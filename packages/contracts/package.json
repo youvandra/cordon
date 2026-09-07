@@ -1,0 +1,12 @@
+{
+  "name": "@cordon/contracts",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "fixtures": "node ../fixtures/scripts/emit-solidity.ts",
+    "build": "npm run fixtures && forge build",
+    "test": "npm run fixtures && forge test -vv",
+    "gate:g1": "npm run fixtures && forge test --match-path 'test/G1_*' -vv"
+  }
+}

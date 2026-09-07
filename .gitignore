@@ -3,6 +3,13 @@ node_modules/
 .env.*
 !.env.example
 dist/
+
+# Foundry build output. lib/ is a submodule and stays tracked; the generated
+# Solidity fixture and the recorded gate results do not, because a reader
+# should be able to see what the tests asserted without running a build.
+packages/contracts/out/
+packages/contracts/cache/
+packages/contracts/broadcast/
 *.log
 design/cordon-surfaces.html
 .DS_Store
