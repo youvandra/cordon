@@ -92,11 +92,18 @@ export default function Drill() {
               id: "status",
               header: "",
               align: "end",
-              width: 100,
+              width: 152,
               cell: (gate) => (
-                <Tag tone={TONE[gate.status]} size="sm">
-                  {gate.status}
-                </Tag>
+                <span className="gate__status">
+                  <Tag tone={TONE[gate.status]} size="sm">
+                    {gate.status}
+                  </Tag>
+                  {gate.tests === null ? null : (
+                    <Text variant="micro" tone="dim" as="span">
+                      {gate.tests} tests
+                    </Text>
+                  )}
+                </span>
               ),
             },
           ]}

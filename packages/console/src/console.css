@@ -502,6 +502,15 @@ body {
   color: var(--cordon-accent);
 }
 
+/* The count beside a gate is recorded from the run that produced it, so it
+   sits with the status rather than anywhere a reader has to go looking. */
+.gate__status {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
 /* ---- statements on glaze ------------------------------------------------- */
 
 .drill,

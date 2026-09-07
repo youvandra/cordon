@@ -10,6 +10,8 @@
  *   kind: "pending"   — a gate has not produced this number yet. Do not invent it.
  */
 
+import { GATE_RUNS } from "./gates.gen.ts";
+
 export const VERIFIED_ON = "2026-09-06";
 
 /* ------------------------------------------------------------------ */
@@ -162,19 +164,40 @@ export const ENFORCED_BY = {
 
 export type GateStatus = "pending" | "green" | "red";
 
-export const GATES: {
+export type Gate = {
   id: string;
   name: string;
   ends: string;
   status: GateStatus;
-}[] = [
-  { id: "G1", name: "tree arithmetic", ends: "every draw debits every ancestor, exactly", status: "pending" },
-  { id: "G2", name: "live on Arc", ends: "four-agent tree, no agent holds a key, refusal on arcscan", status: "pending" },
-  { id: "G3", name: "the hostile drill", ends: "an unrestricted agent is told to spend, and the number is published", status: "pending" },
-  { id: "G4", name: "bounded search", ends: "thousands of strategies scored by the contract, none passes a bound", status: "pending" },
-  { id: "G5", name: "the refusal survives us", ends: "no admin key, no proxy, reversal fails as the deployer", status: "pending" },
-  { id: "G6", name: "the record cannot be forged", ends: "every record names its draw transaction; nobody else can write one", status: "pending" },
-];
+  /** Tests behind the gate. Recorded from the run, never typed by hand. */
+  tests: number | null;
+  /** The date the run that produced this status happened, UTC. */
+  recordedAt: string | null;
+};
+
+const GATE_DEFINITIONS = [
+  { id: "G1", name: "tree arithmetic", ends: "every draw debits every ancestor, exactly" },
+  { id: "G2", name: "live on Arc", ends: "four-agent tree, no agent holds a key, refusal on arcscan" },
+  { id: "G3", name: "the hostile drill", ends: "an unrestricted agent is told to spend, and the number is published" },
+  { id: "G4", name: "bounded search", ends: "thousands of strategies scored by the contract, none passes a bound" },
+  { id: "G5", name: "the refusal survives us", ends: "no admin key, no proxy, reversal fails as the deployer" },
+  { id: "G6", name: "the record cannot be forged", ends: "every record names its draw transaction; nobody else can write one" },
+] as const;
+
+/**
+ * A gate is green because a run said so, not because someone edited a file.
+ * `gates.gen.ts` is written by packages/contracts/scripts/record-gate.mjs from
+ * the test run itself; a gate missing from it has not been run and is pending.
+ */
+export const GATES: Gate[] = GATE_DEFINITIONS.map((g) => {
+  const run = GATE_RUNS[g.id];
+  return {
+    ...g,
+    status: run ? run.status : "pending",
+    tests: run ? run.tests : null,
+    recordedAt: run ? run.recordedAt : null,
+  };
+});
 
 /**
  * G3 and G4 have not been run. The number is the entire difference between

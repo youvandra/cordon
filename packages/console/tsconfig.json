@@ -17,6 +17,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    // packages/fixtures is consumed by tsc, by vite and by plain node (the
+    // Solidity emitter). Node needs the explicit extension; this lets the
+    // other two read the same file rather than forcing a second copy.
+    "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "paths": {
       "cordon-ui": [
