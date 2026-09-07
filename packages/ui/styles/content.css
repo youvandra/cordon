@@ -1,0 +1,144 @@
+/* ==========================================================================
+   Carousel, Feed, Comments.
+   ========================================================================== */
+
+.cordon-carousel { position: relative; }
+
+.cordon-carousel__track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc(100% / var(--cordon-carousel-per-view, 1) - var(--cordon-gap) * (var(--cordon-carousel-per-view, 1) - 1) / var(--cordon-carousel-per-view, 1));
+  gap: var(--cordon-gap);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.cordon-carousel__track::-webkit-scrollbar { display: none; }
+.cordon-carousel__slide { scroll-snap-align: start; min-width: 0; }
+
+.cordon-carousel__arrow {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--cordon-glass-line);
+  border-radius: var(--cordon-radius-pill);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--cordon-shadow-control);
+  color: var(--cordon-ink);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: box-shadow var(--cordon-dur-control) var(--cordon-ease-settle),
+    opacity var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+.cordon-carousel__arrow:hover:not(:disabled) { box-shadow: var(--cordon-shadow-lift); }
+.cordon-carousel__arrow:disabled { opacity: 0.35; cursor: not-allowed; }
+.cordon-carousel__arrow:focus-visible { outline: var(--cordon-focus-ring) solid var(--cordon-focus-on-paper); outline-offset: 2px; }
+.cordon-carousel__arrow--prev { left: -14px; }
+.cordon-carousel__arrow--next { right: -14px; }
+
+.cordon-carousel__dots { display: flex; justify-content: center; gap: 6px; margin-top: var(--cordon-space-4); }
+.cordon-carousel__dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cordon-radius-pill);
+  background: rgba(34, 34, 34, 0.2);
+  cursor: pointer;
+  transition: width var(--cordon-dur-control) var(--cordon-ease-settle),
+    background var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+.cordon-carousel__dot--active { width: 20px; background: var(--cordon-accent); }
+.cordon-carousel__dot:focus-visible { outline: 2px solid var(--cordon-focus-on-paper); outline-offset: 3px; }
+
+/* ---- feed ---------------------------------------------------------------- */
+.cordon-feed { display: flex; flex-direction: column; gap: var(--cordon-space-5); margin: 0; padding: 0; list-style: none; }
+.cordon-feed__entry { position: relative; display: flex; gap: var(--cordon-space-4); min-width: 0; }
+
+.cordon-feed--timeline .cordon-feed__entry:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 34px;
+  left: 15px;
+  bottom: calc(-1 * var(--cordon-space-5));
+  width: 1px;
+  background: var(--cordon-hairline);
+}
+
+.cordon-feed__marker {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  overflow: hidden;
+  border: 1px solid var(--cordon-hairline-soft);
+  border-radius: var(--cordon-radius-pill);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--cordon-shadow-control);
+  color: var(--cordon-accent);
+  font-size: 15px;
+}
+.cordon-feed__avatar { width: 100%; height: 100%; object-fit: cover; }
+
+.cordon-feed__content { min-width: 0; padding-top: 4px; }
+.cordon-feed__summary { margin: 0; color: var(--cordon-copy); font-size: var(--cordon-size-caption); line-height: var(--cordon-leading-caption); }
+.cordon-feed__actor { color: var(--cordon-ink); font-weight: var(--cordon-weight-medium); }
+.cordon-feed__detail { margin-top: 6px; color: var(--cordon-copy); font-size: var(--cordon-size-caption); }
+.cordon-feed__timestamp { display: inline-block; margin-top: 4px; color: var(--cordon-copy-dim); font-size: var(--cordon-size-micro); }
+.cordon-feed__empty { padding: var(--cordon-space-7); color: var(--cordon-copy-dim); font-size: var(--cordon-size-caption); text-align: center; }
+
+/* ---- comments ------------------------------------------------------------ */
+.cordon-commentbox { display: flex; flex-direction: column; gap: var(--cordon-space-6); }
+.cordon-commentbox__composer { display: flex; flex-direction: column; gap: var(--cordon-space-3); }
+.cordon-commentbox__composer-actions { display: flex; justify-content: flex-end; }
+
+.cordon-commentbox__list,
+.cordon-comment__replies { display: flex; flex-direction: column; gap: var(--cordon-space-5); margin: 0; padding: 0; list-style: none; }
+.cordon-comment__replies { margin-top: var(--cordon-space-4); padding-left: var(--cordon-space-5); border-left: 1px solid var(--cordon-hairline-soft); }
+
+.cordon-comment { display: flex; gap: var(--cordon-space-3); min-width: 0; }
+.cordon-comment__avatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: var(--cordon-radius-pill);
+  background: rgba(34, 34, 34, 0.07);
+  color: var(--cordon-copy-dim);
+  font-size: 16px;
+}
+.cordon-comment__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.cordon-comment--nested .cordon-comment__avatar { width: 26px; height: 26px; font-size: 14px; }
+
+.cordon-comment__content { min-width: 0; flex: 1 1 auto; }
+.cordon-comment__meta { display: flex; align-items: baseline; gap: var(--cordon-space-3); margin: 0 0 2px; }
+.cordon-comment__author { color: var(--cordon-ink); font-size: var(--cordon-size-caption); font-weight: var(--cordon-weight-semibold); }
+.cordon-comment__timestamp { color: var(--cordon-copy-dim); font-size: var(--cordon-size-micro); }
+.cordon-comment__body { color: var(--cordon-copy); font-size: var(--cordon-size-caption); line-height: var(--cordon-leading-body); }
+
+.cordon-comment__actions { display: flex; gap: var(--cordon-space-4); margin-top: 5px; }
+.cordon-comment__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cordon-copy-dim);
+  font-size: var(--cordon-size-micro);
+  cursor: pointer;
+  transition: color var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+.cordon-comment__action:hover { color: var(--cordon-ink); }
+.cordon-comment__action--on { color: var(--cordon-accent); }
+.cordon-comment__action:focus-visible { outline: 2px solid var(--cordon-focus-on-paper); outline-offset: 2px; border-radius: 3px; }

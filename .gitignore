@@ -1,0 +1,22 @@
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+*.log
+design/cordon-surfaces.html
+.DS_Store
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Bundled fresh from packages/ui on every brand build.
+packages/brand/src/dotfont.cjs
+
+# Kept out of the repository deliberately. The plan and the brief are how this
+# project is built and what it is betting on, not what it ships, and this
+# repository is public. The engineering constraints they share live in
+# CLAUDE.md, which is tracked; docs/working-rules.md is the unabridged version.
+PLAN.md
+NEXT.md
+docs/
+.claude/

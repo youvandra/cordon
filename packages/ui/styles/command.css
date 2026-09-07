@@ -1,0 +1,150 @@
+/* ==========================================================================
+   Command palette + Kbd.
+   ========================================================================== */
+
+.cordon-command-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--cordon-z-overlay);
+  display: grid;
+  place-items: start center;
+  padding: min(14vh, 120px) var(--cordon-space-5) var(--cordon-space-5);
+  font-family: var(--cordon-font);
+}
+
+.cordon-command {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(620px, 100%);
+  max-height: min(60vh, 520px);
+  overflow: hidden;
+  border: 1px solid var(--cordon-glass-line);
+  border-radius: var(--cordon-radius-6);
+  background: var(--cordon-panel);
+  background-origin: border-box;
+  box-shadow: var(--cordon-shadow-panel), 0 40px 90px rgba(50, 28, 39, 0.28);
+  -webkit-backdrop-filter: blur(20px) saturate(1.12);
+  backdrop-filter: blur(20px) saturate(1.12);
+}
+
+.cordon-command__search {
+  display: flex;
+  align-items: center;
+  gap: var(--cordon-space-3);
+  padding: var(--cordon-space-4) var(--cordon-space-5);
+  border-bottom: 1px solid var(--cordon-hairline-soft);
+}
+.cordon-command__search-icon { flex: 0 0 auto; color: var(--cordon-accent); font-size: 17px; }
+
+.cordon-command__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  outline: none;
+  color: var(--cordon-ink-strong);
+  font-size: 16px;
+  letter-spacing: var(--cordon-track-caption);
+}
+.cordon-command__input::placeholder { color: rgba(34, 34, 34, 0.36); }
+
+.cordon-command__list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--cordon-space-2);
+  scrollbar-width: thin;
+}
+
+.cordon-command__heading {
+  margin: var(--cordon-space-3) 0 3px;
+  padding: 0 10px;
+  color: var(--cordon-copy-dim);
+  font-size: 10.5px;
+  font-weight: var(--cordon-weight-semibold);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.cordon-command__heading:first-child { margin-top: 2px; }
+
+.cordon-command__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--cordon-space-3);
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--cordon-radius-3);
+  background: transparent;
+  color: var(--cordon-ink);
+  font-size: var(--cordon-size-caption);
+  letter-spacing: var(--cordon-track-caption);
+  text-align: left;
+  cursor: pointer;
+}
+.cordon-command__item > * { position: relative; z-index: 1; }
+
+/* The active row is a moving object, not a repainted background. */
+.cordon-command__marker {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: var(--cordon-radius-3);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--cordon-shadow-control);
+}
+.cordon-command__item--active { color: var(--cordon-ink-strong); }
+
+.cordon-command__item-icon {
+  flex: 0 0 auto;
+  width: 17px;
+  color: var(--cordon-copy-dim);
+  font-size: 16px;
+}
+.cordon-command__item--active .cordon-command__item-icon { color: var(--cordon-accent); }
+.cordon-command__item-label { flex: 1 1 auto; min-width: 0; }
+
+.cordon-command__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cordon-space-3);
+  padding: var(--cordon-space-9) var(--cordon-space-5);
+  color: var(--cordon-copy-dim);
+  font-size: var(--cordon-size-caption);
+  text-align: center;
+}
+.cordon-command__empty .cordon-icon { font-size: 22px; opacity: 0.5; }
+
+.cordon-command__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--cordon-space-5);
+  padding: 9px var(--cordon-space-5);
+  border-top: 1px solid var(--cordon-hairline-soft);
+  background: rgba(255, 255, 255, 0.4);
+  color: var(--cordon-copy-dim);
+  font-size: var(--cordon-size-micro);
+}
+.cordon-command__footer span { display: inline-flex; align-items: center; gap: 5px; }
+.cordon-command__count { margin-left: auto; }
+
+/* ---- kbd ----------------------------------------------------------------- */
+.cordon-kbd { display: inline-flex; gap: 3px; }
+
+.cordon-kbd__key {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--cordon-hairline);
+  border-radius: var(--cordon-radius-2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 244, 243, 0.96));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 0 rgba(58, 25, 39, 0.14);
+  color: var(--cordon-copy);
+  font-family: var(--cordon-font);
+  font-size: 10.5px;
+  line-height: 1;
+}
+.cordon-kbd--sm .cordon-kbd__key { min-width: 18px; height: 18px; padding: 0 4px; }
+.cordon-kbd--md .cordon-kbd__key { min-width: 22px; height: 22px; padding: 0 6px; font-size: 12px; }

@@ -1,0 +1,111 @@
+/* ==========================================================================
+   Charts. Structure is hairline; ink is for data.
+   ========================================================================== */
+
+.cordon-chart { position: relative; width: 100%; }
+/* The SVG is sized from a measurement, so a scrollbar appearing between the
+   measure and the paint can leave it a few pixels wider than its parent —
+   which then keeps the scrollbar. This caps the loop. */
+.cordon-chart svg { display: block; max-width: 100%; touch-action: none; }
+
+.cordon-chart__grid line {
+  stroke: rgba(34, 34, 34, 0.075);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.cordon-chart__axis {
+  fill: var(--cordon-copy-dim);
+  font-family: var(--cordon-font);
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+}
+
+.cordon-chart__value {
+  fill: var(--cordon-ink);
+  font-family: var(--cordon-font);
+  font-size: 10.5px;
+  font-weight: var(--cordon-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+/* On a glazed surface the structure has to invert, or the axis disappears
+   into the glaze it is drawn on. */
+.cordon-on-glaze .cordon-chart__grid line { stroke: rgba(255, 255, 255, 0.18); }
+.cordon-on-glaze .cordon-chart__axis { fill: rgba(255, 255, 255, 0.66); }
+.cordon-on-glaze .cordon-chart__value { fill: #fff; }
+.cordon-on-glaze .cordon-chart__crosshair { stroke: rgba(255, 255, 255, 0.7); }
+
+.cordon-chart__crosshair {
+  stroke: var(--cordon-accent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.4;
+}
+
+/* The readout follows the crosshair and is centred on it. */
+.cordon-chart__readout {
+  position: absolute;
+  top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 10px;
+  border: 1px solid var(--cordon-glass-line);
+  border-radius: var(--cordon-radius-3);
+  background: var(--cordon-panel);
+  background-origin: border-box;
+  box-shadow: var(--cordon-shadow-lift);
+  transform: translateX(-50%);
+  pointer-events: none;
+  white-space: nowrap;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.cordon-chart__readout-label {
+  color: var(--cordon-copy-dim);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.cordon-chart__readout-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 13px;
+  color: var(--cordon-ink-strong);
+}
+.cordon-chart__readout-value { font-variant-numeric: tabular-nums; font-weight: var(--cordon-weight-medium); }
+.cordon-chart__readout-row em { font-style: normal; font-size: 10.5px; color: var(--cordon-copy-dim); }
+.cordon-chart__readout-name {
+  min-width: 52px;
+  color: var(--cordon-copy);
+  font-size: 11px;
+}
+.cordon-chart__swatch { width: 7px; height: 7px; border-radius: 999px; }
+
+/* ---- donut --------------------------------------------------------------- */
+.cordon-donut { position: relative; display: grid; place-items: center; }
+.cordon-donut svg { display: block; }
+.cordon-donut__centre {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  pointer-events: none;
+  text-align: center;
+}
+
+/* ---- legend -------------------------------------------------------------- */
+.cordon-legend { display: flex; flex-wrap: wrap; gap: var(--cordon-space-4); }
+.cordon-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cordon-copy);
+  font-size: var(--cordon-size-micro);
+}
+.cordon-legend__swatch { width: 9px; height: 9px; border-radius: 3px; }

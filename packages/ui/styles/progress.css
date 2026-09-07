@@ -1,0 +1,157 @@
+/* ==========================================================================
+   Progress, Loader, Steps.
+   ========================================================================== */
+
+.cordon-progress { display: flex; flex-direction: column; gap: var(--cordon-space-2); width: 100%; }
+.cordon-progress__header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--cordon-space-4); }
+.cordon-progress__label { color: var(--cordon-ink); font-size: var(--cordon-size-caption); letter-spacing: var(--cordon-track-caption); }
+.cordon-progress__value { color: var(--cordon-accent); font-size: var(--cordon-size-micro); font-variant-numeric: tabular-nums; font-weight: var(--cordon-weight-medium); }
+
+.cordon-progress__track {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  border-radius: var(--cordon-radius-pill);
+  background: rgba(34, 34, 34, 0.1);
+  box-shadow: var(--cordon-shadow-inset-well);
+}
+.cordon-progress--md .cordon-progress__track { height: 8px; }
+.cordon-progress--sm .cordon-progress__track { height: 5px; }
+
+.cordon-progress__fill { display: block; height: 100%; border-radius: var(--cordon-radius-pill); }
+.cordon-progress[data-glaze="rose"] .cordon-progress__fill { background: var(--cordon-glaze-rose); }
+.cordon-progress[data-glaze="violet"] .cordon-progress__fill { background: var(--cordon-glaze-violet); }
+.cordon-progress[data-glaze="ember"] .cordon-progress__fill { background: var(--cordon-glaze-ember); }
+
+.cordon-progress__fill--sweep {
+  width: 34%;
+  animation: cordon-sweep 1.25s var(--cordon-ease-support) infinite;
+}
+@keyframes cordon-sweep {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(330%); }
+}
+
+/* ---- loader -------------------------------------------------------------- */
+.cordon-loader { display: inline-flex; align-items: center; color: var(--cordon-accent); }
+.cordon-loader--sm { font-size: 14px; }
+.cordon-loader--md { font-size: 20px; }
+.cordon-loader--lg { font-size: 30px; }
+
+.cordon-loader__spinner { animation: cordon-spin 0.9s linear infinite; }
+
+.cordon-loader__radar { display: block; width: 2.2em; height: 2.2em; }
+.cordon-loader__radar svg { width: 100%; height: 100%; overflow: visible; }
+.cordon-loader__radar-ring { fill: none; stroke: currentColor; stroke-width: 1; opacity: 0.18; }
+.cordon-loader__radar-tick { stroke: currentColor; opacity: 0.28; }
+.cordon-loader__radar-sweep {
+  transform-origin: 50px 50px;
+  animation: cordon-spin 1.9s var(--cordon-ease-support) infinite;
+}
+
+.cordon-loader__dots { display: inline-flex; gap: 0.28em; }
+.cordon-loader__dot {
+  width: 0.3em;
+  height: 0.3em;
+  border-radius: var(--cordon-radius-pill);
+  background: currentColor;
+}
+
+.cordon-loader__bar {
+  position: relative;
+  overflow: hidden;
+  display: block;
+  width: 7em;
+  height: 0.2em;
+  border-radius: var(--cordon-radius-pill);
+  background: rgba(34, 34, 34, 0.12);
+}
+.cordon-loader__bar-fill {
+  position: absolute;
+  inset-block: 0;
+  width: 36%;
+  border-radius: var(--cordon-radius-pill);
+  background: currentColor;
+  animation: cordon-sweep 1.25s var(--cordon-ease-support) infinite;
+}
+
+/* ---- steps: the connection map, carrying progress ------------------------ */
+.cordon-steps { position: relative; }
+.cordon-steps--horizontal { padding-top: 4px; }
+
+.cordon-steps__map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 34px;
+  pointer-events: none;
+}
+.cordon-steps__map svg { display: block; overflow: visible; }
+.cordon-steps__rail-base {
+  fill: none;
+  stroke: rgba(140, 19, 32, 0.16);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+.cordon-steps__rail-lit {
+  fill: none;
+  stroke: var(--cordon-accent);
+  stroke-width: 1.15;
+  stroke-linecap: round;
+}
+
+.cordon-steps__list { display: flex; gap: var(--cordon-space-4); margin: 0; padding: 0; list-style: none; }
+.cordon-steps--horizontal .cordon-steps__list { flex-direction: row; }
+.cordon-steps--vertical .cordon-steps__list { flex-direction: column; }
+
+.cordon-steps__item {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cordon-space-3);
+  min-width: 0;
+}
+.cordon-steps--horizontal .cordon-steps__item {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* The node: the map's glowing dot, not a numbered chip. */
+.cordon-steps__marker {
+  font-variant-numeric: tabular-nums;
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(140, 19, 32, 0.18);
+  border-radius: var(--cordon-radius-pill);
+  background: var(--cordon-paper);
+  color: rgba(34, 34, 34, 0.34);
+  font-size: 11px;
+}
+
+.cordon-steps__item--done .cordon-steps__marker,
+.cordon-steps__item--current .cordon-steps__marker {
+  font-variant-numeric: tabular-nums;
+  border-color: transparent;
+  background: var(--cordon-glaze-rose);
+  background-origin: border-box;
+  color: #fff;
+}
+.cordon-steps__item--current .cordon-steps__marker {
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 4px var(--cordon-accent-quiet), 0 0 14px 2px rgba(255, 103, 150, 0.5);
+}
+.cordon-steps__item--done .cordon-steps__marker {
+  font-variant-numeric: tabular-nums; box-shadow: 0 0 10px rgba(255, 103, 150, 0.32); }
+
+.cordon-steps__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.cordon-steps__label { color: var(--cordon-ink); font-size: var(--cordon-size-caption); font-weight: var(--cordon-weight-medium); letter-spacing: var(--cordon-track-caption); }
+.cordon-steps__item--todo .cordon-steps__label { color: var(--cordon-copy-dim); font-weight: var(--cordon-weight-regular); }
+.cordon-steps__description { color: var(--cordon-copy-dim); font-size: var(--cordon-size-micro); line-height: 1.4; }

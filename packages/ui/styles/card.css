@@ -1,0 +1,121 @@
+/* ==========================================================================
+   Card + MetricCard. The metric card keeps every inner offset as a
+   percentage of its own box, so one --u scale drives the whole tile.
+   ========================================================================== */
+
+.cordon-card { display: flex; min-width: 0; }
+
+.cordon-card__surface > *:not(.cordon-grain) { position: relative; }
+
+.cordon-card__surface {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+}
+
+.cordon-card__media { position: relative; overflow: hidden; background: rgba(34, 34, 34, 0.06); }
+.cordon-card__media img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.cordon-card__header { display: flex; flex-direction: column; gap: 3px; padding: var(--cordon-space-5) var(--cordon-space-5) 0; }
+.cordon-card__body { flex: 1 1 auto; padding: var(--cordon-space-4) var(--cordon-space-5); color: var(--cordon-copy); font-size: var(--cordon-size-caption); line-height: var(--cordon-leading-body); }
+.cordon-card__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--cordon-space-3);
+  padding: 0 var(--cordon-space-5) var(--cordon-space-5);
+}
+.cordon-surface--rose .cordon-card__body,
+.cordon-surface--violet .cordon-card__body,
+.cordon-surface--ember .cordon-card__body { color: var(--cordon-on-glaze-soft); }
+
+/* ---- metric card --------------------------------------------------------- */
+.cordon-metriccard { display: flex; width: 100%; max-width: 429px; }
+
+.cordon-metriccard__surface {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 429 / 554;
+  border: 1px solid var(--cordon-glass-line);
+  /* 1 unit == 1px when the tile is at its reference 429px width */
+  --u: calc(100cqw / 429);
+}
+
+.cordon-metriccard__title {
+  position: absolute;
+  z-index: var(--cordon-z-content);
+  top: 6.1%;
+  left: 5%;
+  width: 90%;
+  margin: 0;
+  color: var(--cordon-on-glaze);
+  font-size: calc(22.95 * var(--u));
+  font-weight: var(--cordon-weight-semibold);
+  line-height: var(--cordon-leading-title);
+  text-align: center;
+  text-shadow: 0 1px 1px rgba(72, 28, 48, 0.14);
+}
+
+/* The stage's own figure box: the gauge overlaps the metric deliberately, so
+   the number sits inside the ring rather than under it. */
+.cordon-metriccard__figure {
+  position: absolute;
+  z-index: 3;
+  top: 27.63%;
+  left: 10.5%;
+  display: grid;
+  place-items: center;
+  width: 79%;
+  height: 59%;
+}
+
+.cordon-metriccard__metric {
+  position: absolute;
+  z-index: 5;
+  top: 48.5%;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.97);
+  filter: drop-shadow(0 1px 1px rgba(104, 27, 54, 0.08));
+}
+
+.cordon-metriccard__value { width: 28%; }
+
+.cordon-metriccard__unit {
+  margin-left: 1.3%;
+  font-size: calc(30.46 * var(--u));
+  font-weight: var(--cordon-weight-regular);
+  line-height: 1;
+  letter-spacing: calc(-0.8 * var(--u));
+}
+
+.cordon-metriccard__caption {
+  position: absolute;
+  z-index: 5;
+  top: 65.1%;
+  left: 10%;
+  width: 80%;
+  margin: 0;
+  color: var(--cordon-on-glaze-soft);
+  font-size: calc(19.95 * var(--u));
+  letter-spacing: calc(-0.36 * var(--u));
+  line-height: var(--cordon-leading-caption);
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(60, 21, 35, 0.16);
+}
+
+.cordon-metriccard__action {
+  position: absolute;
+  z-index: 6;
+  top: 83.75%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.cordon-metriccard__action .cordon-button {
+  width: calc(111 * var(--u));
+  height: calc(45 * var(--u));
+  font-size: calc(14 * var(--u));
+}

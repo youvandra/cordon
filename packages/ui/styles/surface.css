@@ -1,0 +1,164 @@
+/* ==========================================================================
+   Surface — the fired tile. Everything else in Cordon is this shape, resized.
+   ========================================================================== */
+
+.cordon-surface {
+  position: relative;
+  isolation: isolate;
+  background-origin: border-box;
+  border: 0 solid transparent;
+  /* The grain is drawn at 116% so its filtered edges fall outside the box.
+     Without a clip here that overscan escapes the surface and widens the page
+     — 8% of every panel, on both sides. `clip` rather than `hidden` so no
+     surface silently becomes a scroll container. */
+  overflow: clip;
+}
+
+/* ---- glazes -------------------------------------------------------------- */
+.cordon-surface--rose {
+  background: var(--cordon-glaze-rose);
+  background-origin: border-box;
+  color: var(--cordon-on-glaze);
+}
+.cordon-surface--violet {
+  background: var(--cordon-glaze-violet);
+  background-origin: border-box;
+  color: var(--cordon-on-glaze);
+}
+.cordon-surface--ember {
+  background: var(--cordon-glaze-ember);
+  background-origin: border-box;
+  color: var(--cordon-on-glaze);
+}
+.cordon-surface--bisque {
+  background: var(--cordon-glaze-bisque);
+  background-origin: border-box;
+  color: var(--cordon-ink);
+}
+.cordon-surface--paper {
+  background: var(--cordon-paper);
+  color: var(--cordon-ink);
+}
+.cordon-surface--none {
+  background: transparent;
+}
+
+/* ---- rim ----------------------------------------------------------------- */
+.cordon-surface--rim {
+  border: 1px solid var(--cordon-glass-line);
+}
+.cordon-surface--bisque.cordon-surface--rim,
+.cordon-surface--paper.cordon-surface--rim {
+  border-color: var(--cordon-hairline);
+}
+
+/* ---- radius -------------------------------------------------------------- */
+.cordon-surface--r1 { border-radius: var(--cordon-radius-1); }
+.cordon-surface--r2 { border-radius: var(--cordon-radius-2); }
+.cordon-surface--r3 { border-radius: var(--cordon-radius-3); }
+.cordon-surface--r4 { border-radius: var(--cordon-radius-4); }
+.cordon-surface--r5 { border-radius: var(--cordon-radius-5); }
+.cordon-surface--r6 { border-radius: var(--cordon-radius-6); }
+.cordon-surface--rpill { border-radius: var(--cordon-radius-pill); }
+
+/* The hero's own rule: radius is a fixed fraction of the tile's width, so a
+   tile keeps its proportions at any scale. Needs a container to measure. */
+.cordon-surface--rtile {
+  container-type: inline-size;
+  border-radius: calc(100cqw * var(--cordon-radius-tile-ratio));
+}
+
+/* ---- elevation ----------------------------------------------------------- */
+.cordon-surface--eflat { box-shadow: none; }
+.cordon-surface--etile { box-shadow: var(--cordon-shadow-tile); }
+.cordon-surface--epanel { box-shadow: var(--cordon-shadow-panel); }
+.cordon-surface--eoverlay { box-shadow: var(--cordon-shadow-overlay); }
+
+/* ---- sheen --------------------------------------------------------------- */
+.cordon-surface--sheen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: var(--cordon-z-sheen);
+  border-radius: inherit;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  background: var(--cordon-sheen);
+}
+
+/* ---- grain --------------------------------------------------------------- */
+.cordon-grain {
+  position: absolute;
+  inset: -8%;
+  z-index: var(--cordon-z-grain);
+  width: 116%;
+  height: 116%;
+  opacity: var(--cordon-grain-opacity, 0.46);
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
+/* ---- interactive --------------------------------------------------------- */
+.cordon-surface--interactive {
+  cursor: pointer;
+  transition: transform var(--cordon-dur-control) var(--cordon-ease-settle),
+    box-shadow var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+.cordon-surface--interactive:hover {
+  transform: translateY(calc(-1 * var(--cordon-lift)));
+  box-shadow: var(--cordon-shadow-lift);
+}
+.cordon-surface--interactive:focus-visible {
+  outline: var(--cordon-focus-ring) solid var(--cordon-focus-on-paper);
+  outline-offset: var(--cordon-focus-offset);
+}
+.cordon-on-glaze.cordon-surface--interactive:focus-visible {
+  outline-color: var(--cordon-focus-on-glaze);
+}
+
+/* Content must clear the sheen and grain layers. This deliberately does NOT
+   set `position`, because several surfaces (the metric tile above all) place
+   their own children absolutely, and forcing `relative` here would push them
+   out of the tile entirely. Components opt in to stacking themselves. */
+.cordon-surface > *:not(.cordon-grain) {
+  z-index: var(--cordon-z-content);
+}
+
+.cordon-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ---- pointer glow -------------------------------------------------------- */
+/* The highlight follows the cursor across the glaze. `--cordon-px/py` are
+   written straight to the node by usePointerField, so this costs no renders. */
+.cordon-surface--glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: var(--cordon-z-sheen);
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    circle 220px at var(--cordon-px, 50%) var(--cordon-py, 50%),
+    rgba(255, 255, 255, 0.22),
+    transparent 68%
+  );
+  transition: opacity var(--cordon-dur-fast) var(--cordon-ease-settle);
+}
+.cordon-surface--glow:hover::after { opacity: 1; }
+
+/* On paper the same field has to darken, or nothing is visible. */
+.cordon-surface--bisque.cordon-surface--glow::after,
+.cordon-surface--paper.cordon-surface--glow::after {
+  mix-blend-mode: normal;
+  background: radial-gradient(
+    circle 240px at var(--cordon-px, 50%) var(--cordon-py, 50%),
+    rgba(173, 49, 77, 0.09),
+    transparent 66%
+  );
+}

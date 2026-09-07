@@ -1,0 +1,108 @@
+/* ==========================================================================
+   Tooltip + Notification + toasts.
+   ========================================================================== */
+
+.cordon-tooltip { position: relative; display: inline-flex; }
+
+.cordon-tooltip__bubble {
+  position: absolute;
+  z-index: var(--cordon-z-overlay);
+  max-width: 240px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--cordon-radius-2);
+  background: rgba(38, 22, 30, 0.94);
+  box-shadow: var(--cordon-shadow-lift);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: var(--cordon-size-micro);
+  letter-spacing: var(--cordon-track-caption);
+  line-height: 1.4;
+  text-align: center;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.cordon-tooltip__bubble--top { bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); }
+.cordon-tooltip__bubble--bottom { top: calc(100% + 7px); left: 50%; transform: translateX(-50%); }
+.cordon-tooltip__bubble--left { right: calc(100% + 7px); top: 50%; transform: translateY(-50%); }
+.cordon-tooltip__bubble--right { left: calc(100% + 7px); top: 50%; transform: translateY(-50%); }
+
+/* ---- notification -------------------------------------------------------- */
+.cordon-notification {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cordon-space-3);
+  padding: var(--cordon-space-4);
+  border: 1px solid var(--cordon-hairline-soft);
+  border-radius: var(--cordon-radius-4);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--cordon-shadow-control);
+  color: var(--cordon-ink);
+  font-size: var(--cordon-size-caption);
+  line-height: var(--cordon-leading-caption);
+}
+
+.cordon-notification__icon { flex: 0 0 auto; margin-top: 1px; font-size: 16px; }
+.cordon-notification--info .cordon-notification__icon { color: var(--cordon-info); }
+.cordon-notification--positive .cordon-notification__icon { color: var(--cordon-positive); }
+.cordon-notification--caution .cordon-notification__icon { color: var(--cordon-caution); }
+.cordon-notification--critical .cordon-notification__icon { color: var(--cordon-critical); }
+
+.cordon-notification--info { background: rgba(111, 79, 157, 0.07); }
+.cordon-notification--positive { background: rgba(77, 124, 79, 0.08); }
+.cordon-notification--caution { background: rgba(176, 106, 31, 0.09); }
+.cordon-notification--critical { background: rgba(166, 59, 80, 0.08); }
+
+.cordon-notification__text { flex: 1 1 auto; min-width: 0; }
+.cordon-notification__title {
+  margin: 0;
+  color: var(--cordon-ink-strong);
+  font-weight: var(--cordon-weight-semibold);
+  letter-spacing: var(--cordon-track-caption);
+}
+.cordon-notification__body { margin-top: 2px; color: var(--cordon-copy); }
+.cordon-notification__action { flex: 0 0 auto; }
+
+.cordon-notification__close {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: -2px -2px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cordon-radius-pill);
+  background: transparent;
+  color: var(--cordon-copy-dim);
+  cursor: pointer;
+  transition: background var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+.cordon-notification__close:hover { background: rgba(34, 34, 34, 0.08); color: var(--cordon-ink); }
+.cordon-notification__close:focus-visible { outline: 2px solid var(--cordon-focus-on-paper); outline-offset: 1px; }
+
+/* ---- toasts -------------------------------------------------------------- */
+.cordon-toasts {
+  position: fixed;
+  z-index: var(--cordon-z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cordon-space-3);
+  width: min(360px, calc(100vw - 32px));
+  padding: 16px;
+  font-family: var(--cordon-font);
+  pointer-events: none;
+}
+.cordon-toasts > * { pointer-events: auto; }
+.cordon-toasts--top-right { top: 0; right: 0; }
+.cordon-toasts--bottom-right { bottom: 0; right: 0; }
+.cordon-toasts--top-center { top: 0; left: 50%; transform: translateX(-50%); }
+.cordon-toasts--bottom-center { bottom: 0; left: 50%; transform: translateX(-50%); }
+
+.cordon-notification--toast {
+  background: rgba(252, 251, 250, 0.96);
+  box-shadow: var(--cordon-shadow-overlay);
+  -webkit-backdrop-filter: blur(10px) saturate(1.06);
+  backdrop-filter: blur(10px) saturate(1.06);
+}

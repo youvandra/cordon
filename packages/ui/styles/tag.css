@@ -1,0 +1,54 @@
+.cordon-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: var(--cordon-radius-pill);
+  border: 1px solid transparent;
+  font-size: var(--cordon-size-micro);
+  font-weight: var(--cordon-weight-medium);
+  letter-spacing: var(--cordon-track-caption);
+  line-height: 1;
+  white-space: nowrap;
+}
+.cordon-tag--sm { padding: 3px 8px; }
+.cordon-tag--md { padding: 5px 11px; }
+
+.cordon-tag__dot { width: 6px; height: 6px; border-radius: var(--cordon-radius-pill); background: currentColor; }
+
+.cordon-tag--neutral { background: rgba(34, 34, 34, 0.06); border-color: var(--cordon-hairline-soft); color: var(--cordon-copy); }
+.cordon-tag--rose { background: rgba(173, 49, 77, 0.1); color: var(--cordon-accent); }
+.cordon-tag--violet { background: rgba(111, 79, 157, 0.12); color: var(--cordon-info); }
+.cordon-tag--ember { background: rgba(216, 71, 54, 0.12); color: #b13a2c; }
+.cordon-tag--positive { background: rgba(77, 124, 79, 0.13); color: var(--cordon-positive); }
+.cordon-tag--caution { background: rgba(176, 106, 31, 0.14); color: var(--cordon-caution); }
+.cordon-tag--critical { background: rgba(166, 59, 80, 0.13); color: var(--cordon-critical); }
+.cordon-tag--info { background: rgba(111, 79, 157, 0.12); color: var(--cordon-info); }
+
+.cordon-tag--solid { color: var(--cordon-on-glaze); border-color: var(--cordon-glass-line); box-shadow: var(--cordon-shadow-control); }
+.cordon-tag--solid.cordon-tag--rose { background: var(--cordon-glaze-rose); }
+.cordon-tag--solid.cordon-tag--violet { background: var(--cordon-glaze-violet); }
+.cordon-tag--solid.cordon-tag--ember { background: var(--cordon-glaze-ember); }
+.cordon-tag--solid.cordon-tag--neutral { background: var(--cordon-ink); }
+.cordon-tag--solid.cordon-tag--positive { background: var(--cordon-positive-glaze); }
+.cordon-tag--solid.cordon-tag--caution { background: var(--cordon-caution-glaze); }
+.cordon-tag--solid.cordon-tag--critical { background: var(--cordon-critical-glaze); }
+.cordon-tag--solid.cordon-tag--info { background: var(--cordon-info-glaze); }
+
+.cordon-tag__remove {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  margin-right: -3px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cordon-radius-pill);
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+.cordon-tag__remove:hover { opacity: 1; }
+.cordon-tag__remove:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; opacity: 1; }

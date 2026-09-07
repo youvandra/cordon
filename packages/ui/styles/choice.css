@@ -1,0 +1,172 @@
+/* ==========================================================================
+   Checkbox, Radio, Toggle.
+   ========================================================================== */
+
+.cordon-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cordon-space-3);
+}
+
+.cordon-choice__box {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  margin-top: 1px;
+  border: 1px solid var(--cordon-hairline);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--cordon-shadow-inset-well);
+  color: transparent;
+  transition: background var(--cordon-dur-control) var(--cordon-ease-settle),
+    border-color var(--cordon-dur-control) var(--cordon-ease-settle),
+    box-shadow var(--cordon-dur-control) var(--cordon-ease-settle),
+    color var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+
+.cordon-choice__box--check { border-radius: var(--cordon-radius-2); }
+.cordon-choice__box--radio { border-radius: var(--cordon-radius-pill); }
+
+.cordon-choice__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.cordon-choice__input:disabled { cursor: not-allowed; }
+
+.cordon-choice__box:hover {
+  border-color: rgba(34, 34, 34, 0.24);
+  background: #fff;
+}
+
+.cordon-choice__input:checked ~ .cordon-choice__mark,
+.cordon-choice__input:indeterminate ~ .cordon-choice__mark {
+  opacity: 1;
+}
+
+.cordon-choice__box:has(.cordon-choice__input:checked),
+.cordon-choice__box:has(.cordon-choice__input:indeterminate) {
+  border-color: transparent;
+  background: var(--cordon-glaze-rose);
+  background-origin: border-box;
+  box-shadow: var(--cordon-shadow-control);
+  color: #fff;
+}
+
+.cordon-choice__box:has(.cordon-choice__input:focus-visible) {
+  outline: var(--cordon-focus-ring) solid var(--cordon-focus-on-paper);
+  outline-offset: 2px;
+}
+
+.cordon-choice__box:has(.cordon-choice__input:disabled) {
+  opacity: 0.45;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.cordon-choice__mark {
+  width: 13px;
+  height: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+
+.cordon-choice__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--cordon-radius-pill);
+  background: currentColor;
+  transform: scale(0);
+  transition: transform var(--cordon-dur-control) var(--cordon-ease-settle);
+  pointer-events: none;
+}
+.cordon-choice__box:has(.cordon-choice__input:checked) .cordon-choice__dot { transform: scale(1); }
+
+.cordon-choice--invalid .cordon-choice__box { border-color: rgba(166, 59, 80, 0.55); }
+
+.cordon-choice__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.cordon-choice__label {
+  color: var(--cordon-ink);
+  font-size: var(--cordon-size-body);
+  letter-spacing: var(--cordon-track-caption);
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.cordon-choice__description {
+  color: var(--cordon-copy-dim);
+  font-size: var(--cordon-size-micro);
+  letter-spacing: var(--cordon-track-caption);
+  line-height: 1.45;
+}
+
+/* ---- radio group --------------------------------------------------------- */
+.cordon-radiogroup { display: flex; flex-direction: column; gap: var(--cordon-space-3); }
+.cordon-radiogroup__label {
+  color: var(--cordon-ink);
+  font-size: var(--cordon-size-caption);
+  font-weight: var(--cordon-weight-medium);
+  letter-spacing: var(--cordon-track-caption);
+}
+.cordon-radiogroup__options { display: flex; flex-direction: column; gap: var(--cordon-space-3); }
+.cordon-radiogroup--horizontal .cordon-radiogroup__options {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--cordon-space-6);
+}
+
+/* ---- toggle -------------------------------------------------------------- */
+.cordon-toggle { display: flex; align-items: flex-start; gap: var(--cordon-space-3); }
+
+.cordon-toggle__track {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 2px;
+  border: 1px solid var(--cordon-hairline);
+  border-radius: var(--cordon-radius-pill);
+  background: rgba(34, 34, 34, 0.09);
+  box-shadow: var(--cordon-shadow-inset-well);
+  cursor: pointer;
+  transition: background var(--cordon-dur-control) var(--cordon-ease-settle),
+    border-color var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+
+.cordon-toggle--md .cordon-toggle__track { width: 44px; height: 25px; }
+.cordon-toggle--sm .cordon-toggle__track { width: 36px; height: 21px; }
+
+.cordon-toggle__track--on { justify-content: flex-end; border-color: transparent; }
+.cordon-toggle__track--on[data-glaze="rose"] { background: var(--cordon-glaze-rose); }
+.cordon-toggle__track--on[data-glaze="violet"] { background: var(--cordon-glaze-violet); }
+.cordon-toggle__track--on[data-glaze="ember"] { background: var(--cordon-glaze-ember); }
+
+.cordon-toggle__track:disabled { opacity: 0.45; cursor: not-allowed; }
+.cordon-toggle__track:focus-visible {
+  outline: var(--cordon-focus-ring) solid var(--cordon-focus-on-paper);
+  outline-offset: 2px;
+}
+
+.cordon-toggle__thumb {
+  display: block;
+  border-radius: var(--cordon-radius-pill);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(58, 25, 39, 0.28);
+}
+.cordon-toggle--md .cordon-toggle__thumb { width: 19px; height: 19px; }
+.cordon-toggle--sm .cordon-toggle__thumb { width: 15px; height: 15px; }
+
+.cordon-toggle .cordon-choice__label { margin-top: 1px; }

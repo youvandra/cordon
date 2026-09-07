@@ -1,0 +1,334 @@
+import { Link, useParams } from "react-router-dom";
+import {
+  Button,
+  Card,
+  CardBody,
+  Container,
+  DataTable,
+  Grid,
+  Headline,
+  MetricCard,
+  Stack,
+  Surface,
+  Tag,
+  Text,
+} from "cordon-ui";
+import {
+  ARC,
+  ENFORCED_BY,
+  ERC8004,
+  MANDATE,
+  REGISTRY_BASELINE,
+  formatUsdc,
+} from "@cordon/fixtures";
+import {
+  AGENT_PROFILE,
+  RECORD,
+  TREE,
+  flatten,
+  shortTx,
+  txUrl,
+  type RecordEntry,
+} from "../lib/data";
+import { Enforced, Preview } from "../parts/Preview";
+import { Section } from "../parts/Section";
+import { PublicShell } from "../parts/Shell";
+import { usePageMeta } from "../lib/meta";
+import { useEntrance } from "../lib/entrance";
+
+const KIND: Record<
+  RecordEntry["kind"],
+  { label: string; tone: "neutral" | "positive" | "critical" }
+> = {
+  feedback: { label: "feedback", tone: "neutral" },
+  refusal: { label: "refused", tone: "critical" },
+  draw: { label: "draw", tone: "positive" },
+  revocation: { label: "revoked", tone: "neutral" },
+};
+
+/**
+ * /agent/<8004-id> — the public record.
+ *
+ * One LED figure, not five. The rationing rule is that the dot face belongs to
+ * the one number a view exists to show; this page exists to show that the
+ * contract refused, so the refusal count wears it and the supporting figures
+ * are ordinary tabular ones in Bento cells.
+ */
+export default function AgentRecord() {
+  const { id } = useParams();
+  const nodes = flatten(TREE);
+  const node =
+    nodes.find((candidate) => String(candidate.agentId) === id) ?? nodes[0];
+  usePageMeta({
+    title: `Agent ${node.agentId} — conduct record — Cordon`,
+    description: `What ${node.label} asked for, what its mandate allowed, and which draws the contract refused. Every entry names the transaction that produced it.`,
+  });
+  const animate = useEntrance();
+
+  const breachRate = ((node.refused / Math.max(node.draws, 1)) * 100).toFixed(
+    3,
+  );
+
+  const supporting: { value: string; label: string; fn: string }[] = [
+    {
+      value: String(node.refused),
+      label: "refused by the contract",
+      fn: ENFORCED_BY.refusal,
+    },
+    {
+      value: node.draws.toLocaleString(),
+      label: "draws authorised",
+      fn: ENFORCED_BY.budget,
+    },
+    {
+      value: `${node.concentrationPct}%`,
+      label: "highest concentration",
+      fn: ENFORCED_BY.concentration,
+    },
+    {
+      value: `${node.depth}/${MANDATE.maxDepth}`,
+      label: "depth reached",
+      fn: ENFORCED_BY.depth,
+    },
+  ];
+
+  return (
+    <PublicShell>
+      <Container width="wide" className="stackpage">
+        <header className="public__head">
+          <Text variant="micro" tone="dim" as="p" className="eyebrow">
+            erc-8004 identity · token {node.agentId} · arc {ARC.chainId}
+          </Text>
+          <Headline
+            animate={animate}
+            lines={["The RECORD", `of ${node.label}`]}
+            dotWord="RECORD"
+          />
+          <Text variant="lead" tone="copy" as="p" className="public__lede">
+            Not a review. Nobody typed it. It is a measurement a contract made:
+            what this agent asked for, what its owner's mandate allowed, and
+            which draws were refused.
+          </Text>
+          <Preview note="record shape is final; entries are samples" />
+        </header>
+
+        {/* The page's argument, before the page's evidence. It used to sit
+            third, after the hero figure and the four supporting ones, which
+            asked the reader to hold four numbers in mind before being told
+            what they were for. */}
+        <Surface
+          as="section"
+          aria-labelledby="the-comparison"
+          glaze="violet"
+          radius="6"
+          elevation="tile"
+          glow
+          grain
+          sheen
+          className="compare__panel"
+        >
+          <Text
+            variant="micro"
+            tone="on-glaze"
+            as="h2"
+            id="the-comparison"
+            className="eyebrow"
+          >
+            the one comparison this page prints
+          </Text>
+          <p className="compare">
+            This registry: {REGISTRY_BASELINE.noLinkageLow}–
+            {REGISTRY_BASELINE.noLinkageHigh}% of records carry no payment
+            linkage. <em>This page: 100% do.</em>
+          </p>
+          <p className="pane__foot mono">{REGISTRY_BASELINE.source}</p>
+        </Surface>
+
+        {/* The metric tile scales as a rigid unit — it places its children at
+            percentages of its own width, so stretching it to fill a two-row
+            Bento cell drives the caption straight through the numeral. It gets
+            a column of its own and keeps its natural size; the supporting
+            figures, which are ordinary type, fill the Bento beside it. */}
+        <section aria-labelledby="the-figures">
+          <Text
+            variant="micro"
+            tone="dim"
+            as="h2"
+            id="the-figures"
+            className="eyebrow"
+          >
+            what the contract measured
+          </Text>
+          <Grid columns={2} min={320} gap="lg" align="start">
+            <Stack direction="column" gap="sm" align="start">
+              {/* The tile fixes the numeral's width at 28% of its own and the
+                SVG keeps its aspect, so a value's HEIGHT falls out of its
+                character count: "2" is drawn 1.4x taller than the slot between
+                the metric and the caption, and lands on top of it. The hero
+                figure is therefore the rate, which is the refusal expressed at
+                a length the tile was drawn for — and it is the figure an
+                underwriter reads anyway. The count itself leads the Bento. */}
+              <MetricCard
+                animate={animate}
+                title={
+                  <>
+                    Breach rate
+                    <br />
+                    Refusals over authorised draws
+                  </>
+                }
+                value={breachRate}
+                unit="%"
+                progress={Math.min(1, Number(breachRate) / 1)}
+                caption={
+                  <>
+                    {node.refused} refused in {node.draws.toLocaleString()},
+                    <br />
+                    each naming its transaction
+                  </>
+                }
+                glaze="rose"
+              />
+              <Enforced>refusals ÷ draws · {ENFORCED_BY.refusal}</Enforced>
+            </Stack>
+
+            {/* Not a Bento. That device is for a grid of destinations you want
+              seen at once; these are four supporting figures read as a set,
+              and a grid of cards does it without the pretence. */}
+            <Grid columns={2} min={200} gap="md">
+              {supporting.map((figure) => (
+                <Card key={figure.label}>
+                  <CardBody>
+                    <div className="figure">
+                      <span className="figure__value num">{figure.value}</span>
+                      <span className="figure__label">{figure.label}</span>
+                      <Enforced>{figure.fn}</Enforced>
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </Grid>
+          </Grid>
+        </section>
+
+        <Section
+          title="the ledger"
+          aside={
+            <Enforced>
+              {RECORD.length} of {RECORD.length} entries name a transaction
+            </Enforced>
+          }
+        >
+          <DataTable
+            rows={RECORD}
+            rowKey={(entry) => entry.tx + entry.at}
+            columns={[
+              {
+                id: "kind",
+                header: "Kind",
+                width: 116,
+                cell: (entry) => (
+                  <Tag tone={KIND[entry.kind].tone} size="sm" dot>
+                    {KIND[entry.kind].label}
+                  </Tag>
+                ),
+              },
+              {
+                id: "at",
+                header: "Time",
+                width: 88,
+                cell: (entry) => (
+                  <span className="mono cell__id">
+                    {entry.at.slice(11, 19)}
+                  </span>
+                ),
+              },
+              {
+                id: "detail",
+                header: "What the contract did",
+                cell: (entry) => entry.detail,
+              },
+              {
+                id: "amount",
+                header: "Amount",
+                numeric: true,
+                width: 96,
+                cell: (entry) =>
+                  entry.amount6 === undefined ? "—" : formatUsdc(entry.amount6),
+              },
+              {
+                id: "tx",
+                header: "Transaction",
+                width: 148,
+                cell: (entry) => (
+                  <a
+                    className="mono"
+                    href={txUrl(entry.tx)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {shortTx(entry.tx)}
+                  </a>
+                ),
+              },
+            ]}
+          />
+        </Section>
+
+        <Section
+          title="the mandate this agent runs under"
+          aside={<Enforced>windowSeconds is equal at every depth</Enforced>}
+        >
+          <CardBody>
+            <dl className="kv kv--rows">
+              {[
+                ["owner", AGENT_PROFILE.owner],
+                ["mandate", MANDATE.id],
+                ["parent", AGENT_PROFILE.parent],
+                ["window", `${MANDATE.windowSeconds.toLocaleString()}s`],
+                ["identity registry", ERC8004.identity],
+                ["reputation registry", ERC8004.reputation],
+              ].map(([key, value]) => (
+                <div key={key}>
+                  <dt>{key}</dt>
+                  <dd className="mono kv__break">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </CardBody>
+        </Section>
+
+        <Card>
+          <CardBody>
+            <Stack
+              direction="row"
+              justify="between"
+              align="center"
+              gap="md"
+              wrap
+            >
+              <div>
+                <Text variant="micro" tone="dim" as="p" className="eyebrow">
+                  machine-readable
+                </Text>
+                <Text variant="body" tone="copy" as="p">
+                  Sellers gate on it before serving. Underwriters price on it.
+                </Text>
+              </div>
+              <Link to={`/attest/${node.agentId}`}>
+                <Button
+                  variant="primary"
+                  size="md"
+                  magnetic
+                  iconEnd="arrow-right"
+                >
+                  /attest/{node.agentId} · $0.001
+                </Button>
+              </Link>
+            </Stack>
+          </CardBody>
+        </Card>
+      </Container>
+    </PublicShell>
+  );
+}

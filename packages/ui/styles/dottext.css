@@ -1,0 +1,25 @@
+.cordon-dottext {
+  display: inline-block;
+  color: var(--cordon-dot-tone, currentColor);
+  line-height: 0;
+}
+
+.cordon-dottext__svg {
+  display: block;
+  overflow: visible;
+  width: 100%;
+  height: auto;
+  color: inherit;
+}
+
+/* Inline mode: height comes from the type around it, width follows the
+   glyphs. This is what lets the numeral rule apply inside a pill or a cell
+   without every caller measuring a box first. */
+.cordon-dottext--inline {
+  height: 1em;
+  vertical-align: -0.08em;
+}
+.cordon-dottext--inline .cordon-dottext__svg {
+  width: auto;
+  height: 100%;
+}

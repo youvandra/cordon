@@ -1,0 +1,143 @@
+/* ==========================================================================
+   Button. The hero's "Learn More" pill is the secondary variant; everything
+   else is that pill under a different firing.
+   ========================================================================== */
+
+.cordon-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cordon-space-2);
+  border: 0;
+  border-radius: var(--cordon-radius-pill);
+  font-family: var(--cordon-font);
+  font-size: var(--cordon-size-control);
+  font-weight: var(--cordon-weight-regular);
+  letter-spacing: var(--cordon-track-control);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  transition: box-shadow var(--cordon-dur-control) var(--cordon-ease-settle),
+    background-color var(--cordon-dur-control) var(--cordon-ease-settle),
+    color var(--cordon-dur-control) var(--cordon-ease-settle),
+    opacity var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+
+.cordon-button:focus-visible {
+  outline: var(--cordon-focus-ring) solid var(--cordon-focus-on-paper);
+  outline-offset: var(--cordon-focus-offset);
+}
+
+.cordon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+/* ---- sizes --------------------------------------------------------------- */
+.cordon-button--sm {
+  height: var(--cordon-control-h-sm);
+  padding: 0 var(--cordon-space-4);
+  font-size: var(--cordon-size-micro);
+}
+.cordon-button--md {
+  height: var(--cordon-control-h);
+  padding: 0 var(--cordon-control-px);
+}
+.cordon-button--lg {
+  height: var(--cordon-control-h-lg);
+  padding: 0 var(--cordon-space-6);
+  font-size: var(--cordon-size-body);
+}
+
+.cordon-button--icon-only { padding: 0; aspect-ratio: 1; }
+.cordon-button--icon-only.cordon-button--sm { width: var(--cordon-control-h-sm); }
+.cordon-button--icon-only.cordon-button--md { width: var(--cordon-control-h); }
+.cordon-button--icon-only.cordon-button--lg { width: var(--cordon-control-h-lg); }
+
+.cordon-button--block { display: flex; width: 100%; }
+
+.cordon-button__icon { font-size: 1.15em; }
+
+/* ---- primary: a fired pill ---------------------------------------------- */
+.cordon-button--primary {
+  color: var(--cordon-on-glaze);
+  box-shadow: var(--cordon-shadow-tile);
+  background-origin: border-box;
+}
+.cordon-button--primary[data-glaze="rose"] { background: var(--cordon-glaze-rose); }
+.cordon-button--primary[data-glaze="violet"] { background: var(--cordon-glaze-violet); }
+.cordon-button--primary[data-glaze="ember"] { background: var(--cordon-glaze-ember); }
+.cordon-button--primary:hover:not(:disabled) { box-shadow: var(--cordon-shadow-lift); }
+
+/* ---- secondary: the hero's own white pill ------------------------------- */
+.cordon-button--secondary {
+  color: #2d2d2d;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: var(--cordon-shadow-control);
+}
+.cordon-button--secondary:hover:not(:disabled) { box-shadow: var(--cordon-shadow-lift); }
+
+/* ---- ghost --------------------------------------------------------------- */
+.cordon-button--ghost {
+  color: var(--cordon-copy);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--cordon-hairline);
+}
+.cordon-button--ghost:hover:not(:disabled) {
+  color: var(--cordon-ink);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 0 0 1px var(--cordon-hairline), var(--cordon-shadow-control);
+}
+
+/* ---- glaze: sits ON a glazed surface, so it borrows the glass rim ------- */
+.cordon-button--glaze {
+  color: var(--cordon-on-glaze);
+  background: var(--cordon-glass-fill);
+  box-shadow: inset 0 0 0 1px var(--cordon-glass-line);
+  -webkit-backdrop-filter: blur(var(--cordon-glass-blur)) saturate(var(--cordon-glass-saturate));
+  backdrop-filter: blur(var(--cordon-glass-blur)) saturate(var(--cordon-glass-saturate));
+}
+.cordon-button--glaze:hover:not(:disabled) { background: var(--cordon-glass-fill-strong); }
+.cordon-button--glaze:focus-visible { outline-color: var(--cordon-focus-on-glaze); }
+
+/* ---- danger -------------------------------------------------------------- */
+.cordon-button--danger {
+  color: var(--cordon-on-glaze);
+  background: var(--cordon-critical-glaze);
+  box-shadow: var(--cordon-shadow-tile);
+}
+.cordon-button--danger:hover:not(:disabled) { box-shadow: var(--cordon-shadow-lift); }
+
+/* ---- loading ------------------------------------------------------------- */
+.cordon-button__spinner {
+  font-size: 1.15em;
+  animation: cordon-spin 0.9s linear infinite;
+}
+@keyframes cordon-spin { to { transform: rotate(360deg); } }
+
+/* ---- CTA ----------------------------------------------------------------- */
+.cordon-cta--stacked {
+  height: auto;
+  padding: var(--cordon-space-4) var(--cordon-space-6);
+  border-radius: var(--cordon-radius-6);
+}
+.cordon-cta--stacked .cordon-button__label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+}
+.cordon-cta__label {
+  font-size: var(--cordon-size-body);
+  font-weight: var(--cordon-weight-medium);
+  line-height: 1.2;
+}
+.cordon-cta__hint {
+  font-size: var(--cordon-size-micro);
+  font-weight: var(--cordon-weight-regular);
+  letter-spacing: var(--cordon-track-caption);
+  opacity: 0.72;
+}

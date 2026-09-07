@@ -1,0 +1,16 @@
+{
+  "name": "@cordon/brand",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "prebuild": "esbuild ../ui/lib/primitives/dotFont.ts --bundle --format=cjs --outfile=src/dotfont.cjs --log-level=error",
+    "build": "npm run prebuild && node src/build.mjs"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}

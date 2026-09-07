@@ -1,0 +1,332 @@
+/* ==========================================================================
+   CORDON — token layer
+   Every value below is lifted from the "Built for Intelligent Performance"
+   stage. Nothing here is invented; it is that hero, normalised into a scale.
+   ========================================================================== */
+
+:root {
+  /* ---- ground -------------------------------------------------------- */
+  --cordon-paper: #ececeb;
+  --cordon-paper-dim: #e8e8e8;
+  --cordon-paper-raised: #f4f4f2;
+  --cordon-ink: #222222;
+  --cordon-ink-strong: #202020;
+  --cordon-copy: #4a4a4a;
+  --cordon-copy-dim: #6f6f6f;
+  --cordon-hairline: rgba(34, 34, 34, 0.12);
+  --cordon-hairline-soft: rgba(34, 34, 34, 0.07);
+
+  /* ---- accent (the LED word) ----------------------------------------- */
+  --cordon-accent: #ad314d;
+  --cordon-accent-quiet: rgba(173, 49, 77, 0.12);
+  --cordon-accent-line: rgba(173, 49, 77, 0.34);
+
+  /* ---- glaze: rose (card 1 — speed) ---------------------------------- */
+  --cordon-rose-1: #bd4468;
+  --cordon-rose-2: #ad355b;
+  --cordon-rose-3: #a63b50;
+  --cordon-rose-4: #8c1320;
+
+  /* ---- glaze: violet (card 2 — context) ------------------------------ */
+  --cordon-violet-1: #c9b5e1;
+  --cordon-violet-2: #ad80ca;
+  --cordon-violet-3: #9d4f72;
+  --cordon-violet-4: #793246;
+
+  /* ---- glaze: ember (card 3 — connections) --------------------------- */
+  --cordon-ember-1: #d84736;
+  --cordon-ember-2: #dd523c;
+  --cordon-ember-3: #e8703d;
+  --cordon-ember-4: #de5641;
+  --cordon-ember-5: #d34239;
+
+  /* ---- signal (highlights that ride on top of glaze) ----------------- */
+  --cordon-hot: #ff6796;
+  --cordon-hot-soft: #ff9ab7;
+  --cordon-cream: #fff8dd;
+  --cordon-filament: #fff4a7;
+  --cordon-magenta: #ee78d6;
+  --cordon-magenta-deep: #de56b1;
+
+  /* ---- status (borrowed from the same families, never new hues) ------ */
+  --cordon-positive: #4d7c4f;
+  --cordon-positive-glaze: linear-gradient(164deg, #6f9e6a 0%, #3f6b47 100%);
+  --cordon-caution: #b06a1f;
+  --cordon-caution-glaze: linear-gradient(177deg, #e8a03d 0%, #c06a22 100%);
+  --cordon-critical: #a63b50;
+  --cordon-critical-glaze: linear-gradient(180deg, #bd4468 0%, #8c1320 100%);
+  --cordon-info: #6f4f9d;
+  --cordon-info-glaze: linear-gradient(164deg, #ad80ca 0%, #6a3f8c 100%);
+
+  /* ---- glass ---------------------------------------------------------- */
+  --cordon-glass-line: rgba(255, 255, 255, 0.36);
+  --cordon-glass-line-soft: rgba(255, 255, 255, 0.24);
+  --cordon-glass-fill: rgba(255, 255, 255, 0.14);
+  --cordon-glass-fill-strong: rgba(255, 255, 255, 0.28);
+  --cordon-glass-blur: 9px;
+  --cordon-glass-saturate: 1.08;
+
+  /* ---- ink that sits ON a glaze -------------------------------------- */
+  --cordon-on-glaze: rgba(255, 255, 255, 0.96);
+  --cordon-on-glaze-soft: rgba(255, 255, 255, 0.87);
+  --cordon-on-glaze-dim: rgba(255, 255, 255, 0.62);
+  --cordon-on-glaze-line: rgba(255, 255, 255, 0.28);
+
+  /* ---- radius: hero card is 17 / 429 = 3.96% of its own width --------- */
+  --cordon-radius-1: 4px;
+  --cordon-radius-2: 7px;
+  --cordon-radius-3: 10px;
+  --cordon-radius-4: 13px;
+  --cordon-radius-5: 17px;
+  --cordon-radius-6: 24px;
+  --cordon-radius-pill: 999px;
+  --cordon-radius-tile-ratio: 0.0396;
+
+  /* ---- space: the hero's own rhythm (3 / 6 / 8 / 12 / 17 / 23 / 44) --- */
+  --cordon-space-0: 0px;
+  --cordon-space-1: 3px;
+  --cordon-space-2: 6px;
+  --cordon-space-3: 8px;
+  --cordon-space-4: 12px;
+  --cordon-space-5: 17px;
+  --cordon-space-6: 23px;
+  --cordon-space-7: 32px;
+  --cordon-space-8: 44px;
+  --cordon-space-9: 54px;
+  --cordon-space-10: 72px;
+  --cordon-space-11: 94px;
+
+  /* ---- fluid rhythm, exactly as the stage declares it ----------------- */
+  --cordon-gap: clamp(8px, 1.5vw, 23px);
+  --cordon-gutter: clamp(14px, 3.6vw, 54px);
+  --cordon-pad-top: clamp(20px, 9.6vh, 94px);
+  --cordon-pad-bottom: clamp(16px, 3vh, 52px);
+
+  /* ---- type ----------------------------------------------------------- */
+  --cordon-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --cordon-font-mono: "SFMono-Regular", "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  --cordon-size-display: clamp(24px, min(3.1vw, 5.9vh), 47px);
+  --cordon-size-title: 22.95px;
+  --cordon-size-lead: clamp(13px, min(1.36vw, 2.6vh), 20.6px);
+  --cordon-size-metric: 30.6px;
+  --cordon-size-body: 15px;
+  --cordon-size-caption: 13.2px;
+  --cordon-size-micro: 11.5px;
+  --cordon-size-control: 14px;
+
+  --cordon-weight-regular: 400;
+  --cordon-weight-medium: 500;
+  --cordon-weight-semibold: 600;
+  --cordon-weight-bold: 700;
+
+  --cordon-track-display: 0.015em;   /* headline  */
+  --cordon-track-lead: -0.017em;     /* intro     */
+  --cordon-track-caption: -0.018em;  /* -0.36 / 19.95 */
+  --cordon-track-control: -0.018em;  /* -0.25 / 14    */
+  --cordon-track-none: 0;
+
+  --cordon-leading-display: 1.223;
+  --cordon-leading-title: 1.48;
+  --cordon-leading-lead: 1.62;
+  --cordon-leading-body: 1.55;
+  --cordon-leading-caption: 1.45;
+  --cordon-leading-tight: 1;
+
+  /* ---- elevation ------------------------------------------------------ */
+  --cordon-shadow-tile: 0 2px 4px rgba(50, 28, 39, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  --cordon-shadow-control: 0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 1px 3px rgba(58, 25, 39, 0.08);
+  --cordon-shadow-lift: 0 8px 20px rgba(58, 25, 39, 0.16);
+  --cordon-shadow-panel: 0 13px 25px rgba(70, 17, 69, 0.31),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --cordon-shadow-overlay: 0 24px 64px rgba(50, 28, 39, 0.28),
+    0 2px 8px rgba(50, 28, 39, 0.16);
+  --cordon-shadow-inset-well: inset 0 1px 2px rgba(58, 25, 39, 0.1);
+
+  /* ---- motion: the stage only ever uses two curves -------------------- */
+  --cordon-ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+  --cordon-ease-support: cubic-bezier(0.22, 1, 0.36, 1);
+  --cordon-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  --cordon-dur-control: 0.18s;
+  --cordon-dur-fast: 0.32s;
+  --cordon-dur-settle: 0.52s;
+  --cordon-dur-support: 0.54s;
+  --cordon-dur-reveal: 0.62s;
+  --cordon-dur-metric: 0.66s;
+  --cordon-dur-establish: 0.76s;
+  --cordon-dur-resolve: 0.82s;
+  --cordon-dur-headline: 0.84s;
+
+  --cordon-stagger: 0.12s;      /* card 1 .46 -> card 2 .58 -> card 3 .70 */
+  --cordon-lift: 2px;           /* learn-more hover translateY */
+
+  /* ---- density --------------------------------------------------------
+     One knob. Control height, field padding and stack rhythm move together,
+     because changing only one of them is what makes a "compact" mode look
+     squashed instead of dense. */
+  --cordon-control-h: 38px;
+  --cordon-control-h-sm: 30px;
+  --cordon-control-h-lg: 45px;
+  --cordon-control-px: var(--cordon-space-5);
+  --cordon-row-h: 36px;
+  --cordon-stack: var(--cordon-space-5);
+
+  /* ---- focus ---------------------------------------------------------- */
+  --cordon-focus-ring: 3px;
+  --cordon-focus-offset: 3px;
+  --cordon-focus-on-paper: rgba(173, 49, 77, 0.55);
+  --cordon-focus-on-glaze: rgba(255, 255, 255, 0.78);
+
+  /* ---- z ------------------------------------------------------------- */
+  --cordon-z-base: 0;
+  --cordon-z-sheen: 1;
+  --cordon-z-grain: 2;
+  --cordon-z-content: 4;
+  --cordon-z-raised: 6;
+  --cordon-z-sticky: 20;
+  --cordon-z-overlay: 60;
+  --cordon-z-toast: 80;
+
+  /* ---- breakpoints (documented; media queries can't read a var) ------- */
+  --cordon-bp-narrow: 767px;
+  --cordon-bp-wide: 768px;
+  --cordon-bp-tablet-max: 1180px;
+  --cordon-bp-content: 1333px; /* 3 * 429 + 2 * 23 */
+}
+
+/* --------------------------------------------------------------------------
+   Glaze recipes. A glaze is a full multi-stop background, not one colour —
+   that is what makes a Cordon surface read as fired ceramic instead of a fill.
+   -------------------------------------------------------------------------- */
+:root {
+  --cordon-glaze-rose:
+    radial-gradient(ellipse 68% 45% at -4% -3%, rgba(255, 235, 232, 0.73) 0%, rgba(255, 226, 226, 0.41) 46%, transparent 77%),
+    radial-gradient(ellipse 70% 45% at 104% -4%, rgba(255, 238, 233, 0.78) 0%, rgba(255, 226, 226, 0.42) 48%, transparent 78%),
+    radial-gradient(ellipse 93% 47% at 106% 58%, rgba(245, 247, 241, 0.73) 0%, rgba(246, 231, 229, 0.42) 48%, transparent 76%),
+    radial-gradient(ellipse 74% 40% at -8% 73%, rgba(255, 210, 190, 0.48) 0%, rgba(255, 194, 181, 0.25) 48%, transparent 77%),
+    radial-gradient(ellipse 54% 30% at 50% 17%, rgba(106, 8, 51, 0.22) 0%, transparent 78%),
+    linear-gradient(180deg, var(--cordon-rose-1) 0%, var(--cordon-rose-2) 38%, var(--cordon-rose-3) 72%, var(--cordon-rose-4) 100%);
+
+  --cordon-glaze-violet:
+    radial-gradient(ellipse 43% 42% at -5% 30%, rgba(228, 220, 255, 0.53), transparent 78%),
+    radial-gradient(ellipse 43% 42% at 105% 30%, rgba(245, 200, 210, 0.54), transparent 78%),
+    radial-gradient(ellipse 70% 48% at 70% 110%, rgba(238, 204, 201, 0.62), transparent 77%),
+    radial-gradient(ellipse 78% 25% at 15% 8%, rgba(218, 211, 255, 0.54), transparent 79%),
+    radial-gradient(ellipse 45% 26% at 47% 78%, rgba(236, 184, 183, 0.45), transparent 73%),
+    linear-gradient(164deg, var(--cordon-violet-1) 0%, var(--cordon-violet-2) 29%, var(--cordon-violet-3) 64%, var(--cordon-violet-4) 100%);
+
+  --cordon-glaze-ember:
+    radial-gradient(ellipse 38% 24% at 102% 8%, rgba(255, 190, 164, 0.24), transparent 75%),
+    radial-gradient(ellipse 28% 24% at -5% 66%, rgba(255, 192, 174, 0.3), transparent 74%),
+    radial-gradient(ellipse 46% 30% at 104% 32%, rgba(255, 146, 52, 0.42), transparent 74%),
+    radial-gradient(ellipse 80% 36% at 62% 57%, rgba(255, 141, 36, 0.62), transparent 72%),
+    radial-gradient(ellipse 58% 30% at 6% 103%, rgba(199, 49, 45, 0.38), transparent 76%),
+    linear-gradient(177deg, var(--cordon-ember-1) 0%, var(--cordon-ember-2) 24%, var(--cordon-ember-3) 52%, var(--cordon-ember-4) 78%, var(--cordon-ember-5) 100%);
+
+  /* the unfired surface: paper with a whisper of glaze */
+  --cordon-glaze-bisque:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.34) 100%),
+    var(--cordon-paper-raised);
+
+  /* The context-window recipe from the stage, translated to paper. Same four
+     layers in the same order — a white lift from the bottom, a coloured bloom
+     on the trailing edge, a radial at the top, a base — so a dropdown reads as
+     the same object as the hero's glass panel rather than a white rectangle. */
+  --cordon-panel:
+    linear-gradient(0deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.66) 45%, rgba(255, 255, 255, 0.34) 80%),
+    linear-gradient(270deg, rgba(213, 62, 152, 0.16) 0px, rgba(213, 62, 152, 0) 5px),
+    radial-gradient(ellipse 118% 70% at 60% 8%, rgba(255, 203, 252, 0.16), transparent 74%),
+    linear-gradient(105deg, rgba(252, 250, 252, 0.96) 0%, rgba(250, 241, 249, 0.96) 51%, rgba(248, 236, 246, 0.96) 100%);
+
+  --cordon-panel-glazed:
+    linear-gradient(0deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.15) 45%, rgba(255, 255, 255, 0) 80%),
+    linear-gradient(270deg, rgba(213, 62, 152, 0.62) 0px, rgba(213, 62, 152, 0) 5px),
+    radial-gradient(ellipse 118% 70% at 60% 8%, rgba(255, 203, 252, 0.34), transparent 74%),
+    linear-gradient(105deg, rgba(250, 232, 250, 0.72) 0%, rgba(238, 120, 214, 0.68) 51%, rgba(222, 86, 177, 0.82) 100%);
+
+  /* sheen that sits over any glaze, mix-blend-mode: screen */
+  --cordon-sheen:
+    linear-gradient(102deg, rgba(255, 255, 255, 0.1), transparent 28%, rgba(255, 255, 255, 0.08) 62%, transparent 88%),
+    radial-gradient(ellipse 85% 34% at 54% 7%, rgba(255, 255, 255, 0.24), transparent 72%);
+}
+
+/* --------------------------------------------------------------------------
+   Reset — scoped, so Cordon can drop into an existing page without a fight.
+   -------------------------------------------------------------------------- */
+.cordon-root,
+.cordon-root *,
+.cordon-root *::before,
+.cordon-root *::after {
+  box-sizing: border-box;
+}
+
+.cordon-root {
+  color: var(--cordon-ink);
+  background: var(--cordon-paper);
+  font-family: var(--cordon-font);
+  font-size: var(--cordon-size-body);
+  line-height: var(--cordon-leading-body);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+/* `:where()` keeps this at element-level specificity. Without it the reset
+   would outrank every component's own colour rule — a secondary button on a
+   glazed tile would inherit white ink and vanish. */
+:where(.cordon-root) button,
+:where(.cordon-root) input,
+:where(.cordon-root) select,
+:where(.cordon-root) textarea,
+:where(.cordon-root) a {
+  font: inherit;
+  color: inherit;
+}
+
+.cordon-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cordon-root *,
+  .cordon-root *::before,
+  .cordon-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Density is set on any subtree, not globally, so a dense table can sit
+   inside a comfortable page without either one fighting the other. */
+[data-cordon-density="compact"] {
+  --cordon-control-h: 32px;
+  --cordon-control-h-sm: 26px;
+  --cordon-control-h-lg: 38px;
+  --cordon-control-px: var(--cordon-space-4);
+  --cordon-row-h: 30px;
+  --cordon-stack: var(--cordon-space-3);
+}
+
+[data-cordon-density="comfortable"] {
+  --cordon-control-h: 44px;
+  --cordon-control-h-sm: 34px;
+  --cordon-control-h-lg: 52px;
+  --cordon-control-px: var(--cordon-space-6);
+  --cordon-row-h: 44px;
+  --cordon-stack: var(--cordon-space-7);
+}

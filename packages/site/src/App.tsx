@@ -1,0 +1,82 @@
+import { useEffect, useLayoutEffect } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { CordonProvider } from "cordon-ui";
+import { Shell } from "./parts/Shell";
+import { SECTIONS } from "./parts/nav";
+import { useEntranceFailsafe } from "./parts/motion";
+import Landing from "./pages/Landing";
+import NotFound from "./pages/NotFound";
+
+/**
+ * Put the new position at the top before it is painted.
+ *
+ * `useEffect` runs after paint, so the incoming view gets one frame at the
+ * outgoing one's scroll offset. The navigation is a sticky-nav click, which
+ * means that offset is usually thousands of pixels down — and if the new view
+ * is shorter, the browser clamps the scroll and parks the reader in whatever
+ * is at the bottom. It reads as a blank page that a reload "fixes", because a
+ * reload starts at zero.
+ *
+ * `useLayoutEffect` runs before paint, and the scroll has to be instant: a
+ * smooth scroll is an animation, and an animation needs a frame loop it may
+ * not get.
+ *
+ * A hash is an instruction to land somewhere other than the top, so it wins.
+ * The late retry is for the hash arriving with the page — the target's offset
+ * moves as charts above it take their measured height.
+ */
+function ScrollManager() {
+  const { pathname, hash } = useLocation();
+
+  useEffect(() => {
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  }, []);
+
+  useLayoutEffect(() => {
+    const target = hash ? document.querySelector(hash) : null;
+
+    if (!target) {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+      return;
+    }
+
+    const land = () =>
+      document
+        .querySelector(hash)
+        ?.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" });
+
+    land();
+    const settle = window.setTimeout(land, 120);
+    return () => window.clearTimeout(settle);
+  }, [pathname, hash]);
+
+  return null;
+}
+
+export function App() {
+  useEntranceFailsafe();
+
+  return (
+    <CordonProvider glaze="rose">
+      <ScrollManager />
+      <Shell>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+
+          {/* The four pages this site used to be. Anything already linking to
+              them — the brief, the README — lands on the section instead of a
+              404. */}
+          {SECTIONS.map((section) => (
+            <Route
+              key={section.id}
+              path={`/${section.id}`}
+              element={<Navigate to={{ pathname: "/", hash: `#${section.id}` }} replace />}
+            />
+          ))}
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Shell>
+    </CordonProvider>
+  );
+}

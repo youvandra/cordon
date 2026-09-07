@@ -1,0 +1,56 @@
+/* ==========================================================================
+   Gauge — the hero's tick ring, carrying a value.
+   ========================================================================== */
+
+/* The ring only ever occupies the top of its circle, so the box is cropped to
+   it — otherwise every gauge carries half a square of dead space. */
+.cordon-gauge { position: relative; aspect-ratio: 326 / 186; }
+.cordon-gauge__svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+/* Paper is the default ground, so the ring darkens by default and lightens
+   only where it actually sits on a glaze. Keying this off the container —
+   `.docs__demo` and friends — is what washed the ring out on glazed tiles. */
+.cordon-gauge__tick {
+  stroke: rgba(140, 19, 32, 0.15);
+  transition: stroke var(--cordon-dur-fast) var(--cordon-ease-settle);
+}
+.cordon-gauge__tick--lit { stroke: rgba(173, 49, 77, 0.66); }
+
+.cordon-on-glaze .cordon-gauge__tick { stroke: rgba(255, 214, 228, 0.22); }
+.cordon-on-glaze .cordon-gauge__tick--lit { stroke: rgba(255, 226, 236, 0.82); }
+
+.cordon-gauge__pointer { stroke: rgba(173, 49, 77, 0.55); }
+.cordon-on-glaze .cordon-gauge__pointer { stroke: rgba(255, 231, 239, 0.72); }
+
+.cordon-gauge__ring { stroke: rgba(140, 19, 32, 0.12); }
+.cordon-gauge__hairline { stroke: rgba(140, 19, 32, 0.1); }
+.cordon-on-glaze .cordon-gauge__ring { stroke: rgba(255, 166, 194, 0.24); }
+.cordon-on-glaze .cordon-gauge__hairline { stroke: rgba(255, 166, 194, 0.31); }
+
+.cordon-gauge__readout {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5%;
+  padding-bottom: 6%;
+  pointer-events: none;
+}
+
+.cordon-gauge__footnote {
+  color: var(--cordon-copy-dim);
+  font-size: 0.62em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.cordon-on-glaze .cordon-gauge__footnote { color: var(--cordon-on-glaze-dim); }
+
+/* The radar sweep is CSS, so it cannot fight framer for the same transform. */
+.cordon-gauge__sweeping {
+  animation: cordon-gauge-sweep 3.4s linear infinite;
+  transform-box: view-box;
+  transform-origin: 163px 163px;
+}
+@keyframes cordon-gauge-sweep { to { transform: rotate(360deg); } }
