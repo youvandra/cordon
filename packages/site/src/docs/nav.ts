@@ -87,6 +87,11 @@ export const DOC_GROUPS: DocGroup[] = [
         title: "Meter",
         summary: "The indexer and its read API, rebuildable from chain.",
       },
+      {
+        slug: "attest",
+        title: "Attest",
+        summary: "The record, priced: one x402 call before a seller serves an agent.",
+      },
     ],
   },
   {

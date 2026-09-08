@@ -4,7 +4,7 @@ import { DocsLayout } from "./DocsLayout";
 import { findPage } from "./nav";
 import { HowItWorks, Introduction, Quickstart } from "./pages/start";
 import { DrawsAndBounds, MandateTree, Refusals, TheRecord } from "./pages/concepts";
-import { Daemon, Mcp, Meter, Proxy } from "./pages/surfaces";
+import { Attest, Daemon, Mcp, Meter, Proxy } from "./pages/surfaces";
 import { Configuration, Contracts, Faq, Gates } from "./pages/reference";
 
 /**
@@ -23,6 +23,7 @@ const PAGES: Record<string, ComponentType> = {
   proxy: Proxy,
   daemon: Daemon,
   meter: Meter,
+  attest: Attest,
   contracts: Contracts,
   configuration: Configuration,
   gates: Gates,

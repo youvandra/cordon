@@ -157,6 +157,17 @@ export function Configuration() {
         ]}
       />
 
+      <H2 id="attest">Attest</H2>
+      <Table
+        head={["Variable", "Meaning"]}
+        rows={[
+          [<C key="ak">CORDON_ATTEST_KEY</C>, "the account that submits settlements and pays their gas. Required"],
+          [<C key="ap">CORDON_ATTEST_PAYTO</C>, "who is paid. Defaults to the submitter's own address"],
+          [<C key="aa">CORDON_ATTEST_ASSET</C>, "the token payments arrive in. Defaults to the 6 decimal view of USDC on Arc"],
+          [<C key="ao">CORDON_ATTEST_PORT</C>, "8405"],
+        ]}
+      />
+
       <H2 id="decimals">One note about decimals</H2>
       <P>
         USDC on Arc has two views of one balance. The native view has 18

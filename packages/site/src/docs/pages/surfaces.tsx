@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ABSENT_TOOLS, MCP_CONFIG, MCP_TOOLS } from "@cordon/fixtures";
+import { ABSENT_TOOLS, ATTEST, MARKETPLACE, MCP_CONFIG, MCP_TOOLS } from "@cordon/fixtures";
 import { C, Code, H2, Lead, Note, P, Table, UL } from "../parts";
 
 export function Mcp() {
@@ -265,6 +265,100 @@ node src/main.ts --once --out ledger.json     # index and exit`}</Code>
         an API we have not confirmed a buyer can read, so it reports{" "}
         <C>unavailable</C> rather than approximating. A reconciliation that
         quietly compares nothing always passes.
+      </P>
+    </>
+  );
+}
+
+
+export function Attest() {
+  const price = Number(ATTEST.price6) / 1e6;
+
+  return (
+    <>
+      <Lead>
+        The record, priced. <C>{`GET /attest/:agentId`}</C> answers the question
+        a seller asks before it serves an agent: does this buyer hold a live
+        mandate, and what did the contract refuse it? Same facts as the public
+        page, in the shape a machine reads, behind x402 at ${price.toFixed(3)}.
+      </Lead>
+
+      <H2 id="why-paid">Why this one is paid</H2>
+      <P>
+        The page at <C>/agent/:id</C> is free and stays free. This is the same
+        record for a caller in a loop, and it is the first thing Cordon sells,
+        because the thing worth paying for is not the server. It is the seat
+        that produced the record: only the party that refuses can hold a record
+        of refusals.
+      </P>
+      <P>
+        The price sits under the catalogue median of ${MARKETPLACE.priceMedian},
+        inside the band where {MARKETPLACE.offersAtOrBelowOneCent} of{" "}
+        {MARKETPLACE.offersTotal.toLocaleString("en-US")} live offers already are. A check that costs
+        more than the call it guards is a check nobody makes.
+      </P>
+
+      <H2 id="paying">Paying for an answer</H2>
+      <Code lang="bash">{`curl -i https://attest.cordon.xyz/attest/7
+# 402, with the offer in the body
+
+curl -H "X-PAYMENT: $(cordon-pay …)" https://attest.cordon.xyz/attest/7
+# 200, with the record and an X-PAYMENT-RESPONSE header`}</Code>
+      <P>
+        The scheme is x402 <C>exact</C>: an EIP-3009{" "}
+        <C>TransferWithAuthorization</C> signed off chain by the payer, who
+        spends no gas. The endpoint holds the signature, submits it, and is the
+        party that pays for the transaction. The challenge is written in the
+        same dialect the daemon reads on the buying side, so a Cordon bounded
+        agent can pay for an attestation through the fence like anything else.
+      </P>
+
+      <H2 id="two-orderings">Two orderings that make it honest</H2>
+      <Table
+        head={["Rule", "What it prevents"]}
+        rows={[
+          [
+            "Whether an answer exists is free",
+            "An identity outside the indexed range gets a 404 and no offer, so nobody buys an empty answer",
+          ],
+          [
+            "Payment is collected before the answer is written",
+            "A settlement that fails returns a 402 with the reason, and the payer's authorisation is left unspent",
+          ],
+        ]}
+      />
+      <P>
+        Replay is refused twice, and only the second one counts: this process
+        remembers the nonces it has seen, and the token refuses a nonce it has
+        already spent. A restart forgets the first, which is safe precisely
+        because the second is the guard.
+      </P>
+
+      <H2 id="answer">What comes back</H2>
+      <Table
+        head={["Field", "What it holds"]}
+        rows={[
+          [<C key="m">mandate</C>, "live, revoked, root, parent, depth, operator, budget"],
+          [<C key="c">conduct</C>, "draws, refusals, breaches, amounts, how many were published"],
+          [<C key="r">refusals</C>, "each one with its reason, amount, block and transaction hash"],
+          [<C key="g">range</C>, "the block range the answer covers"],
+          [<C key="v">verify</C>, "the contracts and the explorer to check every line against"],
+        ]}
+      />
+      <Note tone="info" title="No score, ever">
+        There is no rating in the response and there will not be one. A score is
+        an opinion, and an opinion is what the registry baseline already has too
+        much of. What is sold here is a measurement a contract made.
+      </Note>
+
+      <H2 id="starting">Starting it</H2>
+      <Code lang="bash">{`CORDON_ATTEST_KEY=0x… node src/main.ts --chain 5042002`}</Code>
+      <P>
+        It refuses to start when the token it would be paid in cannot verify the
+        signature it would publish a domain for. The check is one call, and it
+        is the difference between a payer being refused by the token and a payer
+        being quoted a price they can actually pay. The key it holds submits
+        settlements and does nothing else: no mandate, no vault, no record.
       </P>
     </>
   );
