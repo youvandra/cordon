@@ -8,6 +8,10 @@ import { CONSOLE_URL, GITHUB_URL } from "./links";
 /**
  * The bar carries three things: the name, where to read, and where to sign in.
  *
+ * The last one says what it does. "Console" is a place; "Launch console" is
+ * the only action in the bar, and a reader scanning it should not have to
+ * guess which of the three words is the button.
+ *
  * It used to list the page's own sections. On a single page that is a menu of
  * places the reader has not been given a reason to go yet, and it competed
  * with the one link that matters before anything else, which is the docs.
@@ -45,7 +49,7 @@ export function Shell({ children }: { children: ReactNode }) {
             </a>
             <a href={CONSOLE_URL}>
               <Button variant="primary" size="sm" magnetic>
-                Console
+                Launch console
               </Button>
             </a>
           </div>
