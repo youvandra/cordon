@@ -348,6 +348,23 @@ export const RECORD: RecordEntry[] = [
   },
 ];
 
+/**
+ * The refusal a ledger row is about, when it is about one.
+ *
+ * A `RecordEntry` names its transaction and nothing else, and that stays the
+ * case: the transaction is the fact, and giving the row a refusal id of its
+ * own would write one linkage down twice and let the two drift apart. So the
+ * join is computed here, once, from the field both sides already carry.
+ *
+ * Only the kinds that describe a refusal join. A draw never shares a
+ * transaction with a refusal, and a revocation is about a subtree rather than
+ * a draw, so neither is handed a link it would have to invent.
+ */
+export function refusalForRecord(entry: RecordEntry): Refusal | undefined {
+  if (entry.kind !== "refusal" && entry.kind !== "feedback") return undefined;
+  return REFUSALS.find((refusal) => refusal.tx === entry.tx);
+}
+
 export const AGENT_PROFILE = {
   agentId: 41827,
   label: "address-enrich",

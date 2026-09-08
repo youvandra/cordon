@@ -32,6 +32,8 @@ import {
   RECORD,
   TREE,
   flatten,
+  refusalForRecord,
+  refusalOrdinal,
   shortTx,
   txUrl,
   type RecordEntry,
@@ -256,7 +258,21 @@ export default function AgentRecord() {
               {
                 id: "detail",
                 header: "What the contract did",
-                cell: (entry) => entry.detail,
+                /* A refusal row and the page the chain points at are the same
+                   event twice, and until this the reader had to notice that
+                   the transaction hash in the last column matched a URL they
+                   had never been shown. The rows that are about a refusal
+                   carry it; a draw and a revocation are not, and are left as
+                   plain text rather than given a link that guesses. */
+                cell: (entry) => {
+                  const refusal = refusalForRecord(entry);
+                  if (!refusal) return entry.detail;
+                  return (
+                    <Link to={`/refusal/${refusalOrdinal(refusal)}`}>
+                      {entry.detail}
+                    </Link>
+                  );
+                },
               },
               {
                 id: "amount",
