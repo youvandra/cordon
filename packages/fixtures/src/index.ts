@@ -101,6 +101,65 @@ export const GOVERNANCE_GAP = {
 } as const;
 
 /* ------------------------------------------------------------------ */
+/* Circle Gateway — the fast lane, and where it stops being ours       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Checked against Arc testnet on 2026-09-08, not against a blog post.
+ *
+ * Two things were open in the plan as "verify on day one". Both are answered
+ * here, and the second answer changes what the contract can enforce.
+ */
+export const GATEWAY = {
+  verifiedOn: "2026-09-08",
+
+  /** GatewayWallet on Arc testnet. An ERC-1967 proxy; the implementation is
+   *  22,818 bytes and carries the deposit selectors below. */
+  wallet: "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+  implementation: "0xa33d52b46964495ea6e2bb09ce85faed05776e28",
+
+  /**
+   * RISK 4, ANSWERED — and favourably.
+   *
+   * `depositFor(address token, address depositor, uint256 value)` credits the
+   * `depositor` parameter, not `msg.sender`. Verified on Arc: the call reaches
+   * the allowance check rather than failing dispatch, so the selector is live.
+   * The vault can therefore fund a beneficiary's Gateway balance directly, and
+   * the plan's fallback — routing through the daemon's own address — is not
+   * needed.
+   */
+  depositForCreditsBeneficiary: true,
+
+  /**
+   * RISK 4b, THE ONE NOBODY ASKED.
+   *
+   * The seller is named in `destinationRecipient`, a field of the TransferSpec
+   * inside a burn intent that is signed OFF CHAIN by the depositor and handed
+   * to Circle's API. GatewayWallet never sees it, and no contract can.
+   *
+   * So a Gateway balance is spendable to anyone its depositor chooses, with
+   * one off-chain signature and no on-chain step for Cordon to sit in. Any
+   * bound that names a counterparty — concentration, above all — cannot be
+   * enforced against money that already sits in a Gateway balance. It can only
+   * be enforced at the moment the balance is topped up, or measured afterwards
+   * from settlement records.
+   */
+  sellerIsOffChainOnly: true,
+  sellerField: "destinationRecipient",
+
+  /**
+   * RISK 5, STILL OPEN.
+   *
+   * The plan lists `GET /search-x402transfers` as the way the meter reads a
+   * buyer's own settled transfers. It could not be confirmed: Circle's public
+   * Gateway technical guide documents no x402 endpoints at all, and unauthed
+   * probes of the obvious hosts answered 404, which proves nothing either way.
+   * Until a key confirms it, the meter has no verified buyer-side source.
+   */
+  searchX402Transfers: "unverified" as const,
+} as const;
+
+/* ------------------------------------------------------------------ */
 /* Circle Agent Marketplace — the live catalogue                       */
 /* ------------------------------------------------------------------ */
 
@@ -115,6 +174,10 @@ export const MARKETPLACE = {
   offersAtOrBelowOneCent: 651,
   offersTotal: 1_535,
   arcListings: 0,
+  /** Re-checked 2026-09-08: 100 sampled resources, every offer on Base,
+   *  Solana, Polygon, Ethereum, Avalanche, Arbitrum, Optimism, Unichain and
+   *  four smaller chains. Not one on Arc. */
+  arcListingsRecheckedOn: "2026-09-08",
 } as const;
 
 export const ENDPOINTS = [
