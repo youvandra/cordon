@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { Button, Card, CardBody, CardFooter, CardHeader, Stack, Tag } from "cordon-ui";
 import { formatUsdc } from "@cordon/fixtures";
-import { REFUSALS, shortTx, txUrl, type Refusal } from "@cordon/fixtures/preview";
+import {
+  REFUSALS,
+  refusalOrdinal,
+  shortTx,
+  txUrl,
+  type Refusal,
+} from "@cordon/fixtures/preview";
+import { site } from "../lib/links";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 
@@ -60,15 +67,25 @@ function RefusalCard({ refusal }: { refusal: Refusal }) {
 
       <CardFooter>
         <div className="refusal__foot">
-          {released ? (
-            <Tag tone="positive" size="sm" dot>
-              released by you
-            </Tag>
-          ) : (
-            <Tag tone="critical" size="sm" dot>
-              refused
-            </Tag>
-          )}
+          {/* The status, and where anybody else reads it. `RECORD_BASE` is
+              compiled into the contract, so every refusal in the reputation
+              registry already points at this page; the owner is the one
+              person who could not reach it, which made the console the only
+              view of a refusal that did not know its public address. */}
+          <Stack direction="row" gap="sm" align="center">
+            {released ? (
+              <Tag tone="positive" size="sm" dot>
+                released by you
+              </Tag>
+            ) : (
+              <Tag tone="critical" size="sm" dot>
+                refused
+              </Tag>
+            )}
+            <a className="refusal__record" href={site(`/refusal/${refusalOrdinal(refusal)}`)}>
+              what a seller sees
+            </a>
+          </Stack>
 
           {/* Weight follows consequence. Leaving it refused costs nothing and
               is the safe answer, so it is the quiet button; releasing spends
