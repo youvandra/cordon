@@ -9,7 +9,7 @@ import {
   Tag,
   Text,
 } from "cordon-ui";
-import { DRILL, GATES, formatUsdc } from "@cordon/fixtures";
+import { DRILL, GATES, SEARCH, formatUsdc } from "@cordon/fixtures";
 import { site } from "../lib/links";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
@@ -60,8 +60,12 @@ export default function Drill() {
             pending
           </Tag>
           <p className="pane__foot">
-            {DRILL.strategiesPlanned.toLocaleString()} strategies planned for
-            G4, scored by the contract and never by a model of it.
+            G4 has run: {SEARCH.strategies.toLocaleString()} strategies,{" "}
+            {SEARCH.draws.toLocaleString()} draws, {SEARCH.passedABound} past a
+            bound. The closest any of them got a root to was{" "}
+            {formatUsdc(SEARCH.closestToBudget6)} of{" "}
+            {formatUsdc(SEARCH.budget6, 0)}. Scored by the contract, never by a
+            model of it.
           </p>
         </div>
       </Surface>

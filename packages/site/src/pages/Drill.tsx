@@ -13,7 +13,7 @@ import {
   Text,
   usePageMeta,
 } from "cordon-ui";
-import { DRILL, GATES, MANDATE, formatUsdc } from "@cordon/fixtures";
+import { DRILL, GATES, MANDATE, SEARCH, formatUsdc } from "@cordon/fixtures";
 import { RecordShell } from "../parts/RecordShell";
 import { useEntrance } from "../parts/motion";
 
@@ -95,9 +95,13 @@ export default function PublicDrill() {
               </li>
             </ul>
             <p className="pane__foot">
-              G4 plays {DRILL.strategiesPlanned.toLocaleString()} spend
-              strategies against the contract, scored by the contract and never
-              by a model of it. One that passes a bound is a bug, not a feature.
+              G4 has run. {SEARCH.strategies.toLocaleString()} spend strategies,{" "}
+              {SEARCH.draws.toLocaleString()} draws, {SEARCH.refused.toLocaleString()}{" "}
+              refused, and {SEARCH.passedABound} past a bound. The closest any
+              strategy got a root's window to was{" "}
+              {formatUsdc(SEARCH.closestToBudget6)} of{" "}
+              {formatUsdc(SEARCH.budget6, 0)} — the bound, reached and not
+              crossed. Scored by the contract and never by a model of it.
             </p>
           </div>
         </Surface>

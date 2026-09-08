@@ -8,6 +8,7 @@
     "build": "npm run fixtures && forge build",
     "test": "npm run fixtures && forge test -vv",
     "gate:g1": "npm run fixtures && forge test --match-path 'test/G1_*' -vv",
-    "gate:g6": "npm run fixtures && forge test --match-path 'test/G6_*' -vv"
+    "gate:g6": "npm run fixtures && forge test --match-path 'test/G6_*' -vv",
+    "gate:g4": "npm run fixtures && node scripts/record-search.mjs"
   }
 }

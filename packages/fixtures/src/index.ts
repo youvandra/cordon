@@ -11,6 +11,7 @@
  */
 
 import { GATE_RUNS } from "./gates.gen.ts";
+import { SEARCH } from "./search.gen.ts";
 
 export const VERIFIED_ON = "2026-09-06";
 
@@ -296,15 +297,28 @@ export const GATES: Gate[] = GATE_DEFINITIONS.map((g) => {
 });
 
 /**
- * G3 and G4 have not been run. The number is the entire difference between
+ * G3 has not been run. The number it produces is the entire difference between
  * infrastructure and a dashboard, so it is never invented here.
  */
 export const DRILL = {
   status: "pending" as const,
   /** What the drill is measured against when it runs. */
   ceiling6: MANDATE.budget6,
-  strategiesPlanned: 10_000,
 } as const;
+
+/**
+ * G4 has been run, and these are its numbers — written by the run itself into
+ * `search.gen.ts`, never typed.
+ *
+ * `closestToBudget6` is the figure worth reading twice: the most any of the
+ * strategies got a root's window to. Equal to the budget means one of them
+ * reached the bound exactly and stopped there, which is what a bound is.
+ */
+export { SEARCH } from "./search.gen.ts";
+export type { SearchRun } from "./search.gen.ts";
+
+/** Did any strategy get past a bound? The answer must be no. */
+export const SEARCH_CLEAN = SEARCH.passedABound === 0;
 
 /* ------------------------------------------------------------------ */
 /* Demo illustration — the counterfactual from the plan                */
