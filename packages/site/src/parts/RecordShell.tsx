@@ -58,6 +58,11 @@ export function RecordShell({ children }: { children: ReactNode }) {
             <Link to="/">The argument</Link>
             <Link to="/drill">The hostile drill</Link>
             <Link to="/agent/41827">A conduct record</Link>
+            {/* Reachable by a human, not only by a registry reader following
+                `ConductRecord.RECORD_BASE`. A page nothing links to is a page
+                nobody looks at, which is how the `SURFACES` fixture sat here
+                for a week describing a shipped surface as pending. */}
+            <Link to="/refusal/3">One refusal</Link>
             <a href={ARC.explorer} target="_blank" rel="noreferrer">
               Arc explorer
             </a>

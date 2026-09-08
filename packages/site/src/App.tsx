@@ -9,6 +9,7 @@ import Docs from "./docs/Docs";
 import Drill from "./pages/Drill";
 import AgentRecord from "./pages/AgentRecord";
 import Attest from "./pages/Attest";
+import Refusal from "./pages/Refusal";
 import NotFound from "./pages/NotFound";
 
 /**
@@ -100,6 +101,13 @@ export function App() {
         <Route path="/drill" element={<Drill />} />
         <Route path="/agent/:id" element={<AgentRecord />} />
         <Route path="/attest/:id" element={<Attest />} />
+
+        {/* Not a page anybody navigates to. `ConductRecord.RECORD_BASE` is a
+            Solidity constant, so every record in the reputation registry
+            carries this path for good, with no setter to change it. It was
+            missing until 8 Sep and resolved to the not-found page, which made
+            every record Cordon writes a record whose linkage goes nowhere. */}
+        <Route path="/refusal/:id" element={<Refusal />} />
 
         <Route
           path="*"

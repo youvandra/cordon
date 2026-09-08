@@ -667,6 +667,19 @@ main { flex: 1 1 auto; }
   letter-spacing: var(--cordon-track-lead);
 }
 
+/* A figure slot sets type for a short number, and an endpoint path is neither
+   short nor a number. Left in the default slot, the refused counterparty
+   measured 374px inside a 280px box and was clipped with no scrollbar, so the
+   end of the URL was simply not on the page — and the counterparty is the
+   thing the concentration bound is about. It wraps here, anywhere, because a
+   path has no spaces to break at. */
+.figure__value--path {
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: -0.004em;
+  overflow-wrap: anywhere;
+}
+
 .figure__label {
   color: var(--cordon-copy);
   font-size: var(--cordon-size-caption);

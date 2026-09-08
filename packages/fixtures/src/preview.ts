@@ -198,6 +198,23 @@ export interface Refusal {
   at: string;
   tx: string;
   released: boolean;
+  /**
+   * Who signed the exception, and where it is. `released` stays a boolean
+   * because three views count with it; this is the detail the public page
+   * needs, and it is present exactly when `released` is true.
+   *
+   * A release pays the refused counterparty without moving the bound it
+   * stepped around, so it is a separate transaction from the refusal and
+   * carries its own signer. Recording only "released: true" would hide the
+   * one thing that makes an override accountable: a name.
+   */
+  release?: { by: string; at: string; tx: string };
+  /**
+   * Where the refusal was published, when it was. Absent means the recorder
+   * had no seat or has not caught up — never that the refusal did not happen,
+   * which is why the page says which of those it is looking at.
+   */
+  attested?: { agentId: number; at: string; tx: string };
 }
 
 export const REFUSALS: Refusal[] = [
@@ -213,6 +230,11 @@ export const REFUSALS: Refusal[] = [
     at: "2026-09-07 09:41:22Z",
     tx: "0x6c1f9a7be0a54d3f2b8e77c419ad0e5b3f81c92d47ae6b05d1f3a2c88e740b19",
     released: false,
+    attested: {
+      agentId: 41827,
+      at: "2026-09-07 09:41:26Z",
+      tx: "0x6c1f9a7be0a54d3f2b8e77c419ad0e5b3f81c92d47ae6b05d1f3a2c88e740b19",
+    },
   },
   {
     id: "r-2",
@@ -226,6 +248,11 @@ export const REFUSALS: Refusal[] = [
     at: "2026-09-07 08:12:04Z",
     tx: "0x9a03e51cd7b2480fa16c3e9d5528b70f4c1ae836209db47f5c0a1e6b83d2947c",
     released: false,
+    attested: {
+      agentId: 41827,
+      at: "2026-09-07 08:12:09Z",
+      tx: "0x9a03e51cd7b2480fa16c3e9d5528b70f4c1ae836209db47f5c0a1e6b83d2947c",
+    },
   },
   {
     id: "r-1",
@@ -239,8 +266,42 @@ export const REFUSALS: Refusal[] = [
     at: "2026-09-06 23:55:41Z",
     tx: "0x41bd28e6c093f7a5104b8e2df6390c7ab5e1420d98cf3b6a7e05d419c283f7a0",
     released: true,
+    release: {
+      by: MANDATE.owner,
+      at: "2026-09-07 07:20:11Z",
+      tx: "0xb52ce7401f8a396d2074cbe15a9df3806e1c4a72953bd0f6817e2c4a90db5f31",
+    },
+    attested: {
+      agentId: 41827,
+      at: "2026-09-06 23:55:47Z",
+      tx: "0x41bd28e6c093f7a5104b8e2df6390c7ab5e1420d98cf3b6a7e05d419c283f7a0",
+    },
   },
 ];
+
+/**
+ * Resolve what the chain wrote into what this preview holds.
+ *
+ * `ConductRecord.RECORD_BASE` is compiled into the contract as
+ * `https://getcordon.xyz/refusal/`, and the path it appends is
+ * `TreeVault`'s refusal id: a plain decimal counter starting at 1. The ids in
+ * this file read `r-1`, so the two forms have to meet somewhere, and this is
+ * the somewhere — one resolver rather than a slice in a component, because
+ * the day the page and the record disagree about which refusal `3` is, the
+ * page will look fine.
+ *
+ * Both forms are accepted. Anything else resolves to nothing, and the caller
+ * says so rather than falling back to the first row: a record URI that
+ * silently shows a different refusal is worse than one that 404s.
+ */
+export function refusalByPath(path: string | undefined): Refusal | undefined {
+  if (!path) return undefined;
+  const id = /^\d+$/.test(path) ? `r-${path}` : path;
+  return REFUSALS.find((refusal) => refusal.id === id);
+}
+
+/** The decimal id the chain writes, for a refusal held in this form. */
+export const refusalOrdinal = (refusal: Refusal): string => refusal.id.replace(/^r-/, "");
 
 export interface RecordEntry {
   kind: "draw" | "refusal" | "revocation" | "feedback";
@@ -409,7 +470,13 @@ export function attestationOf(node: TreeNode, root: TreeNode = TREE): Attestatio
       breaches,
       drawn6: node.spent6.toString(),
       refused6: mine.reduce((total, refusal) => total + refusal.requested6, 0n).toString(),
-      attested: mine.filter((refusal) => !refusal.released).length,
+      /* Read off the refusal, not inferred from `released`. This was
+         `!refusal.released`, which said a refusal the owner later signed off
+         was never published — the daemon publishes every refusal with no
+         filter, before anyone decides anything about it, so a release cannot
+         retract a record. Two rules for one field, and the derived one was
+         the wrong rule. */
+      attested: mine.filter((refusal) => Boolean(refusal.attested)).length,
       /* Computed, never asserted. A bug that loses a transaction hash has to
          show up as a number below 1 rather than as a sentence that is quietly
          untrue. */
@@ -424,7 +491,7 @@ export function attestationOf(node: TreeNode, root: TreeNode = TREE): Attestatio
       blockNumber: "pending",
       transactionHash: refusal.tx,
       released: refusal.released,
-      attested: !refusal.released,
+      attested: Boolean(refusal.attested),
     })),
     range: { chainId: ARC.chainId, ...SAMPLE_RANGE },
     verify: {
