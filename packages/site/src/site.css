@@ -313,3 +313,324 @@ main { flex: 1 1 auto; }
   }
   .nav__links--open { opacity: 1; pointer-events: auto; transform: none; }
 }
+
+
+/* ==========================================================================
+   The public record — /drill, /agent/<id>, /attest/<id>.
+
+   These pages came from the console, because that is where they were built.
+   They belong here: none of them is gated, and /agent/<id> is the one surface
+   made to be shared. What follows is the room they need, kept apart from the
+   landing's rhythm above so that changing one does not quietly restyle the
+   other.
+   ========================================================================== */
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Present to the document outline and to a screen reader, absent to the eye.
+   For a heading a component already shows in its own type. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The first thing in the tab order, and invisible until it is focused. A
+   keyboard reader should not have to walk the whole bar on every page. */
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: 0 0 var(--cordon-radius-3) 0;
+  background: var(--cordon-ink);
+  color: var(--cordon-paper);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.skip:focus {
+  left: 0;
+}
+
+/* The docs shell's topbar, copied deliberately: same height, same padding,
+   same paper-at-72% behind the same blur. `--cordon-glass-fill` is the value
+   for a floating panel over content, not for a bar sitting on paper, and using
+   it here is what made this bar read as a different product. */
+.top {
+  position: sticky;
+  top: 0;
+  z-index: var(--cordon-z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--cordon-space-5);
+  height: 56px;
+  padding: 0 var(--cordon-space-6);
+  border-bottom: 1px solid var(--cordon-hairline-soft);
+  background: rgba(236, 236, 234, 0.72);
+  -webkit-backdrop-filter: blur(16px) saturate(1.08);
+  backdrop-filter: blur(16px) saturate(1.08);
+}
+
+.top__brand {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* The docs bar drops this because the docs site *is* the product. A console
+   has to say which product it is, and quietly. */
+.top__mark {
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.top__spacer {
+  flex: 1 1 auto;
+}
+
+/* The docs bar carries one control at the end; this one carries three, so the
+   omnibox has to give ground rather than push them off the edge. */
+.top__end {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--cordon-space-4);
+}
+
+@media (max-width: 820px) {
+.top {
+    gap: var(--cordon-space-3);
+    padding: 0 var(--cordon-space-5);
+  }
+.top__mark {
+    display: none;
+  }
+}
+
+/* ---- page rhythm --------------------------------------------------------- */
+
+.public {
+  flex: 1 1 auto;
+  padding-block: clamp(32px, 6vh, 72px) clamp(56px, 10vh, 120px);
+}
+
+.stackpage,
+.public__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cordon-space-8);
+}
+
+.public__head {
+  align-items: flex-start;
+  gap: var(--cordon-space-3);
+}
+
+.public__lede {
+  max-width: 66ch;
+}
+
+.enforced__dot {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 4px;
+  height: 4px;
+  border-radius: var(--cordon-radius-pill);
+  background: var(--cordon-positive);
+}
+
+/* ---- the few product-specific shapes ------------------------------------- */
+
+.kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--cordon-space-4) var(--cordon-space-5);
+  margin: 0 0 var(--cordon-space-4);
+}
+
+.kv--rows {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin: 0;
+}
+
+.kv > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.kv--rows > div {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--cordon-space-5);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--cordon-hairline-soft);
+}
+
+.kv--rows > div:last-child {
+  border-bottom: 0;
+}
+
+.kv dt {
+  color: var(--cordon-copy-dim);
+  font-size: var(--cordon-size-micro);
+  letter-spacing: 0.02em;
+}
+
+.kv--rows dt {
+  flex: 0 0 168px;
+}
+
+.kv dd {
+  margin: 0;
+  color: var(--cordon-ink);
+  font-size: var(--cordon-size-caption);
+  min-width: 0;
+}
+
+.kv__break {
+  word-break: break-all;
+}
+
+.code {
+  margin: 0 0 var(--cordon-space-5);
+  padding: var(--cordon-space-5);
+  overflow-x: auto;
+  border-radius: var(--cordon-radius-4);
+  background: var(--cordon-paper-dim);
+  box-shadow: var(--cordon-shadow-inset-well);
+  color: var(--cordon-ink);
+  line-height: 1.7;
+}
+
+/* A supporting figure: ordinary tabular numerals, because the LED face is
+   rationed to the one figure a view exists to show. */
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.figure__value {
+  color: var(--cordon-ink-strong);
+  font-size: var(--cordon-size-lead);
+  letter-spacing: var(--cordon-track-lead);
+}
+
+.figure__label {
+  color: var(--cordon-copy);
+  font-size: var(--cordon-size-caption);
+}
+
+.cell__id,
+.cell__cp,
+.treemeta {
+  color: var(--cordon-copy-dim);
+  font-size: 11.5px;
+}
+
+.gate__id {
+  color: var(--cordon-accent);
+}
+
+/* The count beside a gate is recorded from the run that produced it, so it
+   sits with the status rather than anywhere a reader has to go looking. */
+.gate__status {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+/* ---- statements on glaze ------------------------------------------------- */
+
+.drill,
+.compare__panel {
+  padding: clamp(24px, 3vw, 40px);
+}
+
+.drill {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(24px, 4vw, 56px);
+}
+
+@media (max-width: 860px) {
+.drill {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.drill__unset {
+  font-size: 30px;
+  color: var(--cordon-on-glaze-soft);
+}
+
+.drill__statement,
+.compare {
+  margin: 0 0 var(--cordon-space-4);
+  color: var(--cordon-on-glaze);
+  font-size: var(--cordon-size-lead);
+  font-weight: 500;
+  letter-spacing: var(--cordon-track-lead);
+  line-height: var(--cordon-leading-lead);
+}
+
+.compare em {
+  font-style: normal;
+  color: var(--cordon-on-glaze-soft);
+}
+
+.outcomes {
+  margin: 0 0 var(--cordon-space-5);
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cordon-space-3);
+}
+
+.outcomes li {
+  color: var(--cordon-on-glaze-soft);
+  font-size: var(--cordon-size-caption);
+  line-height: var(--cordon-leading-body);
+}
+
+.outcomes b {
+  color: var(--cordon-on-glaze);
+  font-weight: 500;
+}
+
+.pane__foot {
+  margin: var(--cordon-space-5) 0 0;
+  color: var(--cordon-copy-dim);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.drill .pane__foot,
+.compare__panel .pane__foot {
+  color: var(--cordon-on-glaze-soft);
+}

@@ -21,6 +21,7 @@ export default defineConfig({
     alias: [
       { find: /^cordon-ui$/, replacement: local("../ui/index.ts") },
       { find: /^@cordon\/fixtures$/, replacement: local("../fixtures/src/index.ts") },
+      { find: /^@cordon\/fixtures\/preview$/, replacement: local("../fixtures/src/preview.ts") },
       { find: /^react$/, replacement: local("./node_modules/react") },
       { find: /^react-dom$/, replacement: local("./node_modules/react-dom") },
       { find: /^framer-motion$/, replacement: local("./node_modules/framer-motion") },

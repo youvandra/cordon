@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { ARC } from "@cordon/fixtures";
 
 /**
  * Per-route document metadata.
@@ -78,4 +77,3 @@ export function useNoIndex(on: boolean) {
   }, [on]);
 }
 
-export const CHAIN_SUFFIX = `Arc ${ARC.chainId}`;

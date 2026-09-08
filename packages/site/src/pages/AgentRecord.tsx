@@ -5,13 +5,17 @@ import {
   CardBody,
   Container,
   DataTable,
+  Enforced,
   Grid,
   Headline,
   MetricCard,
+  Preview,
+  Section,
   Stack,
   Surface,
   Tag,
   Text,
+  usePageMeta,
 } from "cordon-ui";
 import {
   ARC,
@@ -29,12 +33,9 @@ import {
   shortTx,
   txUrl,
   type RecordEntry,
-} from "../lib/data";
-import { Enforced, Preview } from "../parts/Preview";
-import { Section } from "../parts/Section";
-import { PublicShell } from "../parts/Shell";
-import { usePageMeta } from "../lib/meta";
-import { useEntrance } from "../lib/entrance";
+} from "@cordon/fixtures/preview";
+import { RecordShell } from "../parts/RecordShell";
+import { useEntrance } from "../parts/motion";
 
 const KIND: Record<
   RecordEntry["kind"],
@@ -93,7 +94,7 @@ export default function AgentRecord() {
   ];
 
   return (
-    <PublicShell>
+    <RecordShell>
       <Container width="wide" className="stackpage">
         <header className="public__head">
           <Text variant="micro" tone="dim" as="p" className="eyebrow">
@@ -329,6 +330,6 @@ export default function AgentRecord() {
           </CardBody>
         </Card>
       </Container>
-    </PublicShell>
+    </RecordShell>
   );
 }

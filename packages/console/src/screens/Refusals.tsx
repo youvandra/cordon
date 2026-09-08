@@ -5,12 +5,13 @@ import {
   CardBody,
   CardFooter,
   CardHeader,
+  Enforced,
   Stack,
   Tag,
 } from "cordon-ui";
 import { ENFORCED_BY, formatUsdc } from "@cordon/fixtures";
-import { REFUSALS, shortTx, txUrl, type Refusal } from "../lib/data";
-import { Enforced, ScreenHead } from "../parts/Preview";
+import { REFUSALS, shortTx, txUrl, type Refusal } from "@cordon/fixtures/preview";
+import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 
 /**

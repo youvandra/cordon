@@ -4,10 +4,12 @@ import {
   Button,
   CardBody,
   DataTable,
+  Enforced,
   Grid,
   IconMenu,
   MetricCard,
   ProgressBar,
+  Section,
   Stack,
   Tag,
   Text,
@@ -15,9 +17,8 @@ import {
 } from "cordon-ui";
 import type { TreeNode as UiTreeNode } from "cordon-ui";
 import { ENFORCED_BY, MANDATE, formatUsdc } from "@cordon/fixtures";
-import { TREE, flatten, type TreeNode } from "../lib/data";
-import { Enforced, ScreenHead } from "../parts/Preview";
-import { Section } from "../parts/Section";
+import { TREE, flatten, type TreeNode } from "@cordon/fixtures/preview";
+import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 import { useEntrance } from "../lib/entrance";
 

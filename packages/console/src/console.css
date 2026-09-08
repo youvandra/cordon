@@ -245,29 +245,6 @@ body {
   }
 }
 
-/* ---- page rhythm --------------------------------------------------------- */
-
-.public {
-  flex: 1 1 auto;
-  padding-block: clamp(32px, 6vh, 72px) clamp(56px, 10vh, 120px);
-}
-
-.stackpage,
-.public__head {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cordon-space-8);
-}
-
-.public__head {
-  align-items: flex-start;
-  gap: var(--cordon-space-3);
-}
-
-.public__lede {
-  max-width: 66ch;
-}
-
 .screen__head {
   display: flex;
   align-items: flex-start;
@@ -338,12 +315,6 @@ body {
   margin: 0 0 var(--cordon-space-4);
 }
 
-.kv--rows {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-  margin: 0;
-}
-
 .kv > div {
   display: flex;
   flex-direction: column;
@@ -351,26 +322,10 @@ body {
   min-width: 0;
 }
 
-.kv--rows > div {
-  flex-direction: row;
-  align-items: baseline;
-  gap: var(--cordon-space-5);
-  padding: 12px 0;
-  border-bottom: 1px solid var(--cordon-hairline-soft);
-}
-
-.kv--rows > div:last-child {
-  border-bottom: 0;
-}
-
 .kv dt {
   color: var(--cordon-copy-dim);
   font-size: var(--cordon-size-micro);
   letter-spacing: 0.02em;
-}
-
-.kv--rows dt {
-  flex: 0 0 168px;
 }
 
 .kv dd {
@@ -393,26 +348,6 @@ body {
   box-shadow: var(--cordon-shadow-inset-well);
   color: var(--cordon-ink);
   line-height: 1.7;
-}
-
-/* A supporting figure: ordinary tabular numerals, because the LED face is
-   rationed to the one figure a view exists to show. */
-.figure {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.figure__value {
-  color: var(--cordon-ink-strong);
-  font-size: var(--cordon-size-lead);
-  letter-spacing: var(--cordon-track-lead);
-}
-
-.figure__label {
-  color: var(--cordon-copy);
-  font-size: var(--cordon-size-caption);
 }
 
 .cell__node {
@@ -544,31 +479,6 @@ body {
   font-weight: 500;
   letter-spacing: var(--cordon-track-lead);
   line-height: var(--cordon-leading-lead);
-}
-
-.compare em {
-  font-style: normal;
-  color: var(--cordon-on-glaze-soft);
-}
-
-.outcomes {
-  margin: 0 0 var(--cordon-space-5);
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--cordon-space-3);
-}
-
-.outcomes li {
-  color: var(--cordon-on-glaze-soft);
-  font-size: var(--cordon-size-caption);
-  line-height: var(--cordon-leading-body);
-}
-
-.outcomes b {
-  color: var(--cordon-on-glaze);
-  font-weight: 500;
 }
 
 .pane__foot {

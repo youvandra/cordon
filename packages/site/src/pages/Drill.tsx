@@ -4,18 +4,18 @@ import {
   CardBody,
   Container,
   DataTable,
+  Gauge,
   Headline,
+  Preview,
+  Section,
   Surface,
   Tag,
   Text,
-  Gauge,
+  usePageMeta,
 } from "cordon-ui";
 import { DRILL, GATES, MANDATE, formatUsdc } from "@cordon/fixtures";
-import { Preview } from "../parts/Preview";
-import { Section } from "../parts/Section";
-import { PublicShell } from "../parts/Shell";
-import { usePageMeta } from "../lib/meta";
-import { useEntrance } from "../lib/entrance";
+import { RecordShell } from "../parts/RecordShell";
+import { useEntrance } from "../parts/motion";
 
 const TONE = {
   green: "positive",
@@ -41,7 +41,7 @@ export default function PublicDrill() {
   const green = GATES.filter((gate) => gate.status === "green").length;
 
   return (
-    <PublicShell>
+    <RecordShell>
       <Container width="wide" className="stackpage">
         <header className="public__head">
           <Text variant="micro" tone="dim" as="p" className="eyebrow">
@@ -157,6 +157,6 @@ export default function PublicDrill() {
           </CardBody>
         </Section>
       </Container>
-    </PublicShell>
+    </RecordShell>
   );
 }

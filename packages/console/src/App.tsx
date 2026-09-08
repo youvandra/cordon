@@ -8,9 +8,6 @@ import Setup from "./screens/Setup";
 import Tree from "./screens/Tree";
 import Refusals from "./screens/Refusals";
 import Drill from "./screens/Drill";
-import AgentRecord from "./pages/AgentRecord";
-import PublicDrill from "./pages/PublicDrill";
-import Attest from "./pages/Attest";
 import NotFound from "./pages/NotFound";
 
 /**
@@ -33,9 +30,12 @@ function ScrollToTop() {
 }
 
 /**
- * The console is the owner surface and the public record; it is not where the
- * argument is made. That is `@cordon/site`, so the root here opens the console
- * rather than restating a landing page that already exists.
+ * The console is the owner surface, and only that.
+ *
+ * Everything public — the argument, the conduct record, the drill — is
+ * `@cordon/site`. What is left here is the two things that need the owner's
+ * own key, so the root opens the console rather than restating a landing page
+ * that already exists.
  */
 export function App() {
   useEntranceFailsafe();
@@ -54,12 +54,6 @@ export function App() {
             <Route path="refusals" element={<Refusals />} />
             <Route path="drill" element={<Drill />} />
           </Route>
-
-          {/* Public, and deliberately outside the gate: a record nobody but its
-              owner can read is not a record. */}
-          <Route path="/agent/:id" element={<AgentRecord />} />
-          <Route path="/drill" element={<PublicDrill />} />
-          <Route path="/attest/:id" element={<Attest />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

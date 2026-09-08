@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
-import { Button, Container, EmptyState } from "cordon-ui";
-import { PublicShell } from "../parts/Shell";
-import { usePageMeta } from "../lib/meta";
+import { Button, Container, EmptyState, usePageMeta } from "cordon-ui";
 
+/**
+ * The console's own 404. The public surfaces have their own, on the site —
+ * an address that is wrong here is wrong for an owner, not for a reader.
+ */
 export default function NotFound() {
   usePageMeta({
     title: "Not found — Cordon",
@@ -10,7 +12,7 @@ export default function NotFound() {
   });
 
   return (
-    <PublicShell>
+    <div className="shell">
       <Container width="content">
         {/* EmptyState sets its title as a paragraph, which left this page with
             no heading at all — a document whose outline is empty. The heading
@@ -30,6 +32,6 @@ export default function NotFound() {
           }
         />
       </Container>
-    </PublicShell>
+    </div>
   );
 }

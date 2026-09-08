@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { Button, Logo } from "cordon-ui";
 import { ARC } from "@cordon/fixtures";
 import { SECTIONS } from "./nav";
+import { CONSOLE_URL } from "./links";
 import type { SectionId } from "./nav";
 
 /**
@@ -108,6 +110,11 @@ export function Shell({ children }: { children: ReactNode }) {
                 {section.label}
               </a>
             ))}
+            {/* The public record and the gated surface. Everything above this
+                argues; these two are the thing itself. */}
+            <Link to="/drill">Drill</Link>
+            <Link to="/agent/41827">Record</Link>
+            <a href={CONSOLE_URL}>Console</a>
           </nav>
           <p className="foot__meta">
             Arc testnet {ARC.chainId} · frontend preview · nothing here is live money

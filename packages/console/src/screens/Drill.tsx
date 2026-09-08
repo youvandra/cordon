@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import {
   Button,
   Card,
@@ -11,6 +10,7 @@ import {
   Text,
 } from "cordon-ui";
 import { DRILL, GATES, formatUsdc } from "@cordon/fixtures";
+import { site } from "../lib/links";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 
@@ -109,11 +109,11 @@ export default function Drill() {
           ]}
         />
         <CardBody>
-          <Link to="/drill">
+          <a href={site("/drill")}>
             <Button variant="secondary" size="sm" iconEnd="arrow-right">
               Public drill page
             </Button>
-          </Link>
+          </a>
         </CardBody>
       </Card>
     </>

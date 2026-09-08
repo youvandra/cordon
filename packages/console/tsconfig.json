@@ -29,6 +29,9 @@
       "@cordon/fixtures": [
         "../fixtures/src/index.ts"
       ],
+      "@cordon/fixtures/preview": [
+        "../fixtures/src/preview.ts"
+      ],
       "react": [
         "./node_modules/@types/react"
       ],

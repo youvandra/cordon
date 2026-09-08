@@ -10,10 +10,11 @@ import {
   Surface,
   Tag,
   Text,
+  useNoIndex,
 } from "cordon-ui";
 import { ARC, ENFORCED_BY } from "@cordon/fixtures";
 import { useWallet } from "../lib/wallet";
-import { useNoIndex } from "../lib/meta";
+import { site } from "../lib/links";
 import { SCREENS } from "./screens";
 
 export { SCREENS };
@@ -49,45 +50,6 @@ function Topbar({ children }: { children?: ReactNode }) {
       <span className="top__spacer" />
       <div className="top__end">{children}</div>
     </header>
-  );
-}
-
-export function PublicShell({ children }: { children: ReactNode }) {
-  useNoIndex(false);
-
-  return (
-    <div className="shell">
-      <a className="skip" href="#content">
-        Skip to content
-      </a>
-      <Topbar>
-        <Link to="/console">
-          <Button variant="primary" size="sm" magnetic>
-            Open console
-          </Button>
-        </Link>
-      </Topbar>
-      <main id="content" className="public">
-        {children}
-      </main>
-
-      <footer className="foot">
-        <div className="foot__inner">
-          <Logo size={16} />
-          <Text variant="micro" tone="dim" as="p">
-            One budget for a tree of agents, enforced on chain. Arc{" "}
-            {ARC.chainId}, testnet — nothing here is live money.
-          </Text>
-          <nav aria-label="Cordon" className="foot__links">
-            <Link to="/drill">The hostile drill</Link>
-            <Link to="/agent/41827">A conduct record</Link>
-            <a href={ARC.explorer} target="_blank" rel="noreferrer">
-              Arc explorer
-            </a>
-          </nav>
-        </div>
-      </footer>
-    </div>
   );
 }
 
@@ -134,11 +96,11 @@ export function ConsoleShell() {
               <Button variant="secondary" size="lg" magnetic onClick={connect}>
                 Connect wallet
               </Button>
-              <Link to="/agent/41827">
+              <a href={site("/agent/41827")}>
                 <Button variant="glaze" size="lg">
                   See a public record
                 </Button>
-              </Link>
+              </a>
             </div>
             <div className="gate__foot">
               <Tag tone="caution" size="sm" dot>

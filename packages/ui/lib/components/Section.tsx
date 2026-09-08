@@ -1,6 +1,8 @@
 import { useId } from "react";
 import type { ReactNode } from "react";
-import { Card, CardHeader, Stack, Text } from "cordon-ui";
+import { Card, CardHeader } from "./Card";
+import { Stack } from "./Layout";
+import { Text } from "./Typography";
 
 /**
  * A block of the page, as a block of the document.

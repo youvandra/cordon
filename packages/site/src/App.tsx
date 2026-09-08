@@ -5,6 +5,9 @@ import { Shell } from "./parts/Shell";
 import { SECTIONS } from "./parts/nav";
 import { useEntranceFailsafe } from "./parts/motion";
 import Landing from "./pages/Landing";
+import Drill from "./pages/Drill";
+import AgentRecord from "./pages/AgentRecord";
+import Attest from "./pages/Attest";
 import NotFound from "./pages/NotFound";
 
 /**
@@ -59,24 +62,47 @@ export function App() {
   return (
     <CordonProvider glaze="rose">
       <ScrollManager />
-      <Shell>
-        <Routes>
-          <Route path="/" element={<Landing />} />
+      {/* The landing's shell carries a section nav, so it belongs to the
+          landing rather than to the site. The record pages bring their own
+          frame; nesting them inside this one gave the page two mastheads. */}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Shell>
+              <Landing />
+            </Shell>
+          }
+        />
 
-          {/* The four pages this site used to be. Anything already linking to
-              them — the brief, the README — lands on the section instead of a
-              404. */}
-          {SECTIONS.map((section) => (
-            <Route
-              key={section.id}
-              path={`/${section.id}`}
-              element={<Navigate to={{ pathname: "/", hash: `#${section.id}` }} replace />}
-            />
-          ))}
+        {/* The four pages this site used to be. Anything already linking to
+            them — the brief, the README — lands on the section instead of a
+            404. */}
+        {SECTIONS.map((section) => (
+          <Route
+            key={section.id}
+            path={`/${section.id}`}
+            element={<Navigate to={{ pathname: "/", hash: `#${section.id}` }} replace />}
+          />
+        ))}
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Shell>
+        {/* The public record. It lives here rather than in the console
+            because none of it is gated, and because /agent/<id> is the one
+            surface built to be shared — a seller reads it before serving, an
+            underwriter before pricing. */}
+        <Route path="/drill" element={<Drill />} />
+        <Route path="/agent/:id" element={<AgentRecord />} />
+        <Route path="/attest/:id" element={<Attest />} />
+
+        <Route
+          path="*"
+          element={
+            <Shell>
+              <NotFound />
+            </Shell>
+          }
+        />
+      </Routes>
     </CordonProvider>
   );
 }

@@ -1,14 +1,20 @@
 /**
  * Frontend preview data.
  *
- * Every figure here comes from @cordon/fixtures or is a shaped sample of what
- * the indexer will return once the daemon and contracts are wired. Nothing in
- * this file is a chain read, and every surface that renders it says so.
+ * Every figure here is derived from the fixtures beside it, or is a shaped
+ * sample of what the indexer will return once the daemon and contracts are
+ * wired. Nothing in this file is a chain read, and every surface that renders
+ * it says so.
+ *
+ * It lives in `fixtures` rather than in an app because both surfaces render
+ * it: the console shows an owner their own tree, and the public record pages
+ * show anyone the same tree's conduct. Two copies of a figure is the one
+ * defect this project has already decided it will not ship.
  *
  * Rule 1: the console may not display a number the contract does not enforce.
  * Each figure below therefore carries the function that produces it.
  */
-import { MANDATE, ENFORCED_BY, ARC } from "@cordon/fixtures";
+import { MANDATE, ENFORCED_BY, ARC } from "./index.ts";
 
 export type NodeId = string;
 

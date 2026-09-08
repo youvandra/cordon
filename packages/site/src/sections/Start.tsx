@@ -1,4 +1,5 @@
 import { Button, Surface, Tag } from "cordon-ui";
+import { CONSOLE_URL } from "../parts/links";
 import { ABSENT_TOOL, ARC, MCP_TOOLS } from "@cordon/fixtures";
 import { Reveal } from "../parts/Reveal";
 
@@ -105,6 +106,11 @@ export function Start() {
               Watch the refusal land on Arc {ARC.chainId}, in a block you can open yourself.
             </p>
             <div className="cta__actions">
+              <a href={CONSOLE_URL}>
+                <Button variant="primary" size="lg" magnetic>
+                  Open the console
+                </Button>
+              </a>
               <a href={ARC.explorer} target="_blank" rel="noreferrer">
                 <Button variant="secondary" size="lg" magnetic iconEnd="external">
                   Arc explorer

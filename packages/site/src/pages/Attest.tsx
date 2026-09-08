@@ -4,19 +4,20 @@ import {
   CardBody,
   CardHeader,
   Container,
+  Enforced,
   Grid,
   Headline,
   MetricCard,
+  Preview,
   Stack,
   Tag,
   Text,
+  usePageMeta,
 } from "cordon-ui";
 import { ARC, ENFORCED_BY, MANDATE } from "@cordon/fixtures";
-import { TREE, flatten } from "../lib/data";
-import { Enforced, Preview } from "../parts/Preview";
-import { PublicShell } from "../parts/Shell";
-import { usePageMeta } from "../lib/meta";
-import { useEntrance } from "../lib/entrance";
+import { TREE, flatten } from "@cordon/fixtures/preview";
+import { RecordShell } from "../parts/RecordShell";
+import { useEntrance } from "../parts/motion";
 
 /**
  * /attest/<id> — the x402 endpoint, as a page.
@@ -50,7 +51,7 @@ export default function Attest() {
   };
 
   return (
-    <PublicShell>
+    <RecordShell>
       <Container width="wide" className="stackpage">
         <header className="public__head">
           <Text variant="micro" tone="dim" as="p" className="eyebrow">
@@ -126,6 +127,6 @@ export default function Attest() {
           </Stack>
         </Grid>
       </Container>
-    </PublicShell>
+    </RecordShell>
   );
 }

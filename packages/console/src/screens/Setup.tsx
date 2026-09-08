@@ -5,6 +5,7 @@ import {
   CardBody,
   CardHeader,
   Cta,
+  Enforced,
   Field,
   Grid,
   MetricCard,
@@ -14,7 +15,7 @@ import {
   TextField,
 } from "cordon-ui";
 import { ENFORCED_BY, MANDATE } from "@cordon/fixtures";
-import { Enforced, ScreenHead } from "../parts/Preview";
+import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 import { useEntrance } from "../lib/entrance";
 
