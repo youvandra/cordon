@@ -82,7 +82,18 @@
   filter: drop-shadow(0 1px 1px rgba(104, 27, 54, 0.08));
 }
 
-.cordon-metriccard__value { width: 28%; }
+/* Sized by height, never by width.
+   A fixed width made the dot face taller for a short number than for a long
+   one, because the glyph box grows with the digit count: typing a budget of
+   9 gave a figure twice the cap height of 100, and the number appeared to
+   jump around as it was edited. Height is the constant a reader's eye is
+   actually holding, so height is what is pinned. */
+.cordon-metriccard__value {
+  width: auto;
+  max-width: 74%;
+  height: calc(52 * var(--u));
+}
+.cordon-metriccard__value .cordon-dottext__svg { width: auto; height: 100%; }
 
 .cordon-metriccard__unit {
   margin-left: 1.3%;
