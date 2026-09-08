@@ -38,6 +38,16 @@ export interface TreeNode {
   children: TreeNode[];
 }
 
+/**
+ * The demo tree, and it is over-provisioned on purpose.
+ *
+ * The two workers are sized $70 and $70 under a $100 root, which is $140 the
+ * tree cannot afford. That is the shape the product exists for: nobody knows
+ * in advance which branch will need the money, so no branch is throttled by a
+ * forecast and the root is the only real total. A tree whose children summed
+ * to less than their parent would never once exercise ancestor debit, and
+ * every figure on the screen would be explained by the node's own limit.
+ */
 export const TREE: TreeNode = {
   id: "root",
   label: "orchestrator",
@@ -58,7 +68,7 @@ export const TREE: TreeNode = {
       agentId: 41823,
       depth: 1,
       spent6: 38_900_000n,
-      budget6: 45_000_000n,
+      budget6: 70_000_000n,
       concentrationPct: 31,
       topCounterparty: "api.aisa.one",
       refused: 1,
@@ -71,7 +81,7 @@ export const TREE: TreeNode = {
           agentId: 41825,
           depth: 2,
           spent6: 21_400_000n,
-          budget6: 25_000_000n,
+          budget6: 70_000_000n,
           concentrationPct: 34,
           topCounterparty: "api.aisa.one",
           refused: 1,
@@ -101,7 +111,7 @@ export const TREE: TreeNode = {
       agentId: 41824,
       depth: 1,
       spent6: 32_520_000n,
-      budget6: 40_000_000n,
+      budget6: 70_000_000n,
       concentrationPct: 47,
       topCounterparty: "api.arkm.com",
       refused: 2,
@@ -125,6 +135,49 @@ export const TREE: TreeNode = {
     },
   ],
 };
+
+/**
+ * What a node may still draw, in total. `TreeVault.headroom(node)`.
+ *
+ * A node's own budget is an upper bound, not an amount. A grandchild with $30
+ * of its own window untouched can still draw nothing if the root two levels
+ * above it is full, and a screen that shows the $30 is promising something the
+ * contract will refuse. So the figure is the tightest remaining window on the
+ * path, and it comes with the node that produced it — a refusal should never
+ * be the first time an owner hears which limit was the real one.
+ *
+ * Concentration is deliberately not folded in. It bounds how the headroom may
+ * be split between counterparties, not how much of it there is.
+ */
+export function headroom(
+  node: TreeNode,
+  root: TreeNode = TREE,
+): { available6: bigint; boundBy: TreeNode } {
+  const path = pathTo(node.id, root);
+  let available = root.budget6 - root.spent6;
+  let boundBy = root;
+
+  for (const step of path) {
+    if (step.revoked) return { available6: 0n, boundBy: step };
+    const left = step.budget6 - step.spent6;
+    if (left < available) {
+      available = left;
+      boundBy = step;
+    }
+  }
+
+  return { available6: available < 0n ? 0n : available, boundBy };
+}
+
+/** The path from the root down to `id`, inclusive. Empty if `id` is unknown. */
+export function pathTo(id: NodeId, from: TreeNode = TREE): TreeNode[] {
+  if (from.id === id) return [from];
+  for (const child of from.children) {
+    const below = pathTo(id, child);
+    if (below.length) return [from, ...below];
+  }
+  return [];
+}
 
 export function flatten(node: TreeNode, out: TreeNode[] = []): TreeNode[] {
   out.push(node);

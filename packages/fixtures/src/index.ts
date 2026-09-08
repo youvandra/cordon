@@ -148,6 +148,7 @@ export const MANDATE = {
 /** Enforcing function for every figure the console renders. Rule 1. */
 export const ENFORCED_BY = {
   budget: "TreeVault.windowSpent(node)",
+  headroom: "TreeVault.headroom(node)",
   treeBar: "TreeVault.ancestorDebit(node, amount)",
   refusal: "TreeVault.evaluate(node, amount) -> Refused",
   concentration: "TreeVault.concentrationBound(node, counterparty)",

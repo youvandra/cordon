@@ -17,7 +17,7 @@ import {
 } from "cordon-ui";
 import type { TreeNode as UiTreeNode } from "cordon-ui";
 import { ENFORCED_BY, MANDATE, formatUsdc } from "@cordon/fixtures";
-import { TREE, flatten, type TreeNode } from "@cordon/fixtures/preview";
+import { TREE, flatten, pathTo, type TreeNode } from "@cordon/fixtures/preview";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 import { useEntrance } from "../lib/entrance";
@@ -79,6 +79,32 @@ export default function Tree() {
 
   const share = (node: TreeNode) =>
     Number(((spend[node.id] ?? node.spent6) * 100n) / node.budget6);
+
+  /**
+   * What this node may actually still draw. `TreeVault.headroom(node)`.
+   *
+   * A node's own budget is an upper bound, not an amount: a grandchild with
+   * $48 of its own window untouched can still draw nothing when the root two
+   * levels up is full, and every one of those dollars would be refused. The
+   * share bar above answers "how full is this node"; this answers "what would
+   * happen if it asked", which is the only one an owner can act on.
+   */
+  const headroomOf = (node: TreeNode) => {
+    const path = pathTo(node.id);
+    let available: bigint | null = null;
+    let boundBy = node;
+
+    for (const step of path) {
+      if (revoked.has(step.id)) return { available6: 0n, boundBy: step };
+      const left = step.budget6 - (spend[step.id] ?? step.spent6);
+      if (available === null || left < available) {
+        available = left;
+        boundBy = step;
+      }
+    }
+
+    return { available6: available === null || available < 0n ? 0n : available, boundBy };
+  };
 
   const toUi = (node: TreeNode): UiTreeNode => ({
     id: node.id,
@@ -195,6 +221,29 @@ export default function Tree() {
               width: 100,
               sortBy: (node) => Number(spend[node.id] ?? node.spent6),
               cell: (node) => formatUsdc(spend[node.id] ?? node.spent6),
+            },
+            {
+              id: "headroom",
+              header: "Can still draw",
+              numeric: true,
+              width: 172,
+              sortBy: (node) => Number(headroomOf(node).available6),
+              cell: (node) => {
+                const { available6, boundBy } = headroomOf(node);
+                return (
+                  <span className="headroom">
+                    <b className="num">{formatUsdc(available6)}</b>
+                    {/* Naming the limit only when it is somebody else's is the
+                        whole point of the column. A node bound by its own
+                        window is the unremarkable case. */}
+                    {boundBy.id === node.id ? null : (
+                      <span className="headroom__bound mono">
+                        held by {boundBy.label}
+                      </span>
+                    )}
+                  </span>
+                );
+              },
             },
             {
               id: "concentration",

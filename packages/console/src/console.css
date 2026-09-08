@@ -433,6 +433,21 @@ body {
   font-size: 11.5px;
 }
 
+/* The figure and the reason for it, together — an owner should never learn
+   which limit was the real one from a refusal. */
+.headroom {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  line-height: 1.25;
+}
+
+.headroom__bound {
+  font-size: 10.5px;
+  color: var(--cordon-ink-dim);
+}
+
 .gate__id {
   color: var(--cordon-accent);
 }

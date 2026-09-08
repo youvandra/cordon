@@ -316,6 +316,49 @@ contract TreeVault {
         }
     }
 
+    /**
+     * @notice What `node` may still draw in this window, in total.
+     *
+     * A node's own budget is an upper bound, not an amount. A grandchild with
+     * $30 of its own window untouched can still draw nothing, because the root
+     * two levels above it is full — and a surface that shows the $30 is
+     * telling the owner something the contract will not honour.
+     *
+     * So this returns the tightest remaining window on the whole path, capped
+     * by what the tree actually holds, together with the node that binds it.
+     * Concentration is deliberately not folded in: it limits how the headroom
+     * may be *distributed* between counterparties, not how much there is. Ask
+     * `concentrationBound` for a specific seller.
+     *
+     * @return available6 the most this node could still draw, all sellers
+     * @return boundBy    the node whose limit produces that figure
+     */
+    function headroom(bytes32 node) public view returns (uint128 available6, bytes32 boundBy) {
+        MandateRegistry.Mandate memory m = registry.mandate(node);
+
+        bytes32 cut = registry.revokedAt(node);
+        if (cut != bytes32(0)) return (0, cut);
+
+        bytes32[] memory ancestry = registry.path(node);
+        available6 = type(uint128).max;
+
+        for (uint256 i = 0; i < ancestry.length; ++i) {
+            MandateRegistry.Mandate memory a =
+                i == 0 ? m : registry.mandate(ancestry[i]);
+            uint128 left = a.budget6 - _spent(_nodeWindow[ancestry[i]], a.windowSeconds);
+            if (left < available6) {
+                available6 = left;
+                boundBy = ancestry[i];
+            }
+        }
+
+        uint128 funded = treasury6[m.root];
+        if (funded < available6) {
+            available6 = funded;
+            boundBy = m.root;
+        }
+    }
+
     /// @notice `TreeVault.concentrationBound(node, counterparty)`.
     function concentrationBound(bytes32 node, address counterparty)
         external
