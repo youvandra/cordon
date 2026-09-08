@@ -34,5 +34,7 @@ packages/brand/src/dotfont.cjs
 PLAN.md
 NEXT.md
 CLAUDE.md
-docs/
+# The repository root's own docs folder, not any package's. The site's
+# documentation lives in packages/site/src/docs and ships.
+/docs/
 .claude/

@@ -5,6 +5,7 @@ import { Shell } from "./parts/Shell";
 import { SECTIONS } from "./parts/nav";
 import { useEntranceFailsafe } from "./parts/motion";
 import Landing from "./pages/Landing";
+import Docs from "./docs/Docs";
 import Drill from "./pages/Drill";
 import AgentRecord from "./pages/AgentRecord";
 import Attest from "./pages/Attest";
@@ -90,6 +91,12 @@ export function App() {
             because none of it is gated, and because /agent/<id> is the one
             surface built to be shared — a seller reads it before serving, an
             underwriter before pricing. */}
+        {/* The documentation. Its own frame: a contents list, a page, and the
+            headings of that page, which is a different room from the landing's
+            one long scroll. */}
+        <Route path="/docs" element={<Navigate to="/docs/introduction" replace />} />
+        <Route path="/docs/:slug" element={<Docs />} />
+
         <Route path="/drill" element={<Drill />} />
         <Route path="/agent/:id" element={<AgentRecord />} />
         <Route path="/attest/:id" element={<Attest />} />
