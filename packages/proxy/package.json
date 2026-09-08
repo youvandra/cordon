@@ -1,0 +1,19 @@
+{
+  "name": "@cordon/proxy",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "cordon-proxy": "src/main.ts",
+    "cordon-run": "src/run.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "node --test \"test/*.test.ts\"",
+    "start": "node src/main.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -21,10 +21,22 @@ export interface FetchRequest {
   body?: string;
 }
 
+/* `headers` is the seller's own response headers, carried through untouched.
+   The MCP surface has no use for them, but the proxy does: it is standing in
+   for the network in front of an unmodified program, and a program that asked
+   for a URL is entitled to the content type it came back with. Dropping them
+   would make the proxy quietly lossy in a way only binary responses reveal. */
 export type FetchResult =
-  | { paid: false; free: true; status: number; body: unknown }
+  | { paid: false; free: true; status: number; headers: Record<string, string>; body: unknown }
   | { paid: false; free: false; refusal: DrawOutcome; offer: Offer }
-  | { paid: true; status: number; body: unknown; draw: DrawOutcome; offer: Offer };
+  | {
+      paid: true;
+      status: number;
+      headers: Record<string, string>;
+      body: unknown;
+      draw: DrawOutcome;
+      offer: Offer;
+    };
 
 export interface Transport {
   (url: string, init: { method: string; headers: Record<string, string>; body?: string }): Promise<{
@@ -47,7 +59,7 @@ export async function cordonFetch(
   const challenge = parseChallenge(first.status, first.body);
   if (!challenge) {
     // Not every URL costs money, and a free one must not touch the tree.
-    return { paid: false, free: true, status: first.status, body: first.body };
+    return { paid: false, free: true, status: first.status, headers: first.headers, body: first.body };
   }
 
   const offer = selectOffer(challenge, acceptable);
@@ -75,7 +87,14 @@ export async function cordonFetch(
     body: request.body,
   });
 
-  return { paid: true, status: second.status, body: second.body, draw, offer };
+  return {
+    paid: true,
+    status: second.status,
+    headers: second.headers,
+    body: second.body,
+    draw,
+    offer,
+  };
 }
 
 /** The default transport. Separated so tests drive a seller, not the network. */
