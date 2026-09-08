@@ -1,28 +1,66 @@
 .cordon-tag {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   border-radius: var(--cordon-radius-pill);
   border: 1px solid transparent;
   font-size: var(--cordon-size-micro);
   font-weight: var(--cordon-weight-medium);
-  letter-spacing: var(--cordon-track-caption);
+  letter-spacing: 0.01em;
   line-height: 1;
   white-space: nowrap;
+  /* A tag sits next to figures more often than next to prose. */
+  font-variant-numeric: tabular-nums;
 }
-.cordon-tag--sm { padding: 3px 8px; }
-.cordon-tag--md { padding: 5px 11px; }
+.cordon-tag--sm { padding: 4px 10px; }
+.cordon-tag--md { padding: 6px 13px; }
 
-.cordon-tag__dot { width: 6px; height: 6px; border-radius: var(--cordon-radius-pill); background: currentColor; }
+/* The dot carries a halo of its own colour, so a status reads at a glance
+   from across a screen rather than only when the label is legible. */
+.cordon-tag__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--cordon-radius-pill);
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent);
+}
 
-.cordon-tag--neutral { background: rgba(34, 34, 34, 0.06); border-color: var(--cordon-hairline-soft); color: var(--cordon-copy); }
-.cordon-tag--rose { background: rgba(173, 49, 77, 0.1); color: var(--cordon-accent); }
-.cordon-tag--violet { background: rgba(111, 79, 157, 0.12); color: var(--cordon-info); }
-.cordon-tag--ember { background: rgba(216, 71, 54, 0.12); color: #b13a2c; }
-.cordon-tag--positive { background: rgba(77, 124, 79, 0.13); color: var(--cordon-positive); }
-.cordon-tag--caution { background: rgba(176, 106, 31, 0.14); color: var(--cordon-caution); }
-.cordon-tag--critical { background: rgba(166, 59, 80, 0.13); color: var(--cordon-critical); }
-.cordon-tag--info { background: rgba(111, 79, 157, 0.12); color: var(--cordon-info); }
+/* One shape, one recipe: a tinted ground, a hairline of the same hue, and the
+   hue itself for the text. Before this the tags were flat blocks of wash with
+   no edge, which read as highlighter pen rather than as a status. */
+.cordon-tag--neutral,
+.cordon-tag--rose,
+.cordon-tag--violet,
+.cordon-tag--ember,
+.cordon-tag--positive,
+.cordon-tag--caution,
+.cordon-tag--critical,
+.cordon-tag--info {
+  background: color-mix(in srgb, var(--cordon-tag-hue) 9%, var(--cordon-paper));
+  border-color: color-mix(in srgb, var(--cordon-tag-hue) 26%, transparent);
+  color: var(--cordon-tag-hue);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.cordon-tag--neutral { --cordon-tag-hue: var(--cordon-copy); }
+.cordon-tag--rose { --cordon-tag-hue: var(--cordon-accent); }
+.cordon-tag--violet { --cordon-tag-hue: var(--cordon-info); }
+.cordon-tag--ember { --cordon-tag-hue: #b13a2c; }
+.cordon-tag--positive { --cordon-tag-hue: var(--cordon-positive); }
+.cordon-tag--caution { --cordon-tag-hue: var(--cordon-caution); }
+.cordon-tag--critical { --cordon-tag-hue: var(--cordon-critical); }
+.cordon-tag--info { --cordon-tag-hue: var(--cordon-info); }
+
+/* On a glaze the paper mix would be invisible, so the tinted ground gives way
+   to a translucent white one. */
+.cordon-surface--rose .cordon-tag:not(.cordon-tag--solid),
+.cordon-surface--violet .cordon-tag:not(.cordon-tag--solid),
+.cordon-surface--ember .cordon-tag:not(.cordon-tag--solid) {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: var(--cordon-on-glaze);
+  box-shadow: none;
+}
 
 .cordon-tag--solid { color: var(--cordon-on-glaze); border-color: var(--cordon-glass-line); box-shadow: var(--cordon-shadow-control); }
 .cordon-tag--solid.cordon-tag--rose { background: var(--cordon-glaze-rose); }
