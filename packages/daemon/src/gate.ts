@@ -21,6 +21,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { TreeVaultAbi, MandateRegistryAbi } from "./abi.gen.ts";
 import type { Config } from "./config.ts";
+import { Recorder } from "./record.ts";
 
 /** Mirrors TreeVault.Reason. The order is part of the ABI. */
 export const REASONS = [
@@ -55,6 +56,12 @@ export class Gate {
   private readonly pending = new Map<string, Hex>();
   private readonly config: Config;
   private readonly chain: ReturnType<typeof defineChain>;
+  /**
+   * The record. It borrows this gate's signer rather than holding a copy of a
+   * key, so there is still exactly one place in the process where an operator
+   * key lives.
+   */
+  readonly recorder: Recorder;
 
   constructor(config: Config) {
     this.config = config;
@@ -67,6 +74,11 @@ export class Gate {
 
     this.chain = chain;
     this.publicClient = createPublicClient({ chain, transport: http(config.rpcUrl) });
+
+    this.recorder = new Recorder(
+      { publicClient: this.publicClient, chain, record: config.record, identity: config.identity },
+      (node) => this.walletFor(node),
+    );
 
     for (const { node, keyEnv } of config.keys) {
       const secret = process.env[keyEnv];
@@ -213,6 +225,10 @@ export class Gate {
              node id did not exist until the registry assigned it. */
           if (this.pending.has(params.operator.toLowerCase())) {
             this.bindOperator(node, params.operator);
+            /* A child born mid-run needs an identity before its first refusal
+               can be published — `attest` will not file conduct against a node
+               with no ERC-8004 identity, and it should not. */
+            await this.enrol(node);
           }
           return { node, txHash };
         }
@@ -248,11 +264,55 @@ export class Gate {
       /* Send it anyway. The refusal is the product: a draw that is never
          recorded is a draw nobody can hold the tree to afterwards. */
       const txHash = await wallet.writeContract(request);
-      return { ...(await this.outcomeFrom(txHash)), reason: REASONS[simulatedReason] ?? "none", txHash };
+      const outcome = {
+        ...(await this.outcomeFrom(txHash)),
+        reason: REASONS[simulatedReason] ?? "none",
+        txHash,
+      };
+      await this.publish(node, outcome);
+      return outcome;
     }
 
     const txHash = await wallet.writeContract(request);
     return { ...(await this.outcomeFrom(txHash)), txHash };
+  }
+
+  /**
+   * Give a node an ERC-8004 identity, if there is a seat to bind it to.
+   *
+   * Idempotent and best-effort. A node that fails to enrol still draws and is
+   * still refused; what it loses is the ability to have those refusals
+   * published, which is a loss of publicity and never a loss of control.
+   */
+  async enrol(node: Hex): Promise<bigint | null> {
+    if (!this.recorder.enabled) return null;
+    try {
+      return await this.recorder.enrol(node);
+    } catch (error) {
+      console.error(`${node} has no identity, so its refusals stay unpublished: ${(error as Error).message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Put the refusal on the public record.
+   *
+   * Deliberately after the fact and deliberately unable to fail loudly: the
+   * bound has already been enforced and the refusal is already on chain by the
+   * time this runs, so a seat that is unreachable, unfunded or absent costs the
+   * record its completeness and costs the enforcement nothing. There is no
+   * filter — every refusal is published, because a daemon that chose which
+   * ones to report would be writing an opinion.
+   */
+  private async publish(node: Hex, outcome: DrawOutcome): Promise<void> {
+    if (outcome.released || !outcome.refusalId || !this.recorder.enabled) return;
+    try {
+      await this.recorder.attest(node, outcome.refusalId);
+    } catch (error) {
+      console.error(
+        `refusal ${outcome.refusalId} is on chain but was not published: ${(error as Error).message}`,
+      );
+    }
   }
 
   /** Read what actually happened out of the log, not out of the simulation. */

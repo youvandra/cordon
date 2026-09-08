@@ -52,6 +52,11 @@ export interface Harness {
   gateway: Address;
   registry: Address;
   vault: Address;
+  /** The seat, and the two ERC-8004 registries it writes into. Stand-ins here;
+   *  on Arc these are live already at deterministic addresses. */
+  record: Address;
+  identity: Address;
+  reputation: Address;
   root: Hex;
   child: Hex;
   /** A seller that answers 402 in the shape Circle's catalogue uses. */
@@ -84,8 +89,10 @@ export async function startHarness(port = 8546): Promise<Harness> {
   const asOpRoot = createWalletClient({ account: opRoot, chain, transport: http(rpc) });
   const asOpChild = createWalletClient({ account: opChild, chain, transport: http(rpc) });
 
-  const deploy = async (name: string, args: unknown[] = []): Promise<Address> => {
-    const out = JSON.parse(readFileSync(resolve(contracts, `out/${name}.sol/${name}.json`), "utf8"));
+  /* `file` and `name` differ when one source holds several contracts, which
+     is why this takes both rather than assuming they match. */
+  const deploy = async (name: string, args: unknown[] = [], file = name): Promise<Address> => {
+    const out = JSON.parse(readFileSync(resolve(contracts, `out/${file}.sol/${name}.json`), "utf8"));
     const hash = await asOwner.deployContract({
       abi: out.abi, bytecode: out.bytecode.object as Hex, args: args as never,
     });
@@ -97,6 +104,9 @@ export async function startHarness(port = 8546): Promise<Harness> {
   const gateway = await deploy("MockGateway");
   const registry = await deploy("MandateRegistry");
   const vault = await deploy("TreeVault", [usdc, registry, gateway]);
+  const identity = await deploy("MockIdentityRegistry", [], "MockERC8004");
+  const reputation = await deploy("MockReputationRegistry", [], "MockERC8004");
+  const record = await deploy("ConductRecord", [vault, identity, reputation]);
 
   const params = (operator: Address, budget: bigint) => ({
     operator, budget6: budget, windowSeconds: 86_400n,
@@ -152,7 +162,7 @@ export async function startHarness(port = 8546): Promise<Harness> {
 
   return {
     rpc, chainId: 31337, publicClient, asOwner, asOpChild,
-    usdc, gateway, registry, vault, root, child,
+    usdc, gateway, registry, vault, record, identity, reputation, root, child,
     sellerUrl: cheap.url, greedyUrl: greedy.url,
     async stop() {
       anvil.kill();

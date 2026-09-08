@@ -8,7 +8,7 @@
 /* A relative path rather than an alias: this package runs under plain node,
    where a tsconfig `paths` entry does not exist and a bundler is not involved.
    One import, resolved the same way at build time and at run time. */
-import { ARC } from "../../fixtures/src/index.ts";
+import { ARC, ERC8004 } from "../../fixtures/src/index.ts";
 
 export interface NodeKey {
   /** The mandate node this key is the operator of. */
@@ -23,6 +23,10 @@ export interface Config {
   vault: `0x${string}`;
   registry: `0x${string}`;
   usdc: `0x${string}`;
+  /** The seat. Absent means this daemon publishes nothing, and says so. */
+  record?: `0x${string}`;
+  /** ERC-8004 Identity. Live on Arc already; overridable for a local chain. */
+  identity: `0x${string}`;
   /** CAIP-2 networks and assets this daemon will settle on. */
   networks: string[];
   assets: string[];
@@ -49,6 +53,8 @@ export const ENV = {
     "CORDON_KEY_<label>": "the operator key for that node. The agent never sees it",
   },
   optional: {
+    CORDON_RECORD: "ConductRecord, from deployments/<chainId>.json. Without it, refusals are enforced but never published",
+    CORDON_IDENTITY: `ERC-8004 Identity; defaults to ${ERC8004.identity}`,
     CORDON_RPC: `defaults to ${ARC.rpc}`,
     CORDON_CHAIN_ID: `defaults to ${ARC.chainId}`,
     CORDON_USDC: "the 6-decimal ERC-20 view; defaults to Arc's",
@@ -96,6 +102,8 @@ export function load(env = process.env): Config {
     vault: address(env, "CORDON_VAULT"),
     registry: address(env, "CORDON_REGISTRY"),
     usdc: (env.CORDON_USDC ?? ARC.erc20) as `0x${string}`,
+    record: env.CORDON_RECORD ? address(env, "CORDON_RECORD") : undefined,
+    identity: (env.CORDON_IDENTITY ?? ERC8004.identity) as `0x${string}`,
     networks: (env.CORDON_NETWORKS ?? `eip155:${ARC.chainId}`).split(",").map((s) => s.trim()),
     assets: (env.CORDON_ASSETS ?? ARC.erc20).split(",").map((s) => s.trim()),
     port: Number(env.CORDON_PORT ?? 8402),
