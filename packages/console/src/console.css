@@ -229,6 +229,109 @@ body {
   top: calc(56px + var(--cordon-space-5));
 }
 
+/* ---- sidebar ------------------------------------------------------------- */
+
+.side {
+  position: sticky;
+  top: calc(56px + var(--cordon-space-5));
+  display: flex;
+  flex-direction: column;
+  gap: var(--cordon-space-6);
+}
+
+/* Which tree this console is looking at. A sidebar that opens with navigation
+   and never names the thing being navigated is a sidebar for a product with
+   exactly one of everything. */
+.side__head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: var(--cordon-space-4) var(--cordon-space-5);
+  border: 1px solid var(--cordon-hairline-soft);
+  border-radius: var(--cordon-radius-4);
+  background: rgba(255, 255, 255, 0.62);
+}
+.side__head-label {
+  color: var(--cordon-copy-dim);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.side__head-id { color: var(--cordon-ink-strong); font-size: 12px; }
+
+.side__group { display: flex; flex-direction: column; gap: var(--cordon-space-2); }
+.side__group-title {
+  margin: 0 0 2px 10px;
+  color: var(--cordon-copy-dim);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.side__list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+
+.side__item {
+  display: flex;
+  align-items: center;
+  gap: var(--cordon-space-3);
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--cordon-radius-3);
+  background: transparent;
+  color: var(--cordon-copy);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--cordon-dur-control) var(--cordon-ease-settle),
+    color var(--cordon-dur-control) var(--cordon-ease-settle),
+    border-color var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+.side__item:hover { background: rgba(34, 34, 34, 0.05); color: var(--cordon-ink-strong); }
+.side__item--active {
+  border-color: var(--cordon-hairline-soft);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--cordon-shadow-control);
+  color: var(--cordon-ink-strong);
+}
+.side__item--active .side__icon { color: var(--cordon-accent); }
+
+.side__icon { flex: none; color: var(--cordon-copy-dim); }
+.side__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.side__label { font-size: 13.5px; font-weight: 500; letter-spacing: -0.012em; }
+.side__desc { color: var(--cordon-copy-dim); font-size: 11.5px; line-height: 1.35; }
+
+/* How many decisions are waiting. The one number worth carrying in a nav. */
+.side__count {
+  flex: none;
+  min-width: 20px;
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: var(--cordon-radius-pill);
+  background: color-mix(in srgb, var(--cordon-critical) 12%, var(--cordon-paper));
+  border: 1px solid color-mix(in srgb, var(--cordon-critical) 26%, transparent);
+  color: var(--cordon-critical);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.side__out {
+  display: flex;
+  align-items: center;
+  gap: var(--cordon-space-3);
+  padding: 7px 10px;
+  border-radius: var(--cordon-radius-3);
+  color: var(--cordon-copy-dim);
+  font-size: 13px;
+  text-decoration: none;
+  transition: background var(--cordon-dur-control) var(--cordon-ease-settle), color var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+.side__out:hover { background: rgba(34, 34, 34, 0.05); color: var(--cordon-ink-strong); }
+
 .console__main {
   display: flex;
   flex-direction: column;
@@ -240,7 +343,8 @@ body {
   .console {
     grid-template-columns: minmax(0, 1fr);
   }
-  .console__side {
+  .console__side,
+  .side {
     position: static;
   }
 }
@@ -421,16 +525,56 @@ body {
   font-size: 12.5px;
 }
 
+.refusal__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cordon-space-5);
+  flex-wrap: wrap;
+}
+
 .refusal__node {
+  display: block;
   color: var(--cordon-ink-strong);
   font-size: var(--cordon-size-body);
   font-weight: 500;
   letter-spacing: -0.016em;
 }
 
-.refusal__at {
+.refusal__bound {
+  display: block;
+  margin-top: 2px;
   color: var(--cordon-copy-dim);
-  font-size: 11.5px;
+  font-size: 12.5px;
+}
+
+/* Who wanted paying, top right, where an address is looked up rather than
+   read. The transaction hangs underneath it because the two answer the same
+   question: who, and where can I check. */
+.refusal__party {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 4px 8px;
+  margin: -4px -8px 0 0;
+  border-radius: var(--cordon-radius-3);
+  color: var(--cordon-copy);
+  text-decoration: none;
+  transition: background var(--cordon-dur-control) var(--cordon-ease-settle);
+}
+.refusal__party:hover { background: rgba(34, 34, 34, 0.05); color: var(--cordon-ink-strong); }
+.refusal__tx { color: var(--cordon-copy-dim); font-size: 11px; }
+
+/* The status on the left, the decision on the right. A row of three equal
+   buttons made the irreversible one look like a peer of the safe one. */
+.refusal__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cordon-space-5);
+  width: 100%;
+  flex-wrap: wrap;
 }
 
 /* The figure and the reason for it, together — an owner should never learn

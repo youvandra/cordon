@@ -6,16 +6,16 @@ import {
   DropdownButton,
   Icon,
   Logo,
-  Sidebar,
   Surface,
   Tag,
   Text,
   useNoIndex,
 } from "cordon-ui";
-import { ARC, ENFORCED_BY } from "@cordon/fixtures";
+import { ARC, MANDATE } from "@cordon/fixtures";
+import { REFUSALS } from "@cordon/fixtures/preview";
 import { useWallet } from "../lib/wallet";
 import { site } from "../lib/links";
-import { SCREENS } from "./screens";
+import { SCREENS, SCREEN_GROUPS } from "./screens";
 
 export { SCREENS };
 
@@ -61,7 +61,7 @@ function Topbar({ children }: { children?: ReactNode }) {
  * refusal — both require the owner's own key.
  */
 export function ConsoleShell() {
-  useTitle("Console — Cordon");
+  useTitle("Console · Cordon");
   /* The owner surface is not a page anyone should reach from a search result. */
   useNoIndex(true);
   const { address, connect, disconnect } = useWallet();
@@ -87,10 +87,9 @@ export function ConsoleShell() {
             </Text>
             <h1 className="gate__title">This half of the system is human.</h1>
             <Text variant="body" tone="on-glaze" as="p" className="gate__copy">
-              Creating a mandate and releasing a refusal both require a
-              signature from the owner's own key. Neither our server nor the
-              agent can produce one. That is the point of the wallet gate, not a
-              formality.
+              Creating a mandate and releasing a refusal both need a signature
+              from the owner's own key. Neither our server nor the agent can
+              produce one, which is what the wallet gate is for.
             </Text>
             <div className="gate__actions">
               <Button variant="secondary" size="lg" magnetic onClick={connect}>
@@ -104,9 +103,8 @@ export function ConsoleShell() {
             </div>
             <div className="gate__foot">
               <Tag tone="caution" size="sm" dot>
-                mock connection — no wallet is touched
+                preview build, no wallet is touched
               </Tag>
-              <span className="mono gate__fn">{ENFORCED_BY.release}</span>
             </div>
           </Surface>
         </main>
@@ -114,10 +112,7 @@ export function ConsoleShell() {
     );
   }
 
-  const index = Math.max(
-    0,
-    SCREENS.findIndex((screen) => pathname.startsWith(`/console/${screen.id}`)),
-  );
+  const standing = REFUSALS.filter((refusal) => !refusal.released).length;
 
   return (
     /* Compact, and not a control. The docs offer a density switcher because
@@ -173,17 +168,83 @@ export function ConsoleShell() {
       </Topbar>
 
       <div className="console">
-        <Sidebar
-          className="console__side"
-          value={SCREENS[index].id}
-          onValueChange={(id) => navigate(`/console/${id}`)}
-          sections={[
-            {
-              title: "Four screens",
-              items: SCREENS.map((s) => ({ id: s.id, label: s.label })),
-            },
-          ]}
-        />
+        <nav className="side" aria-label="Console">
+          {/* The mandate this console is looking at. A sidebar that opens with
+              navigation and never says which tree you are in is a sidebar for
+              a product with one tree. */}
+          <div className="side__head">
+            <span className="side__head-label">Mandate</span>
+            <span className="mono side__head-id">
+              {MANDATE.id.slice(0, 10)}…{MANDATE.id.slice(-4)}
+            </span>
+            <Tag tone={ARC.mainnetLaunched ? "positive" : "caution"} size="sm" dot>
+              {ARC.mainnetLaunched ? "mainnet" : "testnet"}
+            </Tag>
+          </div>
+
+          {SCREEN_GROUPS.map((group) => (
+            <div key={group.title} className="side__group">
+              <p className="side__group-title">{group.title}</p>
+              <ul className="side__list">
+                {group.screens.map((screen) => {
+                  const active = pathname.startsWith(`/console/${screen.id}`);
+                  return (
+                    <li key={screen.id}>
+                      <button
+                        type="button"
+                        className={`side__item${active ? " side__item--active" : ""}`}
+                        aria-current={active ? "page" : undefined}
+                        onClick={() => navigate(`/console/${screen.id}`)}
+                      >
+                        <Icon name={screen.icon} size={15} className="side__icon" />
+                        <span className="side__text">
+                          <span className="side__label">{screen.label}</span>
+                          <span className="side__desc">{screen.description}</span>
+                        </span>
+                        {screen.id === "refusals" && standing > 0 ? (
+                          <span className="side__count">{standing}</span>
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+
+          {/* Everything below this line leaves the console. Kept apart from
+              the screens above, because a link that navigates away and one
+              that changes the view are not the same kind of thing. */}
+          <div className="side__group">
+            <p className="side__group-title">Elsewhere</p>
+            <ul className="side__list">
+              <li>
+                <a className="side__out" href={site("/agent/41827")}>
+                  <Icon name="globe" size={14} />
+                  Public record
+                </a>
+              </li>
+              <li>
+                <a className="side__out" href={site("/docs/introduction")}>
+                  <Icon name="info" size={14} />
+                  Docs
+                </a>
+              </li>
+              <li>
+                <a
+                  className="side__out"
+                  href={`${ARC.explorer}/address/${MANDATE.vault}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Icon name="external" size={14} />
+                  Vault on arcscan
+                </a>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
         {/* No progress rail here. The four screens are navigation, not a
             sequence — you go to Tree, then Refusals, then back to Tree — and a
             rail claiming "step 2 of 4" is asserting a journey nobody is on.
