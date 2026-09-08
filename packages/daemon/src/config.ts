@@ -32,6 +32,32 @@ export interface Config {
 
 class ConfigError extends Error {}
 
+/**
+ * What the daemon reads, declared once.
+ *
+ * `load` uses this, and so does the config block the website tells people to
+ * paste. Two config blocks were written by hand before this existed and both
+ * named variables no code has ever read — a reader could copy either and watch
+ * it fail. A variable added to `load` and not to this list will show up
+ * missing at startup, which is the direction that fails safely.
+ */
+export const ENV = {
+  required: {
+    CORDON_VAULT: "TreeVault address, from deployments/<chainId>.json",
+    CORDON_REGISTRY: "MandateRegistry address, from the same file",
+    "CORDON_NODE_<label>": "the mandate node this daemon acts for",
+    "CORDON_KEY_<label>": "the operator key for that node. The agent never sees it",
+  },
+  optional: {
+    CORDON_RPC: `defaults to ${ARC.rpc}`,
+    CORDON_CHAIN_ID: `defaults to ${ARC.chainId}`,
+    CORDON_USDC: "the 6-decimal ERC-20 view; defaults to Arc's",
+    CORDON_NETWORKS: "CAIP-2 ids this daemon will settle on",
+    CORDON_ASSETS: "assets it will pay in",
+    CORDON_PORT: "defaults to 8402",
+  },
+} as const;
+
 /* These read the env they are given, not the process's. `load` takes an
    environment as an argument so a test can build one; reading process.env
    here anyway would make that argument a lie. */

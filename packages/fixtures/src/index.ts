@@ -334,27 +334,27 @@ export const STRUCTURING = {
 /* Surfaces                                                            */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The three ways in. `status` is not decoration: a page that shows an
+ * integration nobody can perform is the same lie as a figure the contract
+ * does not enforce, and only one of these is built today.
+ */
 export const SURFACES = [
   {
     id: "mcp",
     name: "MCP",
+    status: "built" as const,
     shape: "LLM loop with tools — Claude Desktop, Claude Code, MCP runtimes",
     cost: "one config block",
-    /* The block the MCP server actually reads. It used to name
-       CORDON_MANDATE and CORDON_CHAIN, which no code has ever looked at — a
-       config a reader could copy and watch fail. */
-    snippet: `{ "mcpServers": { "cordon": {
-    "command": "npx", "args": ["-y", "@cordon/mcp"],
-    "env": {
-      "CORDON_NODE_ME": "0x7f3a…",
-      "CORDON_KEY_ME": "…",
-      "CORDON_VAULT": "0x…",
-      "CORDON_REGISTRY": "0x…"
-    } } } }`,
+    /* Generated from what the daemon reads — see MCP_CONFIG. Two hand-written
+       versions of this block lived here and in the site, and both named
+       variables no code has ever looked at. */
+    snippet: MCP_CONFIG,
   },
   {
     id: "proxy",
     name: "HTTP proxy",
+    status: "pending" as const,
     shape: "code that makes HTTP calls — LangChain, CrewAI, scripts",
     cost: "one env var",
     snippet: `export HTTP_PROXY=http://localhost:8402
@@ -364,6 +364,7 @@ cordon run --mandate 0x7f3a... -- python my_agent.py`,
   {
     id: "sdk",
     name: "SDK",
+    status: "pending" as const,
     shape: "code we own, wanting explicit control of spawn and retry",
     cost: "two lines",
     snippet: `const cordon = await Cordon.attach(process.env.CORDON_MANDATE)
@@ -371,11 +372,12 @@ const res = await cordon.fetch("https://api.aisa.one/apis/v2/...")`,
   },
 ] as const;
 
-/** The tool list is part of the fence. There is no cordon_transfer, ever. */
-export const MCP_TOOLS = [
-  { name: "cordon_fetch", args: "url, method", note: "pays a 402 endpoint through the gate" },
-  { name: "cordon_spawn", args: "label, cap", note: "registers a child mandate, narrowing only" },
-  { name: "cordon_status", args: "—", note: "tree exposure" },
-] as const;
-
-export const ABSENT_TOOL = "cordon_transfer(to, amount)";
+/**
+ * The tool list is part of the fence, so it is not written down twice.
+ *
+ * `tools.gen.ts` is produced by asking a running MCP server what it exposes,
+ * over the real protocol. This file used to carry its own copy, which said
+ * `cordon_spawn(label, cap)` — an argument list the server has never had.
+ */
+import { MCP_CONFIG } from "./tools.gen.ts";
+export { MCP_TOOLS, ABSENT_TOOLS, MCP_CONFIG, MCP_ENV } from "./tools.gen.ts";

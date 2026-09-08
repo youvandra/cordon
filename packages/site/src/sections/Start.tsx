@@ -1,17 +1,12 @@
 import { Button, Surface, Tag } from "cordon-ui";
 import { CONSOLE_URL } from "../parts/links";
-import { ABSENT_TOOL, ARC, MCP_TOOLS } from "@cordon/fixtures";
+import { ABSENT_TOOLS, ARC, MCP_CONFIG, MCP_TOOLS } from "@cordon/fixtures";
 import { Reveal } from "../parts/Reveal";
 
-const CONFIG = `{
-  "mcpServers": {
-    "cordon": {
-      "command": "cordon",
-      "args": ["mcp"],
-      "env": { "CORDON_RPC": "${ARC.rpc}" }
-    }
-  }
-}`;
+/* Generated from the environment the daemon actually reads. This was written
+   by hand until 8 September 2026, and named one variable that no code has ever
+   looked at — a block a reader could copy and watch do nothing. */
+const CONFIG = MCP_CONFIG;
 
 /**
  * The page's one call to action. It used to be two — a Start page and a
@@ -84,9 +79,17 @@ export function Start() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <Tag tone="critical" size="sm">never</Tag>
-              <span className="mono" style={{ color: "var(--cordon-critical)", textDecoration: "line-through" }}>
-                {ABSENT_TOOL}
-              </span>
+              {/* Every one of these is asserted absent against the same server
+                  the list above was read from. */}
+              {ABSENT_TOOLS.map((name) => (
+                <span
+                  key={name}
+                  className="mono"
+                  style={{ color: "var(--cordon-critical)", textDecoration: "line-through" }}
+                >
+                  {name}
+                </span>
+              ))}
             </div>
             <p className="panel__note">
               The agent cannot express “send money to X” — only “fetch this URL”. The moment a
