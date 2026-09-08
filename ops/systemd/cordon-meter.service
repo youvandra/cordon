@@ -1,0 +1,41 @@
+[Unit]
+# The event indexer and its read-only API. Rebuilds its ledger from Arc on
+# start, so the snapshot it keeps is a cache in the strict sense and losing it
+# costs a warm-up, not a fact.
+Description=Cordon meter (Arc events into a ledger, read-only API on 127.0.0.1:8404)
+Documentation=https://getcordon.xyz/docs/surfaces
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/cordon/packages/meter
+Environment=NODE_ENV=production
+Environment=CORDON_CHAIN_ID=5042002
+# Deployment addresses are not here. The process reads
+# packages/contracts/deployments/5042002.json and exits 2 when it is absent,
+# which is the behaviour we want: a meter pointed at a hand-typed address
+# produces a ledger that looks right and is about another tree.
+EnvironmentFile=-/home/ubuntu/cordon/.env.meter
+ExecStart=/usr/bin/node src/main.ts
+Restart=on-failure
+RestartSec=5s
+
+# A read-only indexer needs nothing from this box but the network and its own
+# snapshot file.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/cordon/packages/meter
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cordon-meter
+
+[Install]
+WantedBy=multi-user.target
