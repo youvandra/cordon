@@ -30,9 +30,9 @@ Two records, both A, both pointing at the box.
 
 | Type | Host | Value |
 |---|---|---|
-| A | `@` | `43.134.86.221` |
-| A | `www` | `43.134.86.221` |
-| A | `attest` | `43.134.86.221` |
+| A | `@` | `<box IP>` |
+| A | `www` | `<box IP>` |
+| A | `attest` | `<box IP>` |
 
 `www` exists only to redirect to the bare name, which is the name the contract
 writes. No AAAA: the box has no routable IPv6 address, and an AAAA that does
@@ -43,7 +43,7 @@ not answer costs every visitor a timeout before the v4 fallback.
 ```bash
 # 1. the tree and the web root
 git clone git@github.com:youvandra/cordon.git ~/cordon
-sudo mkdir -p /var/www/cordon && sudo chown ubuntu:ubuntu /var/www/cordon
+sudo mkdir -p /var/www/cordon && sudo chown "$USER:$USER" /var/www/cordon
 cd ~/cordon && npm ci --prefix packages/site && npm ci --prefix packages/console
 
 # 2. a server that answers ACME, and the site over plain HTTP
@@ -52,8 +52,8 @@ sudo ln -sf /etc/nginx/sites-available/cordon /etc/nginx/sites-enabled/cordon
 sudo nginx -t && sudo systemctl reload nginx
 ./ops/bin/cordon-publish.sh
 
-# check the real bundle before DNS exists: http://43.134.86.221:9081/
-# amw owns 9080 on this box, so grep the box before claiming a port
+# check the real bundle before DNS exists: http://<box IP>:9081/
+# another site owns 9080 here, so grep the box before claiming a port
 
 # 3. certificates, once DNS resolves
 sudo certbot certonly --webroot -w /var/www/cordon \
