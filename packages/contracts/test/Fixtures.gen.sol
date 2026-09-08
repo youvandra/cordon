@@ -24,6 +24,10 @@ library Fixtures {
     address internal constant IDENTITY_REGISTRY = 0x8004A818BFB912233c491871b3d84c89A494BD9e;
     address internal constant REPUTATION_REGISTRY = 0x8004B663056A597Dffe9eCcC1965A193B7388713;
 
+    /* Circle's GatewayWallet on Arc. Verified by eth_getCode and by reaching
+       depositFor's allowance check on 2026-09-08. */
+    address internal constant GATEWAY_WALLET = 0x0077777d7EBA4688BDeF3E311b846F25870A19B9;
+
     /* Structuring beat: 10000 calls at $0.008
        to one payee is $80. Every call is under any
        per-transfer cap; the concentration bound is what refuses it. */

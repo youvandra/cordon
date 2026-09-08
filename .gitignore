@@ -10,6 +10,9 @@ dist/
 packages/contracts/out/
 packages/contracts/cache/
 packages/contracts/broadcast/
+# A local anvil deployment is a throwaway; deployments/ is for chains a reader
+# can go and look at.
+packages/contracts/deployments/31337.json
 *.log
 design/cordon-surfaces.html
 .DS_Store

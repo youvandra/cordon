@@ -1,6 +1,10 @@
 [profile.default]
 src = "src"
 test = "test"
+script = "script"
+# The generated fixtures sit under test/ because that is who reads them most,
+# and the deploy script reads the same file rather than a second copy.
+allow_paths = ["test"]
 out = "out"
 libs = ["lib"]
 solc = "0.8.28"

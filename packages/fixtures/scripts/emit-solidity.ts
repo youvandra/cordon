@@ -14,7 +14,7 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ARC, MANDATE, ERC8004, STRUCTURING } from "../src/index.ts";
+import { ARC, MANDATE, ERC8004, GATEWAY, STRUCTURING } from "../src/index.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, "../../contracts/test/Fixtures.gen.sol");
@@ -44,6 +44,10 @@ library Fixtures {
     /* ERC-8004 — live on Arc already. Nothing to deploy. */
     address internal constant IDENTITY_REGISTRY = ${ERC8004.identity};
     address internal constant REPUTATION_REGISTRY = ${ERC8004.reputation};
+
+    /* Circle's GatewayWallet on Arc. Verified by eth_getCode and by reaching
+       depositFor's allowance check on ${GATEWAY.verifiedOn}. */
+    address internal constant GATEWAY_WALLET = ${GATEWAY.wallet};
 
     /* Structuring beat: ${STRUCTURING.calls} calls at $${STRUCTURING.unitPrice}
        to one payee is $${STRUCTURING.total}. Every call is under any
