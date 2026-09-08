@@ -1,19 +1,17 @@
 import { Button } from "cordon-ui";
-import { DelegationTree } from "../parts/DelegationTree";
+import { Allowances } from "../parts/Allowances";
 import { Appear } from "../parts/motion";
 
 /**
- * The figure runs uncordoned, and that is deliberate.
+ * The figure is the arithmetic, not the tree.
  *
- * It used to run cordoned and refuse, which meant the reader had already
- * watched a refusal, alone and perfectly visible, two screens before the
- * counterfactual explained that a refusal is invisible. The hero was
- * undercutting the section built to make the point.
+ * The delegation tree runs twice in the counterfactual, two screens down,
+ * where the reader has been given a reason to read it. Drawing it here as well
+ * spent the hero on a picture that only pays off later, so the hero now shows
+ * the part that needs no narration: two limits, each respected, together
+ * permitting more than the root holds.
  *
- * So the hero draws the problem the lede beside it describes: every child
- * obeying its own limit while the root drains past a bound nobody is holding.
- *
- * The drawing sits on the page rather than inside a card. A panel around it
+ * The figure sits on the page rather than inside a card. A panel around it
  * turns the mechanism into an illustration of a product screenshot; on the
  * open background it reads as the thing itself.
  */
@@ -74,8 +72,8 @@ export function Hero() {
         </div>
 
         <Appear className="hero__figure" from={{ opacity: 0, y: 16 }} delay={0.42}>
-          <p className="hero__caption">Without a cordon, every local check passes</p>
-          <DelegationTree cordoned={false} height={300} interval={0.6} />
+          <p className="hero__caption">One mandate, handed down to two workers</p>
+          <Allowances />
         </Appear>
       </div>
     </section>
