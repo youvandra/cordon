@@ -14,7 +14,8 @@
  * Rule 1: the console may not display a number the contract does not enforce.
  * Each figure below therefore carries the function that produces it.
  */
-import { MANDATE, ENFORCED_BY, ARC } from "./index.ts";
+import { MANDATE, ENFORCED_BY, ARC, PENDING_ADDRESS } from "./index.ts";
+import { DEPLOYMENT } from "./deployment.gen.ts";
 
 export type NodeId = string;
 
@@ -436,11 +437,10 @@ export interface Attestation {
 
 /**
  * The three contracts are written by the deploy script into
- * `deployments/<chainId>.json` and read from there. Until that file exists
- * they are `pending`, and the sample says so rather than carrying an address
- * nobody can open.
+ * `deployments/<chainId>.json`, folded into `deployment.gen.ts` and read from
+ * there. Until that file names a deployment they are `pending`, and the sample
+ * says so rather than carrying an address nobody can open.
  */
-const PENDING_ADDRESS = "pending — written by the deploy script";
 
 /** The block range this sample covers. Marked as a sample, not a chain read. */
 const SAMPLE_RANGE = { fromBlock: "0", toBlock: "pending" };
@@ -512,9 +512,9 @@ export function attestationOf(node: TreeNode, root: TreeNode = TREE): Attestatio
     })),
     range: { chainId: ARC.chainId, ...SAMPLE_RANGE },
     verify: {
-      vault: PENDING_ADDRESS,
-      registry: PENDING_ADDRESS,
-      record: PENDING_ADDRESS,
+      vault: DEPLOYMENT?.vault ?? PENDING_ADDRESS,
+      registry: DEPLOYMENT?.registry ?? PENDING_ADDRESS,
+      record: DEPLOYMENT?.record ?? PENDING_ADDRESS,
       explorer: ARC.explorer,
     },
   };

@@ -12,6 +12,7 @@
 
 import { GATE_RUNS } from "./gates.gen.ts";
 import { SEARCH } from "./search.gen.ts";
+import { DEPLOYMENT } from "./deployment.gen.ts";
 
 export const VERIFIED_ON = "2026-09-06";
 
@@ -235,8 +236,28 @@ export const ENDPOINTS = [
 /* The demo mandate — every field is a bound the contract evaluates    */
 /* ------------------------------------------------------------------ */
 
+/**
+ * What a surface shows where an address belongs and none has been written yet.
+ *
+ * A figure no run has produced is `pending`, and an address is a figure. The
+ * failure this avoids is an invented address that opens in an explorer and
+ * shows nothing, which reads as a broken deployment rather than as an absent
+ * one.
+ */
+export const PENDING_ADDRESS = "pending — written by the deploy script";
+
+/**
+ * The deployed contracts, copied from `deployments/<chainId>.json` by
+ * `packages/contracts/scripts/record-addresses.mjs`. `null` until a deploy has
+ * run, which is what makes the surfaces read `pending`.
+ */
+export { DEPLOYMENT } from "./deployment.gen.ts";
+export type { Deployment } from "./deployment.gen.ts";
+
 export const MANDATE = {
-  id: "0x7f3a9c41d2e8b5470a6f1c93be2d84f05a71c6e8",
+  /** No mandate is open yet. The owner signs the first one from their own
+   *  wallet, and nothing here may stand in for a signature nobody gave. */
+  id: PENDING_ADDRESS,
   /** TreeVault.windowBudget(root) — base units, 6 dp. */
   budget6: 100_000_000n,
   /** Equal at every depth by construction. A shorter child window resets faster. */
@@ -247,8 +268,10 @@ export const MANDATE = {
   tranche6: 5_000_000n,
   /** TreeVault.concentrationBound() — share of the window to one counterparty. */
   concentrationBoundPct: 35,
-  vault: "0x4c9a1f7b3d0e6852af14c7d95b3e08a6127df4b0",
-  owner: "0xB1f4A2c7093Ed5688cA0Fb2371d9E4c806a3F17d",
+  /** The one on chain, never a literal. */
+  vault: DEPLOYMENT?.vault ?? PENDING_ADDRESS,
+  /** The owner is whoever opens the mandate, and nobody has. */
+  owner: PENDING_ADDRESS,
 } as const;
 
 /**

@@ -81,6 +81,11 @@ forge script script/Deploy.s.sol:Deploy \
 CORDON_COMMIT="$(git rev-parse HEAD 2>/dev/null || echo unknown)" \
   node scripts/record-deployment.mjs "$CHAIN_ID"
 
+# The same addresses, into the fixture the bundles read. They cannot open the
+# deployments file at runtime, and an address retyped into a fixture is one
+# that can disagree with the chain it names.
+node scripts/record-addresses.mjs "$CHAIN_ID"
+
 REGISTRY="$(node -e "console.log(require('./deployments/$CHAIN_ID.json').registry)")"
 VAULT="$(node -e "console.log(require('./deployments/$CHAIN_ID.json').vault)")"
 RECORD="$(node -e "console.log(require('./deployments/$CHAIN_ID.json').record)")"
