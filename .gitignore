@@ -21,9 +21,12 @@ packages/brand/src/dotfont.cjs
 
 # Kept out of the repository deliberately. The plan and the brief are how this
 # project is built and what it is betting on, not what it ships, and this
-# repository is public. The engineering constraints they share live in
-# CLAUDE.md, which is tracked; docs/working-rules.md is the unabridged version.
+# repository is public. The working rules are the same story in engineering
+# terms, so they stay out too — they are how the code got written, not part of
+# what it does. The invariants they name are asserted by the tests, which is
+# where a reader should be able to find them anyway.
 PLAN.md
 NEXT.md
+CLAUDE.md
 docs/
 .claude/
