@@ -250,13 +250,13 @@ export function DelegationTree({
 
       <div className="tree__status" data-state={draw?.refused ? "refused" : breaching ? "over" : "ok"}>
         {draw?.refused ? (
-          <>Refused at the root — the tranche would breach the window the owner signed.</>
+          <>Refused at the root. This draw would break the window the owner signed.</>
         ) : breaching ? (
-          <>Root window exceeded by {Math.round(overRun * 100)}% — every local check passed.</>
+          <>Root window over by {Math.round(overRun * 100)}%, and every local check passed.</>
         ) : cordoned ? (
-          <>Every draw debits every ancestor.</>
+          <>Every draw is charged to every parent above it.</>
         ) : (
-          <>Each child obeys its own limit. Nobody computes the total.</>
+          <>Each child obeys its own limit. Nobody adds them up.</>
         )}
       </div>
     </div>

@@ -10,13 +10,14 @@ export function Claim() {
       <div className="wrap wrap--narrow" style={{ paddingBlock: "clamp(48px, 9vh, 104px)" }}>
         <Reveal>
           <p className="claim">
-            You cannot stop one nanopayment.
+            You cannot stop one payment.
             <br />
             You can stop the <em>ten-thousandth</em>.
           </p>
           <span className="claim__source">
-            x402 batch settlement needs an EOA signature and does not support ERC-1271, so no
-            contract can sit in the path of a single payment. Cordon bounds capacity, not items.
+            Each payment is signed off chain, so no contract can stand in the
+            way of a single one. What Cordon bounds is how much the tree can
+            spend in total.
           </span>
         </Reveal>
       </div>

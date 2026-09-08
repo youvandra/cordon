@@ -12,3 +12,9 @@
 export const CONSOLE_URL: string =
   import.meta.env.VITE_CONSOLE_URL ??
   (import.meta.env.DEV ? "http://localhost:5173/console" : "/console");
+
+/**
+ * The repository. The site links to it from the nav, and the docs link to
+ * individual files, so the URL is written once.
+ */
+export const GITHUB_URL = "https://github.com/youvandra/cordon";
