@@ -66,11 +66,19 @@ function at<T extends object>(fields: T) {
 function ledger(): Ledger {
   block = 1n;
   const events: Event[] = [
-    at({ kind: "MandateOpened", node: ROOT, owner: OWNER, operator: OP_ROOT, budget6: 100_000_000n, windowSeconds: 86_400, maxDepth: 3 } as const),
-    at({ kind: "MandateSpawned", node: CHILD, parent: ROOT, operator: OP_CHILD, budget6: 60_000_000n, depth: 1 } as const),
+    at({ kind: "MandateOpened", node: ROOT, owner: OWNER, operator: OP_ROOT, budget6: 100_000_000n, lifetimeCap6: 250_000_000n, windowSeconds: 86_400, maxDepth: 3 } as const),
+    at({ kind: "MandateSpawned", node: CHILD, parent: ROOT, operator: OP_CHILD, budget6: 60_000_000n, lifetimeCap6: 150_000_000n, depth: 1 } as const),
     at({ kind: "Bound", node: CHILD, agentId: 7n, operator: OP_CHILD } as const),
+    /* A draw emits one ancestor debit per node on the path, the drawing node
+       included. Written without them, a ledger says an agent drew twice and
+       has spent nothing, which is the shape of every indexer bug worth
+       catching. */
     at({ kind: "Drawn", node: CHILD, counterparty: AISA, beneficiary: OP_CHILD, amount6: 2_400n, root: ROOT } as const),
+    at({ kind: "AncestorDebited", node: CHILD, ancestor: CHILD, amount6: 2_400n, spent6: 2_400n, budget6: 60_000_000n } as const),
+    at({ kind: "AncestorDebited", node: CHILD, ancestor: ROOT, amount6: 2_400n, spent6: 2_400n, budget6: 100_000_000n } as const),
     at({ kind: "Drawn", node: CHILD, counterparty: AISA, beneficiary: OP_CHILD, amount6: 2_400n, root: ROOT } as const),
+    at({ kind: "AncestorDebited", node: CHILD, ancestor: CHILD, amount6: 2_400n, spent6: 4_800n, budget6: 60_000_000n } as const),
+    at({ kind: "AncestorDebited", node: CHILD, ancestor: ROOT, amount6: 2_400n, spent6: 4_800n, budget6: 100_000_000n } as const),
     at({ kind: "Refused", refusalId: 1n, node: CHILD, breachedAt: ROOT, counterparty: AISA, amount6: 5_000_001n, reason: "tranche-cap" } as const),
   ];
   return reduce(emptyLedger(CHAIN), events);
@@ -188,6 +196,12 @@ test("a paid call answers with the record, and every refusal in it names its tra
     assert.equal(body.conduct.draws, 2);
     assert.equal(body.conduct.refusals, 1);
     assert.equal(body.conduct.linkage, 1);
+    /* A buyer given the window figure alone prices a mandate that renews
+       itself every day. The answer carries the total and says whether its
+       range reaches back far enough for that total to be the whole of it. */
+    assert.equal(body.mandate.lifetimeCap6, "150000000");
+    assert.equal(body.conduct.lifetimeSpent6, "4800");
+    assert.equal(body.conduct.lifetimeComplete, true);
     assert.match(body.refusals[0].transactionHash, /^0x[0-9a-f]{64}$/);
     assert.equal(body.refusals[0].reason, "tranche-cap");
     assert.equal(body.verify.vault, sources.vault);

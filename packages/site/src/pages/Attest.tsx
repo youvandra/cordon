@@ -121,8 +121,18 @@ export default function Attest() {
                   <Text variant="body" tone="copy" as="p">
                     {body.conduct.refusals} refusals in{" "}
                     {body.conduct.draws.toLocaleString()} draws, against a
-                    mandate of {formatUsdc(BigInt(body.mandate.budget6))} at
-                    depth {body.mandate.depth}.
+                    mandate of {formatUsdc(BigInt(body.mandate.budget6))} per
+                    window at depth {body.mandate.depth}.
+                  </Text>
+                  <Text variant="body" tone="copy" as="p">
+                    {/* The window is a rate. A buyer pricing an agent off the
+                        rate alone prices a mandate that renews itself. */}
+                    {formatUsdc(BigInt(body.conduct.lifetimeSpent6))} of{" "}
+                    {formatUsdc(BigInt(body.mandate.lifetimeCap6))} drawn in
+                    total, across every window since the mandate was opened
+                    {body.conduct.lifetimeComplete
+                      ? "."
+                      : " — and this answer's range starts after that, so the total is a floor, not the figure."}
                   </Text>
                   <Text variant="body" tone="copy" as="p">
                     {body.conduct.attested} of them are published in the

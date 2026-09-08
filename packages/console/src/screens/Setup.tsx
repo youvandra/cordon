@@ -37,7 +37,39 @@ export default function Setup() {
   const [concentration, setConcentration] = useState(
     String(MANDATE.concentrationBoundPct),
   );
+  const [lifetime, setLifetime] = useState(String(MANDATE.lifetimeCap6 / 1_000_000n));
   const [signed, setSigned] = useState(false);
+
+  /* One card, rendered before the signature as a preview and after it as the
+     result. Written twice it drifts, and a preview that disagrees with the
+     thing it previewed is the worst version of this screen. */
+  const commitment = (
+    <MetricCard
+      animate={animate}
+      title={
+        <>
+          What the signature commits
+          <br />
+          Root window budget
+        </>
+      }
+      value={budget || "0"}
+      unit="USDC"
+      progress={Math.min(1, Number(tranche) / Math.max(1, Number(budget)))}
+      caption={
+        <>
+          per {Number(windowS).toLocaleString()}s
+          <br />
+          across the whole tree
+          <br />
+          {/* The window is a rate. Without the total beside it, a reader
+              signing $20 a day believes they have signed $20. */}
+          ${lifetime || "0"} in total, and it never resets
+        </>
+      }
+      glaze="violet"
+    />
+  );
 
   return (
     <>
@@ -74,6 +106,18 @@ export default function Setup() {
                   value={budget}
                   prefix="$"
                   onChange={(event) => setBudget(event.target.value)}
+                />
+              </Field>
+
+              <Field
+                label="Lifetime cap · total"
+                hint={`${ENFORCED_BY.lifetime} · the whole mandate, and it never resets`}
+              >
+                <TextField
+                  type="number"
+                  value={lifetime}
+                  prefix="$"
+                  onChange={(event) => setLifetime(event.target.value)}
                 />
               </Field>
 
@@ -142,30 +186,7 @@ export default function Setup() {
 <Text variant="micro" tone="dim" as="h2" id="the-commitment" className="eyebrow visually-hidden">
               What the signature commits
             </Text>
-            <MetricCard
-              animate={animate}
-              title={
-                <>
-                  What the signature commits
-                  <br />
-                  Root window budget
-                </>
-              }
-              value={budget || "0"}
-              unit="USDC"
-              progress={Math.min(
-                1,
-                Number(tranche) / Math.max(1, Number(budget)),
-              )}
-              caption={
-                <>
-                  per {Number(windowS).toLocaleString()}s
-                  <br />
-                  across the whole tree
-                </>
-              }
-              glaze="violet"
-            />
+            {commitment}
             </>
           )}
 
@@ -244,30 +265,7 @@ export HTTP_PROXY=http://localhost:8403   # anything else`}</pre>
 <Text variant="micro" tone="dim" as="h2" id="the-commitment-signed" className="eyebrow visually-hidden">
               What was signed
             </Text>
-            <MetricCard
-              animate={animate}
-              title={
-                <>
-                  What the signature commits
-                  <br />
-                  Root window budget
-                </>
-              }
-              value={budget || "0"}
-              unit="USDC"
-              progress={Math.min(
-                1,
-                Number(tranche) / Math.max(1, Number(budget)),
-              )}
-              caption={
-                <>
-                  per {Number(windowS).toLocaleString()}s
-                  <br />
-                  across the whole tree
-                </>
-              }
-              glaze="violet"
-            />
+            {commitment}
             </>
           ) : null}
         </Stack>

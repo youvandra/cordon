@@ -49,6 +49,7 @@ export function attestation(ledger: Ledger, row: NodeRow, sources: Sources): Att
       depth: row.depth,
       operator: row.operator,
       budget6: row.budget6.toString(),
+      lifetimeCap6: row.lifetimeCap6.toString(),
     },
     conduct: {
       draws: conduct.draws,
@@ -56,6 +57,12 @@ export function attestation(ledger: Ledger, row: NodeRow, sources: Sources): Att
       breaches: conduct.breaches,
       drawn6: conduct.drawn6.toString(),
       refused6: conduct.refused6.toString(),
+      lifetimeSpent6: conduct.lifetime.spent6.toString(),
+      /* False means this answer was built from a range that starts after the
+         mandate was opened, so the total is a floor rather than the figure.
+         The payer is told, because a total that is quietly short is worse
+         than one that is absent. */
+      lifetimeComplete: conduct.lifetime.complete,
       attested: conduct.attested,
       linkage: conduct.linkage,
     },

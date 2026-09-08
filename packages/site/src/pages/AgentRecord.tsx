@@ -32,6 +32,7 @@ import {
   RECORD,
   TREE,
   flatten,
+  lifetime,
   refusalForRecord,
   refusalOrdinal,
   shortTx,
@@ -312,6 +313,16 @@ export default function AgentRecord() {
                 ["mandate", MANDATE.id],
                 ["parent", AGENT_PROFILE.parent],
                 ["window", `${MANDATE.windowSeconds.toLocaleString()}s`],
+                ["window budget", formatUsdc(node.budget6)],
+                /* A window budget on its own is a rate, and a reader takes a
+                   rate for a total. The total is the figure the owner signed,
+                   and it is the one that does not come back tomorrow. */
+                [
+                  "signed in total",
+                  `${formatUsdc(lifetime(node).spent6)} of ${formatUsdc(
+                    lifetime(node).cap6,
+                  )} drawn`,
+                ],
                 ["identity registry", ERC8004.identity],
                 ["reputation registry", ERC8004.reputation],
               ].map(([key, value]) => (

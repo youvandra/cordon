@@ -17,7 +17,7 @@ import {
 } from "cordon-ui";
 import type { TreeNode as UiTreeNode } from "cordon-ui";
 import { ENFORCED_BY, MANDATE, STRENGTH, formatUsdc } from "@cordon/fixtures";
-import { TREE, flatten, pathTo, type TreeNode } from "@cordon/fixtures/preview";
+import { TREE, flatten, lifetime, pathTo, type TreeNode } from "@cordon/fixtures/preview";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 import { useEntrance } from "../lib/entrance";
@@ -89,6 +89,11 @@ export default function Tree() {
    * share bar above answers "how full is this node"; this answers "what would
    * happen if it asked", which is the only one an owner can act on.
    */
+  /** What this node has drawn since it was opened, including the draws made
+   *  on this screen. The window figure resets and this one does not. */
+  const lifetimeSpentOf = (node: TreeNode) =>
+    lifetime(node).spent6 + ((spend[node.id] ?? node.spent6) - node.spent6);
+
   const headroomOf = (node: TreeNode) => {
     const path = pathTo(node.id);
     let available: bigint | null = null;
@@ -96,7 +101,12 @@ export default function Tree() {
 
     for (const step of path) {
       if (revoked.has(step.id)) return { available6: 0n, boundBy: step };
-      const left = step.budget6 - (spend[step.id] ?? step.spent6);
+      /* Two bounds on one node, and the answer is the tighter one. A column
+         that reads only the window tells the owner a node may draw money the
+         lifetime cap will refuse. */
+      const windowLeft = step.budget6 - (spend[step.id] ?? step.spent6);
+      const lifetimeLeft = lifetime(step).cap6 - lifetimeSpentOf(step);
+      const left = lifetimeLeft < windowLeft ? lifetimeLeft : windowLeft;
       if (available === null || left < available) {
         available = left;
         boundBy = step;
@@ -151,6 +161,11 @@ export default function Tree() {
           caption={
             <>
               of {formatUsdc(TREE.budget6)}
+              <br />
+              {/* The window is a rate. The total is what was signed, and it is
+                  the bound that does not come back tomorrow. */}
+              {formatUsdc(lifetimeSpentOf(TREE))} of{" "}
+              {formatUsdc(MANDATE.lifetimeCap6)} in total
               <br />
               {TREE.refused} refusals at the root
             </>

@@ -59,6 +59,43 @@ export interface TreeNode {
  */
 const share = (bps: number): bigint => (MANDATE.budget6 * BigInt(bps)) / 10_000n;
 
+const min = (a: bigint, b: bigint): bigint => (a < b ? a : b);
+
+/**
+ * How many windows of draws this preview tree has behind it.
+ *
+ * The window rolls and the lifetime does not, so a tree that has only ever run
+ * one window shows the same figure twice and teaches a reader that the two
+ * bounds are one bound. This says the tree has been working for three windows,
+ * which is what makes the total visibly larger than the rate.
+ *
+ * Every node is multiplied by the same number, so the sums that hold across
+ * the tree in one window hold across its life: a parent's lifetime is still
+ * its subtree's, and no child's total exceeds the parent that debits for it.
+ */
+export const WINDOWS_RUN = 3n;
+
+/**
+ * The total a node has drawn since it was opened, and what is left of the
+ * total the owner signed for. `TreeVault.lifetimeSpent(node)`.
+ *
+ * The cap is the root's at every depth: a child may be given a narrower total
+ * but never a wider one, and this tree gives none of them a narrower one, so
+ * the mandate has exactly one total and it is the one on the signature.
+ */
+export function lifetime(node: TreeNode): {
+  cap6: bigint;
+  spent6: bigint;
+  left6: bigint;
+} {
+  const spent6 = node.spent6 * WINDOWS_RUN;
+  return {
+    cap6: MANDATE.lifetimeCap6,
+    spent6,
+    left6: MANDATE.lifetimeCap6 > spent6 ? MANDATE.lifetimeCap6 - spent6 : 0n,
+  };
+}
+
 export const TREE: TreeNode = {
   id: "root",
   label: "orchestrator",
@@ -165,12 +202,14 @@ export function headroom(
   root: TreeNode = TREE,
 ): { available6: bigint; boundBy: TreeNode } {
   const path = pathTo(node.id, root);
-  let available = root.budget6 - root.spent6;
+  let available = min(root.budget6 - root.spent6, lifetime(root).left6);
   let boundBy = root;
 
   for (const step of path) {
     if (step.revoked) return { available6: 0n, boundBy: step };
-    const left = step.budget6 - step.spent6;
+    /* Two bounds on one node, and the answer is the tighter one. A headroom
+       that reports only the window promises money the lifetime will refuse. */
+    const left = min(step.budget6 - step.spent6, lifetime(step).left6);
     if (left < available) {
       available = left;
       boundBy = step;
@@ -421,6 +460,11 @@ export interface Attestation {
     depth: number;
     operator: string;
     budget6: string;
+    /** The total the owner signed for. `budget6` is what may be drawn in one
+     *  window and it resets; this does not, and the binding limit is whichever
+     *  is reached first. A reader given only the first takes a rate for a
+     *  total. */
+    lifetimeCap6: string;
   };
   conduct: {
     draws: number;
@@ -428,6 +472,11 @@ export interface Attestation {
     breaches: number;
     drawn6: string;
     refused6: string;
+    /** Drawn since the mandate was opened, across every window. Whole only if
+     *  `range` reaches back to the node's own opening; `lifetimeComplete` says
+     *  whether it does. */
+    lifetimeSpent6: string;
+    lifetimeComplete: boolean;
     attested: number;
     /** Share of refusals carrying a transaction hash. 1 by construction. */
     linkage: number;
@@ -465,6 +514,7 @@ const REASONS: Record<string, string> = {
   [ENFORCED_BY.treeBar]: "window-budget",
   [ENFORCED_BY.concentration]: "concentration",
   [ENFORCED_BY.revoke]: "revoked",
+  [ENFORCED_BY.lifetime]: "lifetime-cap",
 };
 
 /**
@@ -494,12 +544,17 @@ export function attestationOf(node: TreeNode, root: TreeNode = TREE): Attestatio
       depth: node.depth,
       operator: node.address,
       budget6: node.budget6.toString(),
+      lifetimeCap6: lifetime(node).cap6.toString(),
     },
     conduct: {
       draws: node.draws,
       refusals: node.refused,
       breaches,
       drawn6: node.spent6.toString(),
+      lifetimeSpent6: lifetime(node).spent6.toString(),
+      /* A sample covers the whole life of a tree it invented. A real answer
+         says so from its range. */
+      lifetimeComplete: true,
       refused6: mine.reduce((total, refusal) => total + refusal.requested6, 0n).toString(),
       /* Read off the refusal, not inferred from `released`. This was
          `!refusal.released`, which said a refusal the owner later signed off
