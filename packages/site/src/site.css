@@ -63,7 +63,30 @@ main { flex: 1 1 auto; }
   height: 62px;
   margin-inline: auto;
 }
-.nav__brand { display: flex; text-decoration: none; }
+.nav__brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The word beside the mark: "docs" on the docs, "record" on a record page.
+   The landing carries none, because a bar that labels the front page tells a
+   reader where they already know they are. */
+.nav__mark {
+  color: var(--cordon-copy-dim);
+  font-size: 11.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+/* The bar has to end where the page under it ends. The landing's own column
+   is 1180, the docs grid is 1400, and the record pages run in a wide
+   container; a bar capped anywhere else reads as a second, narrower page
+   sitting on the first. */
+.nav__inner--wide { width: min(100% - 2 * var(--cordon-gutter), 1400px); }
+.nav__inner--page { width: min(100% - 2 * var(--cordon-gutter), 1600px); }
 
 .nav__end { display: flex; align-items: center; gap: var(--cordon-space-2); margin-left: auto; }
 .nav__link {
@@ -76,6 +99,9 @@ main { flex: 1 1 auto; }
   transition: color 0.18s var(--cordon-ease-settle), background 0.18s var(--cordon-ease-settle);
 }
 .nav__link:hover { color: var(--cordon-ink); background: rgba(34, 34, 34, 0.05); }
+/* The page you are on, named rather than hidden. Dropping the link on the docs
+   was what made that bar look like a different bar. */
+.nav__link--current { color: var(--cordon-ink); background: rgba(34, 34, 34, 0.05); }
 
 .nav__icon {
   display: inline-flex;
@@ -486,69 +512,6 @@ main { flex: 1 1 auto; }
   left: 0;
 }
 
-/* The docs shell's topbar, copied deliberately: same height, same padding,
-   same paper-at-72% behind the same blur. `--cordon-glass-fill` is the value
-   for a floating panel over content, not for a bar sitting on paper, and using
-   it here is what made this bar read as a different product. */
-.top {
-  position: sticky;
-  top: 0;
-  z-index: var(--cordon-z-sticky);
-  display: flex;
-  align-items: center;
-  gap: var(--cordon-space-5);
-  height: 56px;
-  padding: 0 var(--cordon-space-6);
-  border-bottom: 1px solid var(--cordon-hairline-soft);
-  background: rgba(236, 236, 234, 0.72);
-  -webkit-backdrop-filter: blur(16px) saturate(1.08);
-  backdrop-filter: blur(16px) saturate(1.08);
-}
-
-.top__brand {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 0;
-  border: 0;
-  background: none;
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-}
-
-/* The docs bar drops this because the docs site *is* the product. A console
-   has to say which product it is, and quietly. */
-.top__mark {
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-.top__spacer {
-  flex: 1 1 auto;
-}
-
-/* The docs bar carries one control at the end; this one carries three, so the
-   omnibox has to give ground rather than push them off the edge. */
-.top__end {
-  flex: 0 0 auto;
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--cordon-space-4);
-}
-
-@media (max-width: 820px) {
-.top {
-    gap: var(--cordon-space-3);
-    padding: 0 var(--cordon-space-5);
-  }
-.top__mark {
-    display: none;
-  }
-}
-
 /* ---- page rhythm --------------------------------------------------------- */
 
 .public {
@@ -803,32 +766,8 @@ main { flex: 1 1 auto; }
 
 .docs { display: flex; flex-direction: column; min-height: 100svh; }
 
-.docs__top {
-  position: sticky;
-  top: 0;
-  z-index: var(--cordon-z-sticky);
-  border-bottom: 1px solid var(--cordon-hairline-soft);
-  background: rgba(236, 236, 234, 0.86);
-  -webkit-backdrop-filter: blur(16px) saturate(1.08);
-  backdrop-filter: blur(16px) saturate(1.08);
-}
-.docs__top-inner {
-  display: flex;
-  align-items: center;
-  gap: var(--cordon-space-3);
-  width: min(100% - 2 * var(--cordon-gutter), 1400px);
-  height: 58px;
-  margin-inline: auto;
-}
-.docs__mark {
-  color: var(--cordon-copy-dim);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
 .docs__menu {
   display: none;
-  margin-left: auto;
   padding: 6px 12px;
   border: 1px solid var(--cordon-hairline-soft);
   border-radius: var(--cordon-radius-pill);

@@ -1,48 +1,26 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Button, Logo, Text } from "cordon-ui";
+import { Logo, Text } from "cordon-ui";
 import { ARC } from "@cordon/fixtures";
-import { CONSOLE_URL } from "./links";
+import { SiteNav } from "./SiteNav";
 
 /**
  * The frame around the public record.
  *
- * These pages are the shareable half of Cordon — a seller reads one before
- * serving, an underwriter before pricing — so they get a plain masthead and a
- * footer rather than the landing's section nav, which points at a page they
- * are not on.
+ * These pages are the shareable half of Cordon: a seller reads one before
+ * serving, an underwriter before pricing. They used to carry a masthead of
+ * their own, one that stood shorter than the landing's bar, sat on a different
+ * paper alpha and dropped both the docs link and the repository. It is
+ * `SiteNav` now, with "record" beside the mark, so crossing from the landing
+ * to a record does not move the furniture.
  */
-function Masthead() {
-  return (
-    /* Named, because a page carries two of these — the site's banner and the
-       page's own header — and a screen reader listing "banner, banner" is no
-       more use than listing nothing. */
-    <header className="top" aria-label="Cordon">
-      <Link to="/" className="top__brand" aria-label="Cordon">
-        <Logo size={19} />
-        <Text variant="micro" tone="dim" as="span" className="top__mark">
-          record
-        </Text>
-      </Link>
-      <span className="top__spacer" />
-      <div className="top__end">
-        <a href={CONSOLE_URL}>
-          <Button variant="primary" size="sm" magnetic>
-            Launch console
-          </Button>
-        </a>
-      </div>
-    </header>
-  );
-}
-
 export function RecordShell({ children }: { children: ReactNode }) {
   return (
     <div className="shell">
       <a className="skip" href="#content">
         Skip to content
       </a>
-      <Masthead />
+      <SiteNav mark="record" width="page" />
       <main id="content" className="public">
         {children}
       </main>
