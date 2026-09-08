@@ -373,48 +373,6 @@ export const STRUCTURING = {
   refusedBy: ENFORCED_BY.concentration,
 } as const;
 
-/* ------------------------------------------------------------------ */
-/* Surfaces                                                            */
-/* ------------------------------------------------------------------ */
-
-/**
- * The three ways in. `status` is not decoration: a page that shows an
- * integration nobody can perform is the same lie as a figure the contract
- * does not enforce, and only one of these is built today.
- */
-export const SURFACES = [
-  {
-    id: "mcp",
-    name: "MCP",
-    status: "built" as const,
-    shape: "LLM loop with tools: Claude Desktop, Claude Code, MCP runtimes",
-    cost: "one config block",
-    /* Generated from what the daemon reads — see MCP_CONFIG. Two hand-written
-       versions of this block lived here and in the site, and both named
-       variables no code has ever looked at. */
-    snippet: MCP_CONFIG,
-  },
-  {
-    id: "proxy",
-    name: "HTTP proxy",
-    status: "pending" as const,
-    shape: "code that makes HTTP calls: LangChain, CrewAI, scripts",
-    cost: "one env var",
-    snippet: `export HTTP_PROXY=http://localhost:8402
-# or
-cordon run --mandate 0x7f3a... -- python my_agent.py`,
-  },
-  {
-    id: "sdk",
-    name: "SDK",
-    status: "pending" as const,
-    shape: "code we own, wanting explicit control of spawn and retry",
-    cost: "two lines",
-    snippet: `const cordon = await Cordon.attach(process.env.CORDON_MANDATE)
-const res = await cordon.fetch("https://api.aisa.one/apis/v2/...")`,
-  },
-] as const;
-
 /**
  * The tool list is part of the fence, so it is not written down twice.
  *
@@ -422,5 +380,4 @@ const res = await cordon.fetch("https://api.aisa.one/apis/v2/...")`,
  * over the real protocol. This file used to carry its own copy, which said
  * `cordon_spawn(label, cap)` — an argument list the server has never had.
  */
-import { MCP_CONFIG } from "./tools.gen.ts";
 export { MCP_TOOLS, ABSENT_TOOLS, MCP_CONFIG, MCP_ENV } from "./tools.gen.ts";
