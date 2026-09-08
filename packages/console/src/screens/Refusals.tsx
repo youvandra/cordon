@@ -1,138 +1,114 @@
 import { useState } from "react";
-import {
-  Button,
-  Card,
-  CardBody,
-  CardFooter,
-  CardHeader,
-  Enforced,
-  Stack,
-  Tag,
-} from "cordon-ui";
-import { ENFORCED_BY, formatUsdc } from "@cordon/fixtures";
+import { Button, Card, CardBody, CardFooter, CardHeader, Stack, Tag } from "cordon-ui";
+import { formatUsdc } from "@cordon/fixtures";
 import { REFUSALS, shortTx, txUrl, type Refusal } from "@cordon/fixtures/preview";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 
 /**
- * No LED numerals on this screen. It is a list of decisions, and the rationing
- * rule is that the dot face belongs to a view's one hero figure — a list has
- * none, so these are ordinary tabular figures.
+ * One card, one decision.
+ *
+ * The card used to carry four labelled fields, a timestamp, a contract
+ * function and three buttons in a row, and the actual question, which is
+ * whether to release money past a bound, sat in the middle of all of it. What
+ * is left is the shape of the decision: who wanted paying and how much, at the
+ * top; what stopped it, in the middle; and the two buttons at the bottom right
+ * where a hand already is.
  */
 function RefusalCard({ refusal }: { refusal: Refusal }) {
   const [released, setReleased] = useState(refusal.released);
+  const short = `${refusal.counterparty.slice(0, 6)}…${refusal.counterparty.slice(-4)}`;
 
   return (
-    <Card>
-      {/* CardHeader lays its children out in a column, so a label on the left
-          and a mark on the right has to be one child, not two. Given two, it
-          stacked them and stretched the tag to the full width of the card. */}
+    <Card className="refusal">
       <CardHeader>
-        <Stack direction="row" justify="between" align="baseline" gap="md" wrap>
-          <Stack direction="row" gap="sm" align="baseline" wrap>
+        <div className="refusal__top">
+          <div>
             <span className="refusal__node">{refusal.nodeLabel}</span>
-            <span className="mono refusal__at">{refusal.at}</span>
-          </Stack>
+            <span className="refusal__bound">stopped by {refusal.boundLabel}</span>
+          </div>
+          <a
+            className="refusal__party"
+            href={txUrl(refusal.tx)}
+            target="_blank"
+            rel="noreferrer"
+            title={refusal.counterparty}
+          >
+            <span className="mono">{short}</span>
+            <span className="refusal__tx mono">{shortTx(refusal.tx)}</span>
+          </a>
+        </div>
+      </CardHeader>
+
+      <CardBody>
+        {/* One comparison, because that is the whole decision: what was asked
+            for, against what there was room for. */}
+        <div className="ask">
+          <div className="ask__side">
+            <span className="ask__label">wanted</span>
+            <span className="ask__value num">{formatUsdc(refusal.requested6)}</span>
+          </div>
+          <span className="ask__vs" aria-hidden="true">
+            against
+          </span>
+          <div className="ask__side">
+            <span className="ask__label">room left</span>
+            <span className="ask__value ask__value--short num">{formatUsdc(refusal.headroom6)}</span>
+          </div>
+        </div>
+      </CardBody>
+
+      <CardFooter>
+        <div className="refusal__foot">
           {released ? (
-            <Tag tone="positive" size="sm">
-              released by owner
+            <Tag tone="positive" size="sm" dot>
+              released by you
             </Tag>
           ) : (
             <Tag tone="critical" size="sm" dot>
               refused
             </Tag>
           )}
-        </Stack>
-      </CardHeader>
 
-      <CardBody>
-        {/* The decision is one comparison — asked against allowed — so the two
-            figures are set as that comparison rather than as two of four
-            equal-weight fields. What it was for comes underneath. */}
-        <div className="ask">
-          <div className="ask__side">
-            <span className="ask__label">requested</span>
-            <span className="ask__value num">
-              {formatUsdc(refusal.requested6)}
-            </span>
-          </div>
-          <span className="ask__vs" aria-hidden="true">
-            against
-          </span>
-          <div className="ask__side">
-            <span className="ask__label">headroom</span>
-            <span className="ask__value ask__value--short num">
-              {formatUsdc(refusal.headroom6)}
-            </span>
-          </div>
-        </div>
-
-        <dl className="kv">
-          <div>
-            <dt>bound</dt>
-            <dd>{refusal.boundLabel}</dd>
-          </div>
-          <div>
-            <dt>counterparty</dt>
-            <dd className="mono kv__break">{refusal.counterparty}</dd>
-          </div>
-        </dl>
-      </CardBody>
-
-      <CardFooter>
-        {/* Emphasis follows consequence, not eagerness. Leaving the refusal
-            standing costs nothing and is the safe default, so it reads as the
-            plain choice; releasing spends past a bound the owner signed, so it
-            carries the weight. `primary` on the release button was inviting the
-            irreversible click. */}
-        <Stack direction="row" gap="sm" align="center" wrap>
-          <Button size="sm" variant="secondary" disabled={released}>
-            Leave refused
-          </Button>
-          <Button
-            size="sm"
-            variant="danger"
-            disabled={released}
-            onClick={() => setReleased(true)}
-          >
-            Sign to release
-          </Button>
-          <a href={txUrl(refusal.tx)} target="_blank" rel="noreferrer">
-            <Button size="sm" variant="secondary" iconEnd="external">
-              {shortTx(refusal.tx)}
+          {/* Weight follows consequence. Leaving it refused costs nothing and
+              is the safe answer, so it is the quiet button; releasing spends
+              past a bound you signed, so it carries the colour. */}
+          <Stack direction="row" gap="sm" align="center">
+            <Button size="sm" variant="secondary" disabled={released}>
+              Leave it
             </Button>
-          </a>
-          <span className="grow" />
-          <Enforced>{ENFORCED_BY.release}</Enforced>
-        </Stack>
+            <Button size="sm" variant="danger" disabled={released} onClick={() => setReleased(true)}>
+              Sign to release
+            </Button>
+          </Stack>
+        </div>
       </CardFooter>
     </Card>
   );
 }
 
 export default function Refusals() {
-  useTitle("Refusals — Cordon console");
+  useTitle("Refusals · Cordon console");
   const released = REFUSALS.filter((refusal) => refusal.released).length;
+  const standing = REFUSALS.length - released;
 
   return (
     <>
       <ScreenHead
         title="Which node, how much, which bound."
-        lede="Two buttons, no third option. A refusal consumes no budget; releasing is a named human signing from their own key, and it is logged."
-        note="sample refusals; signing is mocked"
+        lede="Two answers, no third. Leaving a refusal standing costs nothing. Releasing one is you signing from your own key, and it stays on the record next to the refusal."
+        note="sample refusals, signing is mocked"
       />
 
       <Stack direction="row" gap="sm" align="center" wrap>
-        <Tag tone="critical" size="sm">
-          {REFUSALS.length - released} standing
+        <Tag tone="critical" size="sm" dot>
+          {standing} standing
         </Tag>
-        <Tag tone="positive" size="sm">
+        <Tag tone="positive" size="sm" dot>
           {released} released
         </Tag>
       </Stack>
 
-      {/* Not a TileWall. A wall of one column is a list with a frame round it,
-          and these cards are wide enough that one column is the right count. */}
       <Stack direction="column" gap="lg">
         {REFUSALS.map((refusal) => (
           <RefusalCard key={refusal.id} refusal={refusal} />
