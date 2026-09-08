@@ -108,8 +108,15 @@ export async function startHarness(port = 8546): Promise<Harness> {
   const reputation = await deploy("MockReputationRegistry", [], "MockERC8004");
   const record = await deploy("ConductRecord", [vault, identity, reputation]);
 
+  /* A lifetime cap high enough that it cannot be the reason a test fails.
+     Every mandate carries one, so a harness has to name one; the subject of
+     these tests is the window, the tranche and the tree, and the lifetime has
+     its own gate in the contract suite. Mirrors `NO_LIFETIME_BOUND` in
+     packages/contracts/test/Bounds.sol. */
+  const NO_LIFETIME_BOUND = (1n << 128n) - 1n;
+
   const params = (operator: Address, budget: bigint) => ({
-    operator, budget6: budget, windowSeconds: 86_400n,
+    operator, budget6: budget, lifetimeCap6: NO_LIFETIME_BOUND, windowSeconds: 86_400n,
     trancheCap6: TRANCHE, concentrationBps: 3500, maxDepth: 3,
   });
 

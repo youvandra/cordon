@@ -93,6 +93,9 @@ export function createDaemon(deps: ServerDeps) {
         const spawned = await deps.gate.spawn(body.node as Hex, {
           operator: body.operator as Address,
           budget6: BigInt(String(body.budget6 ?? "0")),
+          /* Omitted means the parent's total, not none: the gate resolves it
+             from the chain rather than sending a zero the contract refuses. */
+          lifetimeCap6: body.lifetimeCap6 === undefined ? undefined : BigInt(String(body.lifetimeCap6)),
           trancheCap6: BigInt(String(body.trancheCap6 ?? "0")),
           concentrationBps: Number(body.concentrationBps ?? 0),
         });

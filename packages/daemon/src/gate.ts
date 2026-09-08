@@ -31,8 +31,21 @@ export const REASONS = [
   "window-budget",
   "concentration",
   "vault-balance",
+  /* Appended, never inserted. The index is the on-chain enum value, and a
+     Reason is stored in every refusal, so an existing one may not move. */
+  "lifetime-cap",
 ] as const;
-export type Reason = (typeof REASONS)[number];
+
+/**
+ * A refusal reason this build has no name for.
+ *
+ * The contract may append a reason before this package is rebuilt, and the
+ * fallback that matters is the one that does not lie: reporting an unknown
+ * index as `none` tells an agent the draw was refused for no reason, which
+ * reads as a bug in Cordon rather than as a bound it hit.
+ */
+export const UNRECOGNISED = "unrecognised-reason";
+export type Reason = (typeof REASONS)[number] | typeof UNRECOGNISED;
 
 export interface DrawOutcome {
   released: boolean;
@@ -151,7 +164,7 @@ export class Gate {
 
     return {
       released: reason === 0,
-      reason: REASONS[reason] ?? "none",
+      reason: REASONS[reason] ?? UNRECOGNISED,
       breachedAt: reason === 0 ? undefined : breachedAt,
     };
   }
@@ -187,10 +200,19 @@ export class Gate {
    */
   async spawn(
     parent: Hex,
-    params: { operator: Address; budget6: bigint; trancheCap6: bigint; concentrationBps: number },
+    params: {
+      operator: Address;
+      budget6: bigint;
+      /** Absent means the parent's own total, which is the widest the contract
+       *  will allow a child. Zero is not unlimited and is refused. */
+      lifetimeCap6?: bigint;
+      trancheCap6: bigint;
+      concentrationBps: number;
+    },
   ): Promise<{ node: Hex; txHash: Hex }> {
     const wallet = this.walletFor(parent);
     const inherited = (await this.mandate(parent)) as {
+      lifetimeCap6: bigint;
       windowSeconds: bigint;
       maxDepth: number;
     };
@@ -204,6 +226,7 @@ export class Gate {
         {
           operator: params.operator,
           budget6: params.budget6,
+          lifetimeCap6: params.lifetimeCap6 ?? inherited.lifetimeCap6,
           windowSeconds: inherited.windowSeconds,
           trancheCap6: params.trancheCap6,
           concentrationBps: params.concentrationBps,
@@ -266,7 +289,7 @@ export class Gate {
       const txHash = await wallet.writeContract(request);
       const outcome = {
         ...(await this.outcomeFrom(txHash)),
-        reason: REASONS[simulatedReason] ?? "none",
+        reason: REASONS[simulatedReason] ?? UNRECOGNISED,
         txHash,
       };
       await this.publish(node, outcome);
@@ -336,7 +359,7 @@ export class Gate {
         const args = event.args as { refusalId: bigint; breachedAt: Hex; reason: number };
         return {
           released: false,
-          reason: REASONS[args.reason] ?? "none",
+          reason: REASONS[args.reason] ?? UNRECOGNISED,
           breachedAt: args.breachedAt,
           refusalId: args.refusalId,
           txHash,
