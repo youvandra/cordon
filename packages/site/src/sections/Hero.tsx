@@ -15,10 +15,9 @@ import { Appear } from "../parts/motion";
  * turns the mechanism into an illustration of a product screenshot; on the
  * open background it reads as the thing itself.
  *
- * It carries no words, and it lost its caption with them. A drawing captioned
- * "one mandate, handed down to two workers" is a diagram being explained; the
- * lede two lines up already says it, and saying it twice on one screen made
- * the figure look like it could not stand on its own.
+ * It carries four labels and no caption. The labels are the figures the bars
+ * are drawn from; a caption would be the lede two lines up, said twice on one
+ * screen.
  */
 export function Hero() {
   return (
@@ -47,7 +46,19 @@ export function Hero() {
               transition={{ duration: 0.84, ease: [0.16, 1, 0.3, 1] }}
               delay={0.17}
             >
-              for a tree <span className="display__dim">of agents.</span>
+              for a tree
+            </Appear>
+            {/* Its own line. Left to wrap, "of agents." broke after "of" at
+                most widths, which hung a preposition on the end of a display
+                line and left the noun stranded on the next one. */}
+            <Appear
+              as="span"
+              className="display__line display__dim"
+              from={{ opacity: 0, y: "0.4em", clipPath: "inset(0 0 56% 0)" }}
+              transition={{ duration: 0.84, ease: [0.16, 1, 0.3, 1] }}
+              delay={0.26}
+            >
+              of agents.
             </Appear>
           </h1>
 

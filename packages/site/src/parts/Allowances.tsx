@@ -4,25 +4,23 @@ import { TREE } from "@cordon/fixtures/preview";
 import { useEntrance } from "./motion";
 
 /* ==========================================================================
-   What was signed, and what was handed out. No words on it.
+   What was signed, and what was handed out.
 
-   The hero figure carries no labels and no figures. Everything it says, it
-   says with length: the top band is the window the owner signed, the bottom
-   band is what the two workers may draw between them, both are drawn on one
-   scale, and the bottom one is longer. That is the entire argument, and it
-   needs no sentence next to it — the lede beside the drawing is where the
-   words live.
+   Two bars on one scale: the window the owner signed, and the two workers'
+   own limits laid end to end against it. The second is longer, and the tail
+   past the bound is hatched because nothing funds it.
 
-   It is still data. Every width here is computed from the mandate in
-   `packages/fixtures`, the tick spacing is a round number of dollars rather
-   than a decorative interval, and the bound falls exactly on a tick because
-   the root's budget is a whole multiple of that step. Nothing is drawn to
-   look convincing: strip the labels off a figure and the proportions are the
-   only claim left, so they had better be the real ones.
+   It ran without labels for a while, on the theory that proportions are the
+   only honest claim a figure makes. They are, but a reader arriving cold read
+   two pink rectangles and moved on: the drawing was carrying an argument that
+   only made sense to someone who already knew it. So the lengths still do the
+   arguing and four short labels say what is being measured. They are the
+   figures the bars are drawn from, printed once each, not a caption restating
+   the lede.
 
-   Because there is no visible text, the drawing carries a description for
-   anyone who cannot see it. That is not a caption — it never renders — it is
-   the alternative to a picture that says nothing to a screen reader.
+   Every width is computed from the mandate in `packages/fixtures` and the
+   tick spacing is a round number of dollars, so the bound falls on a division
+   rather than between two. Nothing here is drawn to look convincing.
 
    Only the fills move, and they move behind geometry that is already in
    place. A hidden tab runs no frames, so the figure is complete and readable
@@ -32,6 +30,7 @@ import { useEntrance } from "./motion";
 const ROOT = MANDATE.budget6;
 const WORKERS = TREE.children;
 const PERMITTED = WORKERS.reduce((total, node) => total + node.budget6, 0n);
+const OVER = PERMITTED - ROOT;
 
 /** Where the root's window ends, as a share of what the children may draw. */
 const BOUND = Number(ROOT) / Number(PERMITTED);
@@ -67,14 +66,14 @@ export function Allowances({ className }: { className?: string }) {
         `the ${WORKERS.length} workers' own limits: ` +
         `${WORKERS.map((w) => formatUsdc(w.budget6, 0)).join(" and ")}. ` +
         `Each is inside the limit its owner set, and together they permit ` +
-        `${formatUsdc(PERMITTED, 0)} — ${formatUsdc(PERMITTED - ROOT, 0)} more than the ` +
+        `${formatUsdc(PERMITTED, 0)}, which is ${formatUsdc(OVER, 0)} more than the ` +
         `window they are drawn against. The excess is hatched because nobody funded it.`
       }
     >
       <div className="allow__stack">
-        {/* The measure. Regular divisions give the two bands a common scale
-            without stating one, and the bound sits on a division rather than
-            between two, because the budget is a whole multiple of the step. */}
+        {/* The measure. Regular divisions give the two bars a common scale,
+            and the bound sits on a division rather than between two because
+            the budget is a whole multiple of the step. */}
         <div className="allow__rail" aria-hidden="true">
           {TICKS.map((at) => (
             <span
@@ -86,9 +85,16 @@ export function Allowances({ className }: { className?: string }) {
           ))}
         </div>
 
-        {/* The signed window. Solid, because it is the one band on this
-            drawing that is money rather than permission. */}
+        {/* ---- the window that was signed ---------------------------- */}
+        <p className="allow__key" aria-hidden="true">
+          <span>signed by the owner</span>
+          <span className="allow__figure" style={{ left: `${BOUND * 100}%` }}>
+            {formatUsdc(ROOT, 0)}
+          </span>
+        </p>
         <div className="allow__row">
+          {/* Solid, because it is the one bar here that is money rather than
+              permission. */}
           <div className="allow__signed" style={{ width: `${BOUND * 100}%` }}>
             <motion.span
               className="allow__fill allow__fill--signed"
@@ -99,9 +105,12 @@ export function Allowances({ className }: { className?: string }) {
           </div>
         </div>
 
-        {/* What was handed out. Outlined rather than solid, and divided, so
-            the two limits read as two decisions that were each allowed. */}
-        <div className="allow__row allow__row--tall">
+        {/* ---- what the two workers may draw ------------------------- */}
+        <p className="allow__key" aria-hidden="true">
+          <span>handed to two workers</span>
+          <span className="allow__figure allow__figure--end">{formatUsdc(PERMITTED, 0)}</span>
+        </p>
+        <div className="allow__row">
           {WORKERS.map((worker, index) => (
             <div
               key={worker.id}
@@ -114,20 +123,26 @@ export function Allowances({ className }: { className?: string }) {
                 animate={animate ? { scaleX: 1 } : undefined}
                 transition={{ duration: 0.78, ease: EASE, delay: 0.58 + index * 0.14 }}
               />
+              {/* Each worker's own limit, inside its own bar. Both are
+                  under the window; that is the point, and a reader who
+                  cannot see the two numbers cannot check it. */}
+              <span className="allow__seg-value">{formatUsdc(worker.budget6, 0)}</span>
             </div>
           ))}
 
           {/* Drawn over the segments rather than beside them: it is not a
               third allowance, it is the tail of the second one. It has no
-              right-hand edge, because the drawing's point is that nothing
-              downstream stops it. */}
+              right-hand edge, because nothing downstream is what stops it. */}
           <div className="allow__over" style={{ width: `${(1 - BOUND) * 100}%` }} />
         </div>
 
-        {/* One line through the rail and both bands. It is the whole
-            comparison: everything right of it was handed out and never
-            signed for. */}
+        {/* One line through the rail and both bars: everything right of it was
+            handed out and never signed for. */}
         <div className="allow__bound" style={{ left: `${BOUND * 100}%` }} aria-hidden="true" />
+
+        <p className="allow__over-key" style={{ width: `${(1 - BOUND) * 100}%` }} aria-hidden="true">
+          {formatUsdc(OVER, 0)} nobody funded
+        </p>
       </div>
     </div>
   );

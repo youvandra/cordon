@@ -183,7 +183,9 @@ main { flex: 1 1 auto; }
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   gap: clamp(28px, 5vw, 72px);
-  align-items: end;
+  /* Centred against the copy. Bottom-aligned, the figure sank to the buttons'
+     baseline and left the top right of the hero empty. */
+  align-items: center;
 }
 .hero__actions { display: flex; flex-wrap: wrap; gap: var(--cordon-space-3); margin-top: var(--cordon-space-7); }
 /* The drawing sits on the page. The soft wash behind it separates it from the
@@ -281,22 +283,21 @@ main { flex: 1 1 auto; }
 .tree__status[data-state="over"] { color: #b8461f; }
 
 /* ---- allowances: what was signed, and what was handed out ---------------- */
-/* The hero figure, and it carries no words. Two bands on one scale with a
-   measured rail above them, so the overrun is a length the eye reads before
-   the copy beside it is finished. Everything that used to be a label is
-   gone; what is left has to be geometry. */
+/* The hero figure. Two bars on one measured scale, and the second one is
+   longer than the first. The labels are the figures the bars are drawn from,
+   printed once each: the drawing ran wordless for a while and read as two pink
+   rectangles, which is a proportion nobody was given a reason to compare. */
 .allow { width: 100%; }
-.allow__stack { position: relative; display: flex; flex-direction: column; gap: 10px; }
+.allow__stack { position: relative; display: flex; flex-direction: column; }
 
-/* The rail. Divisions rather than numbers: it says the two bands are measured
+/* The rail. Divisions rather than numbers: it says the two bars are measured
    against one thing without claiming what that thing is. */
 .allow__rail {
   position: relative;
   /* Ticks hang down off a top line. Read the other way up they looked like a
      bar chart of their own, which is the last thing a scale should look
      like. */
-  height: 14px;
-  margin-bottom: -1px;
+  height: 13px;
   border-top: 1px solid rgba(166, 59, 80, 0.42);
 }
 .allow__tick {
@@ -306,23 +307,46 @@ main { flex: 1 1 auto; }
   height: 5px;
   border-left: 1px solid rgba(166, 59, 80, 0.42);
 }
-/* The division the signed window ends on. It is a tick like the others,
-   drawn the full depth of the rail, because the bound is a fact about the
-   scale rather than an annotation on top of it. */
+/* The division the signed window ends on, drawn the full depth of the rail:
+   the bound is a fact about the scale rather than an annotation on top of it. */
 .allow__tick[data-bound] {
-  height: 14px;
+  height: 13px;
   border-left: 1.5px solid var(--cordon-ink-strong);
 }
 
-.allow__row { position: relative; display: flex; align-items: stretch; height: clamp(52px, 8vh, 68px); }
-.allow__row--tall { height: clamp(112px, 19vh, 156px); }
+/* What the bar under it measures, and the figure it reaches. */
+.allow__key {
+  position: relative;
+  margin: var(--cordon-space-5) 0 6px;
+  color: var(--cordon-copy-dim);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.allow__figure {
+  position: absolute;
+  bottom: 0;
+  /* Sits over the end of its own bar, so the number and the length it
+     describes are one object. */
+  transform: translateX(-100%);
+  padding-right: 9px;
+  color: var(--cordon-ink-strong);
+  font-family: var(--cordon-font-mono);
+  font-size: 12.5px;
+  letter-spacing: -0.01em;
+}
+.allow__figure--end { right: 0; left: auto; transform: none; padding-right: 0; }
 
-/* Every band is a box with a fill behind it. The fill is the only thing that
+.allow__row { position: relative; display: flex; align-items: stretch; height: clamp(46px, 7vh, 62px); }
+
+/* Every bar is a box with a fill behind it. The fill is the only thing that
    moves, so a frame that never arrives costs the figure its entrance and
    nothing else. */
 .allow__signed,
 .allow__seg {
   position: relative;
+  display: flex;
+  align-items: center;
   overflow: hidden;
   border-radius: 3px;
 }
@@ -337,14 +361,30 @@ main { flex: 1 1 auto; }
   transform-origin: left center;
   border: 1px solid var(--cordon-accent-line);
   border-radius: inherit;
-  background: linear-gradient(168deg, rgba(173, 49, 77, 0.17), rgba(173, 49, 77, 0.08));
+  background: linear-gradient(168deg, rgba(173, 49, 77, 0.2), rgba(173, 49, 77, 0.1));
 }
 /* The signed window is the one thing here that is real money, so it is the
-   one band that is solid. Without labels this contrast is doing the work the
-   word "signed" used to do. */
+   one bar that is solid. */
 .allow__fill--signed {
   border-color: transparent;
   background: linear-gradient(168deg, var(--cordon-rose-1), var(--cordon-rose-3));
+}
+
+/* Each worker's own limit, inside its own bar. Both are under the window, and
+   a reader who cannot see the two numbers cannot check that. */
+/* Left-aligned inside its own bar, not centred: the second worker's bar runs
+   past the bound, and a centred figure landed in the middle of the hatching,
+   where it read as a label for the overrun rather than for the limit. */
+.allow__seg-value {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding-left: 11px;
+  text-align: left;
+  color: var(--cordon-accent);
+  font-family: var(--cordon-font-mono);
+  font-size: 12px;
+  letter-spacing: -0.01em;
 }
 
 /* Hatched, not filled: permission the root cannot fund. No right-hand edge,
@@ -362,18 +402,28 @@ main { flex: 1 1 auto; }
   );
 }
 
+/* The tail, named. It is exactly as wide as the hatching above it, so the
+   sentence and the shape it describes start and end together. */
+.allow__over-key {
+  margin: 7px 0 0 auto;
+  color: var(--cordon-critical);
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+  text-align: center;
+  line-height: 1;
+}
+
 .allow__bound {
   position: absolute;
-  /* Continues the rail's tall tick down through both bands. The tick and this
+  /* Continues the rail's tall tick down through both bars. The tick and this
      line are the same fact and should look like one mark. */
-  top: 14px;
-  bottom: -6px;
+  top: 13px;
+  bottom: 24px;
   z-index: 2;
   width: 0;
   border-left: 1.5px dashed var(--cordon-ink-strong);
   pointer-events: none;
 }
-
 
 /* ---- figure panels ------------------------------------------------------- */
 .panel { padding: var(--cordon-space-7); }
