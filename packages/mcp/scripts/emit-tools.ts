@@ -59,7 +59,7 @@ const entries = tools
       .join(", ");
     return {
       name: tool.name,
-      args: args || "—",
+      args: args || "no arguments",
       note: (tool.description ?? "").replace(/\s+/g, " ").trim(),
     };
   })

@@ -15,7 +15,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "cordon_status",
-    "args": "—",
+    "args": "no arguments",
     "note": "What this mandate may still spend, and which node in the tree is the limit. The answer is often an ancestor rather than this node."
   }
 ] as const;
@@ -42,6 +42,8 @@ export const MCP_ENV = {
     "CORDON_KEY_<label>": "the operator key for that node. The agent never sees it"
   },
   "optional": {
+    "CORDON_RECORD": "ConductRecord, from deployments/<chainId>.json. Without it, refusals are enforced but never published",
+    "CORDON_IDENTITY": "ERC-8004 Identity; defaults to 0x8004A818BFB912233c491871b3d84c89A494BD9e",
     "CORDON_RPC": "defaults to https://rpc.testnet.arc.io",
     "CORDON_CHAIN_ID": "defaults to 5042002",
     "CORDON_USDC": "the 6-decimal ERC-20 view; defaults to Arc's",

@@ -14,7 +14,7 @@ import { Tag } from "./Tag";
 export function Preview({ note }: { note?: string }) {
   return (
     <Tag tone="caution" size="sm" dot>
-      frontend preview — {note ?? "figures are fixtures, not chain reads"}
+      preview build · {note ?? "figures are fixtures, not chain reads"}
     </Tag>
   );
 }

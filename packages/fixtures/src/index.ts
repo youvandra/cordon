@@ -250,8 +250,8 @@ export const ENFORCED_BY = {
   concentration: "TreeVault.concentrationBound(node, counterparty)",
   depth: "MandateRegistry.maxDepth()",
   tranche: "TreeVault.trancheCap()",
-  release: "TreeVault.release(refusalId) — owner signature",
-  revoke: "MandateRegistry.revoke(node) — subtree",
+  release: "TreeVault.release(refusalId), owner signature",
+  revoke: "MandateRegistry.revoke(node), subtree",
   record: "ReputationRegistry.giveFeedback(agentId, score, tags, uri)",
 } as const;
 
@@ -358,7 +358,7 @@ export const SURFACES = [
     id: "mcp",
     name: "MCP",
     status: "built" as const,
-    shape: "LLM loop with tools — Claude Desktop, Claude Code, MCP runtimes",
+    shape: "LLM loop with tools: Claude Desktop, Claude Code, MCP runtimes",
     cost: "one config block",
     /* Generated from what the daemon reads — see MCP_CONFIG. Two hand-written
        versions of this block lived here and in the site, and both named
@@ -369,7 +369,7 @@ export const SURFACES = [
     id: "proxy",
     name: "HTTP proxy",
     status: "pending" as const,
-    shape: "code that makes HTTP calls — LangChain, CrewAI, scripts",
+    shape: "code that makes HTTP calls: LangChain, CrewAI, scripts",
     cost: "one env var",
     snippet: `export HTTP_PROXY=http://localhost:8402
 # or
