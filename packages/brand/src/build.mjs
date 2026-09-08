@@ -130,9 +130,12 @@ write("banner", social(1280, 640), [1280]);
 
 /* ---- serve them --------------------------------------------------------- */
 
-const publicDir = join(here, "..", "..", "console", "public");
-mkdirSync(publicDir, { recursive: true });
-for (const [from, to] of [
+/* Both surfaces, not just the console. The site is the one that gets shared,
+   so it is the one whose missing og:image is visible to everybody: a link
+   posted anywhere renders as a bare URL without it. It had no `public/` at
+   all until 8 Sep, which is the sort of gap that survives because the surface
+   that does have icons is the one you look at while building. */
+const served = [
   ["mark.svg", "favicon.svg"],
   ["mark-32.png", "favicon-32.png"],
   ["mark-16.png", "favicon-16.png"],
@@ -141,8 +144,64 @@ for (const [from, to] of [
   ["mark-512.png", "icon-512.png"],
   ["icon-maskable.png", "icon-maskable-512.png"],
   ["og-image.png", "og-image.png"],
-]) {
-  copyFileSync(join(out, from), join(publicDir, to));
+];
+
+/* The manifest is generated per surface because the icon paths in it are
+   absolute and Vite does not rewrite them: a `.webmanifest` in `public/` is
+   copied byte for byte, so the console's copy asking for `/icon-192.png`
+   404s once the console is served from `/console/`. The base belongs to the
+   deployment, so it is written here beside the icons rather than typed into
+   two files that then disagree. */
+const surfaces = [
+  {
+    pkg: "site",
+    base: "/",
+    name: "Cordon",
+    short: "Cordon",
+    description: "One budget for a tree of agents, enforced on chain.",
+  },
+  {
+    pkg: "console",
+    base: "/console/",
+    name: "Cordon console",
+    short: "Cordon",
+    description: "One budget for a tree of agents, enforced on chain.",
+  },
+];
+
+for (const { pkg, base, name, short, description } of surfaces) {
+  const publicDir = join(here, "..", "..", pkg, "public");
+  mkdirSync(publicDir, { recursive: true });
+  for (const [from, to] of served) copyFileSync(join(out, from), join(publicDir, to));
+
+  const icon = (file, extra) => ({
+    src: `${base}${file}`,
+    sizes: extra.sizes,
+    type: "image/png",
+    ...(extra.purpose ? { purpose: extra.purpose } : {}),
+  });
+
+  writeFileSync(
+    join(publicDir, "manifest.webmanifest"),
+    `${JSON.stringify(
+      {
+        name,
+        short_name: short,
+        description,
+        start_url: base,
+        display: "standalone",
+        background_color: "#ececeb",
+        theme_color: "#ececeb",
+        icons: [
+          icon("icon-192.png", { sizes: "192x192" }),
+          icon("icon-512.png", { sizes: "512x512" }),
+          icon("icon-maskable-512.png", { sizes: "512x512", purpose: "maskable" }),
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 console.log(`${written.length} files in export/`);
