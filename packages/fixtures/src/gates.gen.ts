@@ -13,5 +13,6 @@ export type GateRecord = {
 export const GATE_RUNS: Record<string, GateRecord> = {
   "G1": {"id":"G1","status":"green","tests":57,"passed":57,"recordedAt":"2026-09-08"},
   "G4": {"id":"G4","status":"green","tests":1,"passed":1,"recordedAt":"2026-09-08"},
+  "G5": {"id":"G5","status":"green","tests":12,"passed":12,"recordedAt":"2026-09-08"},
   "G6": {"id":"G6","status":"green","tests":14,"passed":14,"recordedAt":"2026-09-08"},
 };
