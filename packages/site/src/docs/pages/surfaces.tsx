@@ -299,10 +299,10 @@ export function Attest() {
       </P>
 
       <H2 id="paying">Paying for an answer</H2>
-      <Code lang="bash">{`curl -i https://attest.cordon.xyz/attest/7
+      <Code lang="bash">{`curl -i https://attest.getcordon.xyz/attest/7
 # 402, with the offer in the body
 
-curl -H "X-PAYMENT: $(cordon-pay …)" https://attest.cordon.xyz/attest/7
+curl -H "X-PAYMENT: $(cordon-pay …)" https://attest.getcordon.xyz/attest/7
 # 200, with the record and an X-PAYMENT-RESPONSE header`}</Code>
       <P>
         The scheme is x402 <C>exact</C>: an EIP-3009{" "}

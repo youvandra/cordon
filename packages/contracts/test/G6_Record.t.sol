@@ -48,9 +48,9 @@ contract G6_Record is Base {
            not register it and does not hold it — a record about a token we
            control is the shape of the thing being replaced. */
         vm.prank(opRoot);
-        agentRoot = identity.register("https://cordon.xyz/agent/orchestrator");
+        agentRoot = identity.register("https://getcordon.xyz/agent/orchestrator");
         vm.prank(opA);
-        agentA = identity.register("https://cordon.xyz/agent/research-worker");
+        agentA = identity.register("https://getcordon.xyz/agent/research-worker");
 
         record.bind(root, agentRoot);
         record.bind(childA, agentA);
@@ -133,7 +133,7 @@ contract G6_Record is Base {
         _spend(opRoot, root, Fixtures.BUDGET6 - 4_000_000);
 
         vm.prank(opG);
-        uint256 agentG = identity.register("https://cordon.xyz/agent/scholar-fetch");
+        uint256 agentG = identity.register("https://getcordon.xyz/agent/scholar-fetch");
         record.bind(grandchild, agentG);
 
         (bool ok, uint256 refusalId, TreeVault.Reason reason) = _draw(opG, grandchild, aisa, Fixtures.TRANCHE6);
@@ -163,7 +163,7 @@ contract G6_Record is Base {
            address, which is the only address a reader filters on. */
         vm.prank(sybil);
         reputation.giveFeedback(
-            agentA, 100, 0, "cordon.refused", "window-budget", "", "https://cordon.xyz/refusal/1", bytes32(0)
+            agentA, 100, 0, "cordon.refused", "window-budget", "", "https://getcordon.xyz/refusal/1", bytes32(0)
         );
 
         assertEq(reputation.feedbackCount(agentA, sybil), 1, "they wrote something, under their own name");
@@ -203,7 +203,7 @@ contract G6_Record is Base {
         record.attest(refusalId);
 
         vm.prank(opA);
-        uint256 fresh = identity.register("https://cordon.xyz/agent/research-worker-take-two");
+        uint256 fresh = identity.register("https://getcordon.xyz/agent/research-worker-take-two");
 
         vm.expectRevert(abi.encodeWithSelector(ConductRecord.NodeAlreadyBound.selector, childA, agentA));
         record.bind(childA, fresh);

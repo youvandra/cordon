@@ -81,7 +81,7 @@ export class Recorder {
     if (existing !== 0n) return existing;
 
     const wallet = this.walletFor(node);
-    const base = this.deps.agentUriBase ?? "https://cordon.xyz/agent/";
+    const base = this.deps.agentUriBase ?? "https://getcordon.xyz/agent/";
 
     const registered = await wallet.writeContract({
       address: this.deps.identity,

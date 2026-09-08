@@ -61,7 +61,7 @@ contract ConductRecord {
 
     /// @dev Records resolve here. The path carries the refusal id; the client
     ///      address on the feedback carries which vault, on which chain.
-    string public constant RECORD_BASE = "https://cordon.xyz/refusal/";
+    string public constant RECORD_BASE = "https://getcordon.xyz/refusal/";
 
     /// @dev One tag, because there is one kind of record here. A release is
     ///      appended to the refusal it belongs to, not filed as its own event.
