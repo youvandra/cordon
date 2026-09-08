@@ -9,6 +9,12 @@
 #     cast wallet import cordon-deployer --interactive
 #
 # After that, this script never sees it and neither does your shell history.
+# Foundry asks for the keystore password on the terminal. To run unattended,
+# put that password in a file only you can read and name it. The key stays in
+# the keystore either way; what is named here is a password, never a key.
+#
+#     printf '%s' 'the password' > ~/.cordon-pw && chmod 600 ~/.cordon-pw
+#     CORDON_PASSWORD_FILE=~/.cordon-pw ./script/deploy.sh
 #
 #     ./script/deploy.sh                 # Arc testnet, from packages/fixtures
 #     CORDON_ACCOUNT=other ./script/deploy.sh
@@ -21,6 +27,14 @@ CHAIN_ID="${CORDON_CHAIN_ID:-5042002}"
 RPC="${CORDON_RPC:-https://rpc.testnet.arc.io}"
 ACCOUNT="${CORDON_ACCOUNT:-cordon-deployer}"
 VERIFIER_URL="${CORDON_VERIFIER_URL:-https://testnet.arcscan.app/api/}"
+
+# ETH_PASSWORD_FILE is not read by foundry 1.8.1, which prompts anyway and
+# fails with "Device not configured" when there is no terminal, so the flag is
+# passed explicitly rather than exported.
+PASSWORD=()
+if [ -n "${CORDON_PASSWORD_FILE:-}" ]; then
+  PASSWORD=(--password-file "$CORDON_PASSWORD_FILE")
+fi
 
 echo "chain     $CHAIN_ID"
 echo "rpc       $RPC"
@@ -45,7 +59,7 @@ echo "gateway   $CORDON_GATEWAY"
 echo "identity  $CORDON_IDENTITY"
 echo "reputatn  $CORDON_REPUTATION"
 
-SENDER="$(cast wallet address --account "$ACCOUNT")"
+SENDER="$(cast wallet address --account "$ACCOUNT" "${PASSWORD[@]}")"
 echo "sender    $SENDER"
 
 BALANCE="$(cast balance "$SENDER" --rpc-url "$RPC")"
@@ -61,6 +75,7 @@ forge script script/Deploy.s.sol:Deploy \
   --rpc-url "$RPC" \
   --account "$ACCOUNT" \
   --sender "$SENDER" \
+  "${PASSWORD[@]}" \
   --broadcast
 
 CORDON_COMMIT="$(git rev-parse HEAD 2>/dev/null || echo unknown)" \
