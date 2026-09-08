@@ -1,30 +1,14 @@
-import { Tag, Text } from "cordon-ui";
+import { Preview, Text } from "cordon-ui";
 
 /**
- * Two labels this console may not be without.
+ * The console's screen header.
  *
- * `Preview` says the figures are not chain reads. `Enforced` names the contract
- * function that produces the figure beside it — the rule from CLAUDE.md is that
- * no surface may display a number the contract does not enforce, so a figure
- * without one of these is a figure that should be deleted.
+ * `Preview` and `Enforced` used to be defined here as well, and stayed behind
+ * as copies when they moved into the library — so the console was rendering an
+ * older pair that knew nothing about the enforced/declared distinction. One
+ * definition now, in `cordon-ui`, and this file keeps only the thing that is
+ * genuinely console-shaped: a screen title with its preview label.
  */
-export function Preview({ note }: { note?: string }) {
-  return (
-    <Tag tone="caution" size="sm" dot>
-      frontend preview — {note ?? "figures are fixtures, not chain reads"}
-    </Tag>
-  );
-}
-
-export function Enforced({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="enforced">
-      <span className="enforced__dot" aria-hidden="true" />
-      <span className="mono">{children}</span>
-    </span>
-  );
-}
-
 export function ScreenHead({
   title,
   lede,

@@ -148,6 +148,7 @@ export type { FormProps, FormSectionProps, FormActionsProps } from "./lib/compon
 export { Section } from "./lib/components/Section";
 
 export { Preview, Enforced } from "./lib/components/Enforced";
+export type { Strength } from "./lib/components/Enforced";
 
 export { usePageMeta, useNoIndex } from "./hooks/usePageMeta";
 export type { PageMeta } from "./hooks/usePageMeta";

@@ -538,3 +538,24 @@ body {
 .foot__links a:hover {
   color: var(--cordon-ink);
 }
+
+/* A figure the contract bounds only as a declaration. The colour is the same
+   one every other caution in this system uses, so the reader does not have to
+   learn a new signal to notice the difference. */
+.enforced[data-strength="declared"]::before,
+.enforced[data-strength="declared"] .enforced__dot {
+  background: var(--cordon-caution);
+}
+
+.enforced__strength {
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--cordon-caution);
+}
+
+/* A declared figure inside a dense table gets the caution colour rather than a
+   second label; the column header already says what "declared" means, and
+   repeating it on every row would drown the number. */
+.cell__cp[data-strength="declared"] {
+  color: var(--cordon-caution);
+}

@@ -1,12 +1,21 @@
-import { Tag } from "cordon-ui";
-import { ENFORCED_BY, MANDATE, formatUsdc } from "@cordon/fixtures";
+import { Enforced, Tag } from "cordon-ui";
+import { ENFORCED_BY, MANDATE, STRENGTH, formatUsdc } from "@cordon/fixtures";
 import { Reveal } from "../parts/Reveal";
 
 const CHECKS = [
-  { name: "Tranche cap", detail: `No single draw exceeds ${formatUsdc(MANDATE.tranche6, 0)} USDC.`, fn: ENFORCED_BY.tranche },
-  { name: "Trailing window", detail: `${MANDATE.windowSeconds / 3600} hours, equal at every depth by construction.`, fn: ENFORCED_BY.budget },
-  { name: "Concentration", detail: `No counterparty takes more than ${MANDATE.concentrationBoundPct}% of the window.`, fn: ENFORCED_BY.concentration },
-  { name: "Ancestor debit", detail: "Every parent up to the root is debited on every draw.", fn: ENFORCED_BY.treeBar },
+  { name: "Tranche cap", detail: `No single draw exceeds ${formatUsdc(MANDATE.tranche6, 0)} USDC.`, fn: ENFORCED_BY.tranche, strength: STRENGTH.tranche },
+  { name: "Trailing window", detail: `${MANDATE.windowSeconds / 3600} hours, equal at every depth by construction.`, fn: ENFORCED_BY.budget, strength: STRENGTH.budget },
+  {
+    name: "Concentration",
+    /* This one used to read "no counterparty takes more than 35% of the
+       window", which claimed more than the contract can do. A payment leaves a
+       Gateway balance through a signature no contract reads, so what is
+       bounded is the counterparty the daemon names on chain before paying. */
+    detail: `No counterparty the daemon declares takes more than ${MANDATE.concentrationBoundPct}% of the window.`,
+    fn: ENFORCED_BY.concentration,
+    strength: STRENGTH.concentration,
+  },
+  { name: "Ancestor debit", detail: "Every parent up to the root is debited on every draw.", fn: ENFORCED_BY.treeBar, strength: STRENGTH.treeBar },
 ];
 
 /**
@@ -25,7 +34,10 @@ export function Mechanism() {
           </h2>
           <p className="lede">
             Four checks run in the contract on every tranche. Three of them exist elsewhere.
-            The fourth is the reason this is not a smaller wallet.
+            The fourth is the reason this is not a smaller wallet. The third is bounded
+            against what the daemon declares, because a payment leaves a Gateway balance
+            through a signature no contract can read — and a bound that overstates itself
+            is worse than one that names its edge.
           </p>
         </Reveal>
 
@@ -39,7 +51,7 @@ export function Mechanism() {
                   {index === 3 ? <Tag tone="rose" size="sm" style={{ marginLeft: 8 }}>the difference</Tag> : null}
                 </span>
                 <p className="points__body">{check.detail}</p>
-                <span className="enforced">{check.fn}</span>
+                <Enforced strength={check.strength}>{check.fn}</Enforced>
               </li>
             ))}
           </ul>
@@ -59,7 +71,7 @@ export function Mechanism() {
               is available — a named human signs it. What cannot be reversed is the bound, not
               the decision.
             </p>
-            <span className="enforced">{ENFORCED_BY.release}</span>
+            <Enforced>{ENFORCED_BY.release}</Enforced>
           </div>
           <hr className="rule" />
         </Reveal>
@@ -81,7 +93,7 @@ export function Mechanism() {
                 Spawns happen in seconds while the owner sleeps. The contract refuses a child
                 wider than its parent, so no per-spawn approval is needed and none would be safe.
               </p>
-              <span className="enforced">{ENFORCED_BY.revoke}</span>
+              <Enforced>{ENFORCED_BY.revoke}</Enforced>
             </li>
           </ul>
         </Reveal>

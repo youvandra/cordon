@@ -19,11 +19,34 @@ export function Preview({ note }: { note?: string }) {
   );
 }
 
-export function Enforced({ children }: { children: React.ReactNode }) {
+/**
+ * How hard the contract stands behind the figure beside it.
+ *
+ * `enforced` is the ordinary case: the money does not move unless the contract
+ * agrees. `declared` is the one place that is not true. A payment out of a
+ * Circle Gateway balance is a burn intent signed off chain, and the seller is
+ * a field inside that signature, so no contract can read it. What the contract
+ * bounds there is what the daemon stated on chain before paying.
+ *
+ * The distinction is shown rather than smoothed over, because a bound that
+ * looks stronger than it is does more harm than one that admits its edge.
+ */
+export type Strength = "enforced" | "declared";
+
+export function Enforced({
+  children,
+  strength = "enforced",
+}: {
+  children: React.ReactNode;
+  strength?: Strength;
+}) {
   return (
-    <span className="enforced">
+    <span className="enforced" data-strength={strength}>
       <span className="enforced__dot" aria-hidden="true" />
       <span className="mono">{children}</span>
+      {strength === "declared" ? (
+        <span className="enforced__strength">declared, not enforced</span>
+      ) : null}
     </span>
   );
 }

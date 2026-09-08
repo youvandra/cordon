@@ -16,7 +16,7 @@ import {
   Tree as TreeView,
 } from "cordon-ui";
 import type { TreeNode as UiTreeNode } from "cordon-ui";
-import { ENFORCED_BY, MANDATE, formatUsdc } from "@cordon/fixtures";
+import { ENFORCED_BY, MANDATE, STRENGTH, formatUsdc } from "@cordon/fixtures";
 import { TREE, flatten, pathTo, type TreeNode } from "@cordon/fixtures/preview";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
@@ -247,10 +247,15 @@ export default function Tree() {
             },
             {
               id: "concentration",
-              header: "Top counterparty",
+              /* "Declared" is in the header rather than in every row because
+                 it is a property of the column, not of any one node. The
+                 contract bounds the counterparty a daemon names on chain; the
+                 payment itself leaves a Gateway balance through a signature no
+                 contract reads. */
+              header: "Top declared counterparty",
               width: 200,
               cell: (node) => (
-                <span className="mono cell__cp">
+                <span className="mono cell__cp" data-strength={STRENGTH.concentration}>
                   {node.concentrationPct}% · {node.topCounterparty}
                 </span>
               ),

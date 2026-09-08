@@ -17,12 +17,14 @@ import {
   Text,
   usePageMeta,
 } from "cordon-ui";
+import type { Strength } from "cordon-ui";
 import {
   ARC,
   ENFORCED_BY,
   ERC8004,
   MANDATE,
   REGISTRY_BASELINE,
+  STRENGTH,
   formatUsdc,
 } from "@cordon/fixtures";
 import {
@@ -70,7 +72,13 @@ export default function AgentRecord() {
     3,
   );
 
-  const supporting: { value: string; label: string; fn: string }[] = [
+  const supporting: {
+    value: string;
+    label: string;
+    fn: string;
+    /** Absent means enforced, which is the ordinary case. */
+    strength?: Strength;
+  }[] = [
     {
       value: String(node.refused),
       label: "refused by the contract",
@@ -83,8 +91,9 @@ export default function AgentRecord() {
     },
     {
       value: `${node.concentrationPct}%`,
-      label: "highest concentration",
+      label: "highest declared concentration",
       fn: ENFORCED_BY.concentration,
+      strength: STRENGTH.concentration,
     },
     {
       value: `${node.depth}/${MANDATE.maxDepth}`,
@@ -203,7 +212,7 @@ export default function AgentRecord() {
                     <div className="figure">
                       <span className="figure__value num">{figure.value}</span>
                       <span className="figure__label">{figure.label}</span>
-                      <Enforced>{figure.fn}</Enforced>
+                      <Enforced strength={figure.strength}>{figure.fn}</Enforced>
                     </div>
                   </CardBody>
                 </Card>

@@ -634,3 +634,17 @@ main { flex: 1 1 auto; }
 .compare__panel .pane__foot {
   color: var(--cordon-on-glaze-soft);
 }
+
+/* A figure the contract bounds only as a declaration. The colour is the same
+   one every other caution in this system uses, so the reader does not have to
+   learn a new signal to notice the difference. */
+.enforced[data-strength="declared"]::before,
+.enforced[data-strength="declared"] .enforced__dot {
+  background: var(--cordon-caution);
+}
+
+.enforced__strength {
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--cordon-caution);
+}

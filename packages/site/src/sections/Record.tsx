@@ -1,4 +1,4 @@
-import { DotText, Surface } from "cordon-ui";
+import { DotText, Enforced, Surface } from "cordon-ui";
 import { ENFORCED_BY, ERC8004, REGISTRY_BASELINE } from "@cordon/fixtures";
 import { Reveal } from "../parts/Reveal";
 
@@ -91,7 +91,7 @@ export function Record() {
               enforcement seat: you must be the thing that refuses in order to hold a record of
               refusals.
             </p>
-            <span className="enforced">{ENFORCED_BY.record}</span>
+            <Enforced>{ENFORCED_BY.record}</Enforced>
           </div>
           <hr className="rule" />
         </Reveal>

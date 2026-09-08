@@ -110,7 +110,7 @@ export default function Setup() {
 
               <Field
                 label="Counterparty concentration bound"
-                hint={`${ENFORCED_BY.concentration} · percent of one window to a single payTo`}
+                hint={`${ENFORCED_BY.concentration} · percent of one window to a single declared payTo`}
               >
                 <TextField
                   type="number"

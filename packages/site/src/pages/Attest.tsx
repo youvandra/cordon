@@ -14,8 +14,8 @@ import {
   Text,
   usePageMeta,
 } from "cordon-ui";
-import { ARC, ENFORCED_BY, MANDATE } from "@cordon/fixtures";
-import { TREE, flatten } from "@cordon/fixtures/preview";
+import { ARC, ENFORCED_BY, MANDATE, STRENGTH, formatUsdc } from "@cordon/fixtures";
+import { TREE, flatten, headroom } from "@cordon/fixtures/preview";
 import { RecordShell } from "../parts/RecordShell";
 import { useEntrance } from "../parts/motion";
 
@@ -38,16 +38,24 @@ export default function Attest() {
   });
   const animate = useEntrance();
 
+  /**
+   * What a seller gets for a tenth of a cent, and every field says how hard
+   * the contract stands behind it. `declaredConcentrationPct` is named that
+   * way on purpose: a machine reading this must not mistake a bound on what
+   * the daemon said for a bound on what it paid.
+   */
   const body = {
     agentId: node.agentId,
     mandate: MANDATE.id,
     chain: ARC.chainId,
     live: true,
-    headroom: "28.58",
+    headroom: formatUsdc(headroom(node).available6).replace("$", ""),
+    headroomBoundBy: headroom(node).boundBy.label,
     refusals: node.refused,
     draws: node.draws,
     depth: node.depth,
-    concentrationPct: node.concentrationPct,
+    declaredConcentrationPct: node.concentrationPct,
+    enforcement: STRENGTH,
   };
 
   return (
