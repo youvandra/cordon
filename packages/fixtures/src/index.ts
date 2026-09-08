@@ -246,6 +246,26 @@ export const ENDPOINTS = [
  */
 export const PENDING_ADDRESS = "pending — written by the deploy script";
 
+/** The same absence, for the two fields no deploy can fill. A mandate exists
+ *  because an owner signed for it, which is the one step no script may take. */
+export const PENDING_MANDATE = "pending — no mandate signed yet";
+
+/** Is this an address, or is it the sentence that stands where one will go? */
+export function isAddress(value: string): boolean {
+  return /^0x[0-9a-fA-F]{40}$/.test(value);
+}
+
+/**
+ * An address, short enough to sit in a chip.
+ *
+ * Anything that is not an address reads `pending`, whole. Slicing the ends off
+ * a sentence produces a shorter sentence, not an address, and `pending — …ript`
+ * on screen looks like a truncated identifier rather than an absent one.
+ */
+export function shortAddress(value: string, head = 10, tail = 4): string {
+  return isAddress(value) ? `${value.slice(0, head)}…${value.slice(-tail)}` : "pending";
+}
+
 /**
  * The deployed contracts, copied from `deployments/<chainId>.json` by
  * `packages/contracts/scripts/record-addresses.mjs`. `null` until a deploy has
@@ -257,21 +277,21 @@ export type { Deployment } from "./deployment.gen.ts";
 export const MANDATE = {
   /** No mandate is open yet. The owner signs the first one from their own
    *  wallet, and nothing here may stand in for a signature nobody gave. */
-  id: PENDING_ADDRESS,
+  id: PENDING_MANDATE,
   /** TreeVault.windowBudget(root) — base units, 6 dp. */
-  budget6: 100_000_000n,
+  budget6: 20_000_000n,
   /** Equal at every depth by construction. A shorter child window resets faster. */
   windowSeconds: 86_400,
   /** MandateRegistry.maxDepth() */
   maxDepth: 3,
   /** TreeVault.trancheCap() */
-  tranche6: 5_000_000n,
+  tranche6: 1_000_000n,
   /** TreeVault.concentrationBound() — share of the window to one counterparty. */
   concentrationBoundPct: 35,
   /** The one on chain, never a literal. */
   vault: DEPLOYMENT?.vault ?? PENDING_ADDRESS,
   /** The owner is whoever opens the mandate, and nobody has. */
-  owner: PENDING_ADDRESS,
+  owner: PENDING_MANDATE,
 } as const;
 
 /**
@@ -413,22 +433,41 @@ export const SEARCH_CLEAN = SEARCH.passedABound === 0;
 /* Not a chain read. Labelled as an illustration everywhere it renders.*/
 /* ------------------------------------------------------------------ */
 
+/**
+ * A share of the signed window, in basis points.
+ *
+ * The illustration is about proportion: an unbounded run climbing past a
+ * window that stops climbing. Written as amounts, every one of these figures
+ * has to be retyped when the mandate is resized, and the failure mode is a
+ * step that sits above the ceiling it is drawn under.
+ */
+const share = (bps: number): bigint => (MANDATE.budget6 * BigInt(bps)) / 10_000n;
+
 export const COUNTERFACTUAL = {
   kind: "illustration" as const,
   steps: [
-    { draw: 1, without6: 127_000_000n, with6: 47_000_000n, refused: false },
-    { draw: 2, without6: 284_000_000n, with6: 83_000_000n, refused: false },
-    { draw: 3, without6: 451_000_000n, with6: 100_000_000n, refused: true },
-    { draw: 4, without6: 612_000_000n, with6: 100_000_000n, refused: true },
-    { draw: 5, without6: 847_000_000n, with6: 100_000_000n, refused: true },
+    { draw: 1, without6: share(12_700), with6: share(4_700), refused: false },
+    { draw: 2, without6: share(28_400), with6: share(8_300), refused: false },
+    { draw: 3, without6: share(45_100), with6: MANDATE.budget6, refused: true },
+    { draw: 4, without6: share(61_200), with6: MANDATE.budget6, refused: true },
+    { draw: 5, without6: share(84_700), with6: MANDATE.budget6, refused: true },
   ],
 } as const;
 
-/** Warm-up beat: structuring. Every call is under any per-transfer cap. */
+/**
+ * Warm-up beat: structuring. Every call is under any per-transfer cap.
+ *
+ * The total has to land between the concentration bound and the window, or the
+ * beat proves the wrong thing: over the window and the budget refuses first,
+ * under the bound and nothing refuses at all.
+ */
+const STRUCTURING_CALLS = 2_000;
+const STRUCTURING_UNIT = 0.008;
+
 export const STRUCTURING = {
-  calls: 10_000,
-  unitPrice: 0.008,
-  total: 80,
+  calls: STRUCTURING_CALLS,
+  unitPrice: STRUCTURING_UNIT,
+  total: STRUCTURING_CALLS * STRUCTURING_UNIT,
   refusedBy: ENFORCED_BY.concentration,
 } as const;
 

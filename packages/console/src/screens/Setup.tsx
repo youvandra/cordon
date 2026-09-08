@@ -14,7 +14,7 @@ import {
   Text,
   TextField,
 } from "cordon-ui";
-import { ENFORCED_BY, MANDATE } from "@cordon/fixtures";
+import { ENFORCED_BY, MANDATE, isAddress } from "@cordon/fixtures";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 import { useEntrance } from "../lib/entrance";
@@ -190,7 +190,11 @@ export default function Setup() {
                 </Stack>
               </CardHeader>
               <CardBody>
-                <pre className="code mono">{`export CORDON_MANDATE=${MANDATE.id.slice(0, 14)}…
+                {/* Pasted, this has to either work or read as a blank. A
+                    truncated sentence where the id goes is neither. */}
+                <pre className="code mono">{`export CORDON_MANDATE=${
+                  isAddress(MANDATE.id) ? `${MANDATE.id.slice(0, 14)}…` : "<the mandate you signed>"
+                }
 export CORDON_CHAIN=arc
 
 npx -y @cordon/mcp                        # MCP

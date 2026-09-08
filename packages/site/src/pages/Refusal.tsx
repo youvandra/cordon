@@ -14,7 +14,7 @@ import {
   Text,
   usePageMeta,
 } from "cordon-ui";
-import { ARC, ENFORCED_BY, STRENGTH, formatUsdc, strengthOf } from "@cordon/fixtures";
+import { ARC, ENFORCED_BY, STRENGTH, formatUsdc, isAddress, shortAddress, strengthOf } from "@cordon/fixtures";
 import {
   addrUrl,
   refusalByPath,
@@ -91,14 +91,20 @@ function Release({ refusal }: { refusal: RefusalRow }) {
               </Text>
               <Text variant="body" tone="copy" as="p">
                 Signed by{" "}
-                <a
-                  href={addrUrl(refusal.release.by)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mono"
-                >
-                  {refusal.release.by.slice(0, 10)}…{refusal.release.by.slice(-6)}
-                </a>{" "}
+                {/* An explorer link to a sentence resolves to nothing, so an
+                    owner nobody has signed as is named, not linked. */}
+                {isAddress(refusal.release.by) ? (
+                  <a
+                    href={addrUrl(refusal.release.by)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mono"
+                  >
+                    {shortAddress(refusal.release.by, 10, 6)}
+                  </a>
+                ) : (
+                  <span className="mono">the owner’s own key</span>
+                )}{" "}
                 in{" "}
                 <a
                   href={txUrl(refusal.release.tx)}

@@ -11,7 +11,7 @@ import {
   Text,
   useNoIndex,
 } from "cordon-ui";
-import { ARC, MANDATE } from "@cordon/fixtures";
+import { ARC, MANDATE, isAddress, shortAddress } from "@cordon/fixtures";
 import { REFUSALS } from "@cordon/fixtures/preview";
 import { useWallet } from "../lib/wallet";
 import { site } from "../lib/links";
@@ -161,8 +161,10 @@ export function ConsoleShell() {
               an address becomes the single character "0". An address has no
               initials, and inventing one is worse than a glyph. */}
           <Icon name="user" size={14} />
+          {/* No owner has signed a mandate yet, so the preview build has no
+              address to show and says which of the two it is. */}
           <span className="mono top__addr">
-            {address.slice(0, 6)}…{address.slice(-4)}
+            {isAddress(address) ? shortAddress(address, 6) : "preview session"}
           </span>
         </DropdownButton>
       </Topbar>
@@ -174,9 +176,7 @@ export function ConsoleShell() {
               a product with one tree. */}
           <div className="side__head">
             <span className="side__head-label">Mandate</span>
-            <span className="mono side__head-id">
-              {MANDATE.id.slice(0, 10)}…{MANDATE.id.slice(-4)}
-            </span>
+            <span className="mono side__head-id">{shortAddress(MANDATE.id)}</span>
             <Tag tone={ARC.mainnetLaunched ? "positive" : "caution"} size="sm" dot>
               {ARC.mainnetLaunched ? "mainnet" : "testnet"}
             </Tag>

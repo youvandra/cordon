@@ -42,20 +42,30 @@ export interface TreeNode {
 /**
  * The demo tree, and it is over-provisioned on purpose.
  *
- * The two workers are sized $70 and $70 under a $100 root, which is $140 the
- * tree cannot afford. That is the shape the product exists for: nobody knows
+ * The two workers are each sized at 70% of the root, which is 140% of a tree
+ * that only has 100%. That is the shape the product exists for: nobody knows
  * in advance which branch will need the money, so no branch is throttled by a
  * forecast and the root is the only real total. A tree whose children summed
  * to less than their parent would never once exercise ancestor debit, and
  * every figure on the screen would be explained by the node's own limit.
  */
+/**
+ * A node's size, as a share of the root's window in basis points.
+ *
+ * Written as dollars, every figure in this tree has to be retyped whenever the
+ * mandate is resized, and the failure is silent: a child left at $70 under a
+ * root resized to $20 is a child larger than the tree it hangs from. The
+ * proportions are the illustration; the amounts follow from the mandate.
+ */
+const share = (bps: number): bigint => (MANDATE.budget6 * BigInt(bps)) / 10_000n;
+
 export const TREE: TreeNode = {
   id: "root",
   label: "orchestrator",
   address: "0x9d41…7c02",
   agentId: 41822,
   depth: 0,
-  spent6: 71_420_000n,
+  spent6: share(7_142),
   budget6: MANDATE.budget6,
   concentrationPct: 22,
   topCounterparty: "api.aisa.one",
@@ -68,8 +78,8 @@ export const TREE: TreeNode = {
       address: "0x2b70…9ae1",
       agentId: 41823,
       depth: 1,
-      spent6: 38_900_000n,
-      budget6: 70_000_000n,
+      spent6: share(3_890),
+      budget6: share(7_000),
       concentrationPct: 31,
       topCounterparty: "api.aisa.one",
       refused: 1,
@@ -81,8 +91,8 @@ export const TREE: TreeNode = {
           address: "0x7c19…33fd",
           agentId: 41825,
           depth: 2,
-          spent6: 21_400_000n,
-          budget6: 70_000_000n,
+          spent6: share(2_140),
+          budget6: share(7_000),
           concentrationPct: 34,
           topCounterparty: "api.aisa.one",
           refused: 1,
@@ -95,8 +105,8 @@ export const TREE: TreeNode = {
           address: "0x51aa…08b4",
           agentId: 41826,
           depth: 2,
-          spent6: 17_500_000n,
-          budget6: 20_000_000n,
+          spent6: share(1_750),
+          budget6: share(2_000),
           concentrationPct: 28,
           topCounterparty: "agents.allium.so",
           refused: 0,
@@ -111,8 +121,8 @@ export const TREE: TreeNode = {
       address: "0xc408…12d7",
       agentId: 41824,
       depth: 1,
-      spent6: 32_520_000n,
-      budget6: 70_000_000n,
+      spent6: share(3_252),
+      budget6: share(7_000),
       concentrationPct: 47,
       topCounterparty: "api.arkm.com",
       refused: 2,
@@ -124,8 +134,8 @@ export const TREE: TreeNode = {
           address: "0xe6f2…5b90",
           agentId: 41827,
           depth: 2,
-          spent6: 30_000_000n,
-          budget6: 30_000_000n,
+          spent6: share(3_000),
+          budget6: share(3_000),
           concentrationPct: 61,
           topCounterparty: "api.arkm.com",
           refused: 2,
@@ -226,7 +236,11 @@ export const REFUSALS: Refusal[] = [
     bound: ENFORCED_BY.treeBar,
     boundLabel: "ancestor debit, at the root window",
     requested6: 200_000_000n,
-    headroom6: 28_580_000n,
+    /* What the root window had left, which is the whole point of this refusal:
+       the node's own limit was untouched and an ancestor's was not. Derived,
+       because a headroom typed beside a budget it no longer matches is the
+       figure a reader would use to check the arithmetic. */
+    headroom6: MANDATE.budget6 - TREE.spent6,
     counterparty: "api.arkm.com/x402/intelligence/address-enriched-batch",
     at: "2026-09-07 09:41:22Z",
     tx: "0x6c1f9a7be0a54d3f2b8e77c419ad0e5b3f81c92d47ae6b05d1f3a2c88e740b19",
