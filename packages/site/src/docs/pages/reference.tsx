@@ -39,7 +39,8 @@ export function Contracts() {
           [<C key="d">draw(node, counterparty, amount)</C>, "the node's operator", "ask for a tranche; releases or refuses"],
           [<C key="rl">release(refusalId)</C>, "the owner", "sign a one time exception to one refusal"],
           [<C key="ws">windowSpent(node)</C>, "anyone", "what this node has spent in the current window"],
-          [<C key="hr">headroom(node)</C>, "anyone", "what it may still draw, and which node is the limit"],
+          [<C key="ls">lifetimeSpent(node)</C>, "anyone", "what it has spent since it was opened; this one never resets"],
+          [<C key="hr">headroom(node)</C>, "anyone", "the tighter of window and lifetime, and which node is the limit"],
           [<C key="ev">evaluate(node, to, amount)</C>, "anyone", "what a draw would do, without doing it"],
           [<C key="rf">refusal(id)</C>, "anyone", "one refusal, in full"],
         ]}

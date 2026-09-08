@@ -1,6 +1,12 @@
 import { Link } from "react-router-dom";
 import { MANDATE, formatUsdc } from "@cordon/fixtures";
+import { TREE } from "@cordon/fixtures/preview";
 import { C, Code, H2, H3, Lead, Note, OL, P, Table, UL } from "../parts";
+
+/* The branch the ancestor-debit example walks down. Named here so the figures
+   below are the demo tree's own, not a second set that can disagree with it. */
+const WORKER = TREE.children[0]!;
+const LEAF = WORKER.children[0]!;
 
 export function MandateTree() {
   return (
@@ -15,13 +21,14 @@ export function MandateTree() {
       <P>
         The owner opens the root from their own wallet. This is the one moment a
         person authorises the tree, and no server can do it for them. The root
-        carries five numbers:
+        carries six numbers:
       </P>
       <Table
         head={["Field", "Meaning", "Example"]}
         rows={[
           ["budget", "how much the whole tree may spend in one window", formatUsdc(MANDATE.budget6, 0)],
           ["window", "the length of that window, in seconds", `${MANDATE.windowSeconds}`],
+          ["lifetime cap", "how much it may spend in total, ever; this one never resets", formatUsdc(MANDATE.lifetimeCap6, 0)],
           ["tranche cap", "the most any single purchase may cost", formatUsdc(MANDATE.tranche6, 0)],
           ["concentration", "the share of a window one seller may take", `${MANDATE.concentrationBoundPct}%`],
           ["max depth", "how deep the tree may go", `${MANDATE.maxDepth}`],
@@ -37,7 +44,7 @@ export function MandateTree() {
         its parent, whoever asks, including the owner.
       </P>
       <UL>
-        <li>Budget, tranche cap and concentration may only shrink.</li>
+        <li>Budget, lifetime cap, tranche cap and concentration may only shrink.</li>
         <li>Depth may only increase, and never past the root's maximum.</li>
         <li>
           The window must be <b>equal</b> to the parent's, never shorter.
@@ -58,9 +65,13 @@ export function MandateTree() {
         and no per session limit can do, and it is the reason a tree has a total
         at all.
       </P>
-      <Code>{`root        $100 budget      spent $71.42
- └─ worker   $70 budget      spent $38.90
-     └─ leaf $70 budget      spent $21.40   ← its own budget is fine
+      {/* Derived from the mandate, never typed. A tree written in dollars is
+          a tree that has to be retyped every time the mandate is resized, and
+          the failure is silent: a child left at $70 under a $20 root is a
+          child larger than the tree it hangs from. */}
+      <Code>{`root        ${formatUsdc(TREE.budget6, 0)} budget      spent ${formatUsdc(TREE.spent6)}
+ └─ worker   ${formatUsdc(WORKER.budget6, 0)} budget      spent ${formatUsdc(WORKER.spent6)}
+     └─ leaf ${formatUsdc(LEAF.budget6, 0)} budget      spent ${formatUsdc(LEAF.spent6)}   ← its own budget is fine
                                               the root's is what refuses`}</Code>
 
       <H2 id="revocation">Revocation</H2>
@@ -99,7 +110,7 @@ export function DrawsAndBounds() {
         this design exists to remove.
       </Note>
 
-      <H2 id="the-four-bounds">The four bounds</H2>
+      <H2 id="the-four-bounds">The five bounds</H2>
       <H3 id="tranche-cap">Tranche cap</H3>
       <P>
         No single draw may exceed the cap. This is what stops one plausible
@@ -111,6 +122,14 @@ export function DrawsAndBounds() {
         The node's spend inside the current window plus this draw must fit the
         node's budget. Windows tumble in whole steps, so a parent and a child of
         equal length stay in phase forever.
+      </P>
+
+      <H3 id="lifetime-cap">Lifetime cap</H3>
+      <P>
+        The node's spend since it was opened, plus this draw, must fit the total
+        the owner signed for. The window above rolls; this does not. Without it
+        a budget is a rate, and a mandate left running for a week authorises
+        seven windows of it.
       </P>
 
       <H3 id="concentration">Concentration</H3>
@@ -130,13 +149,13 @@ export function DrawsAndBounds() {
       <P>
         All of the above are evaluated for every node on the path, not only for
         the node that asked. This is the check that makes delegation safe, and
-        the only one of the four that does not exist somewhere else already.
+        the only one of the five that does not exist somewhere else already.
       </P>
 
       <H2 id="order">The order things happen in</H2>
       <OL>
         <li>Is any node on the path revoked?</li>
-        <li>For each node from the asker to the root: cap, then window, then concentration.</li>
+        <li>For each node from the asker to the root: cap, then window, then lifetime, then concentration.</li>
         <li>Does the treasury actually hold the money?</li>
       </OL>
       <P>
@@ -148,9 +167,10 @@ export function DrawsAndBounds() {
       <H2 id="headroom">Headroom</H2>
       <P>
         Headroom is what a node may still draw right now, and which node is the
-        reason. It is often an ancestor. A tool that reported a node's own
-        remaining budget would be reporting a number that does not decide
-        anything.
+        reason. It is often an ancestor, and it is the tighter of the window and
+        the lifetime — a figure that reported only the window would promise
+        money the lifetime refuses. A tool that reported a node's own remaining
+        budget would be reporting a number that does not decide anything.
       </P>
     </>
   );
@@ -188,6 +208,7 @@ export function Refusals() {
           ["revoked", "this node or one above it has been cut"],
           ["tranche-cap", "the purchase is larger than one draw may be"],
           ["window-budget", "the window is spent, on this node or an ancestor"],
+          ["lifetime-cap", "the total this mandate was signed for is spent, and it does not come back"],
           ["concentration", "this recipient has taken its share of the window"],
           ["vault-balance", "the bounds passed and the treasury is empty"],
         ]}
