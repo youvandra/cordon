@@ -17,6 +17,7 @@ packages/contracts/deployments/31337.json
 # The meter's snapshot. A cache by definition: delete it and the meter rebuilds
 # it from chain, which is the property its tests assert.
 packages/meter/ledger.*.json
+packages/attest/ledger.*.json
 design/cordon-surfaces.html
 .DS_Store
 tsconfig.tsbuildinfo

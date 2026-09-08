@@ -181,6 +181,35 @@ export const MARKETPLACE = {
   arcListingsRecheckedOn: "2026-09-08",
 } as const;
 
+/* ------------------------------------------------------------------ */
+/* The attestation endpoint — what Cordon itself sells                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A seller asks one question before serving an agent: does this buyer hold a
+ * live mandate, and what has it done inside it? The answer is the same record
+ * `/agent/<id>` shows for free, in the shape a machine reads, behind x402.
+ *
+ * Price is a parameter of the offer, not a measurement. It sits under the
+ * catalogue's median of $0.024 and inside the band where 651 of 1,535 live
+ * offers already are, because a check that costs more than the call it guards
+ * is a check nobody makes.
+ */
+export const ATTEST = {
+  /** Base units, 6 dp. $0.001. */
+  price6: 1_000n,
+  /** x402 `exact`, the only scheme with an EOA signature and no gas. */
+  scheme: "exact",
+  x402Version: 2,
+  resourcePath: "/attest",
+  /** How long a payer's authorisation has to stay valid after it arrives.
+   *  A signature that expires while the settlement is in flight is a payment
+   *  the seller cannot collect and a buyer who was charged nothing. */
+  minLeadSeconds: 15,
+  /** What the offer tells a payer to sign for. */
+  maxTimeoutSeconds: 300,
+} as const;
+
 export const ENDPOINTS = [
   { price: 0.0024, seller: "AIsa API", path: "api.aisa.one/apis/v2/scholar/search/explain" },
   { price: 0.008, seller: "AIsa API", path: "api.aisa.one/apis/v2/coingecko/simple/price" },
