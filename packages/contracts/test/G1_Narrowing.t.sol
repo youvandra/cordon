@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {Base} from "./Base.t.sol";
 import {MandateRegistry} from "../src/MandateRegistry.sol";
 import {Fixtures} from "./Fixtures.gen.sol";
+import {NO_LIFETIME_BOUND} from "./Bounds.sol";
 
 /**
  * G1 — children narrow monotonically.
@@ -129,6 +130,7 @@ contract G1_Narrowing is Base {
         MandateRegistry.Params memory p = MandateRegistry.Params({
             operator: makeAddr("op"),
             budget6: budget6,
+            lifetimeCap6: NO_LIFETIME_BOUND,
             windowSeconds: Fixtures.WINDOW_SECONDS,
             trancheCap6: tranche6,
             concentrationBps: bps,

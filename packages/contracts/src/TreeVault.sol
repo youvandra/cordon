@@ -49,7 +49,10 @@ contract TreeVault {
         TrancheCap,
         WindowBudget,
         Concentration,
-        VaultBalance
+        VaultBalance,
+        /* Appended, never inserted. A Reason is stored in every refusal and
+           emitted in every event, so an existing value may not change index. */
+        LifetimeCap
     }
 
     /// @dev A tumbling window advanced by whole multiples, so equal-length
@@ -85,6 +88,10 @@ contract TreeVault {
 
     /// @notice Funds are held per root, never commingled across trees.
     mapping(bytes32 => uint128) public treasury6;
+
+    /// @dev Gross draws by a node and, through ancestor debit, by everything
+    ///      under it. This one never rolls: that is the whole point of it.
+    mapping(bytes32 => uint128) private _lifetimeSpent;
 
     mapping(bytes32 => Window) private _nodeWindow;
     /// @dev Keyed by DECLARED counterparty. Bounds an honest daemon; a lying
@@ -265,6 +272,13 @@ contract TreeVault {
             uint128 spent = _spent(_nodeWindow[ancestry[i]], a.windowSeconds);
             if (spent + amount6 > a.budget6) return (Reason.WindowBudget, ancestry[i]);
 
+            /* The window resets and this does not. Without it the budget above
+               is a rate: a tree left running spends its window again in the
+               next one, and every one after that, forever. */
+            if (_lifetimeSpent[ancestry[i]] + amount6 > a.lifetimeCap6) {
+                return (Reason.LifetimeCap, ancestry[i]);
+            }
+
             uint128 declared = _spent(_counterpartyWindow[ancestry[i]][counterparty], a.windowSeconds);
             uint128 limit = uint128((uint256(a.budget6) * a.concentrationBps) / BPS);
             if (declared + amount6 > limit) return (Reason.Concentration, ancestry[i]);
@@ -284,6 +298,8 @@ contract TreeVault {
             Window memory w = _roll(_nodeWindow[id], a.windowSeconds);
             w.spent += amount6;
             _nodeWindow[id] = w;
+
+            _lifetimeSpent[id] += amount6;
 
             Window memory cw = _roll(_counterpartyWindow[id][counterparty], a.windowSeconds);
             cw.spent += amount6;
@@ -330,6 +346,12 @@ contract TreeVault {
     /* ------------------------------------------------------------------ */
     /* Views — every figure the console renders comes from one of these     */
     /* ------------------------------------------------------------------ */
+
+    /// @notice `TreeVault.lifetimeSpent(node)` — gross draws by this node and
+    ///         everything under it, for the life of the mandate. Never resets.
+    function lifetimeSpent(bytes32 node) external view returns (uint128) {
+        return _lifetimeSpent[node];
+    }
 
     /// @notice `TreeVault.windowSpent(node)` — the budget figure on screen.
     function windowSpent(bytes32 node) external view returns (uint128) {
@@ -383,6 +405,11 @@ contract TreeVault {
             MandateRegistry.Mandate memory a =
                 i == 0 ? m : registry.mandate(ancestry[i]);
             uint128 left = a.budget6 - _spent(_nodeWindow[ancestry[i]], a.windowSeconds);
+            /* Two bounds on one node, and the answer is the tighter one. A
+               headroom that reports only the window tells an agent it may
+               spend money the lifetime cap will refuse. */
+            uint128 lifeLeft = a.lifetimeCap6 - _lifetimeSpent[ancestry[i]];
+            if (lifeLeft < left) left = lifeLeft;
             if (left < available6) {
                 available6 = left;
                 boundBy = ancestry[i];

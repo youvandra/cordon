@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {Base} from "./Base.t.sol";
 import {TreeVault} from "../src/TreeVault.sol";
 import {Fixtures} from "./Fixtures.gen.sol";
+import {NO_LIFETIME_BOUND} from "./Bounds.sol";
 
 /**
  * G1 — the difference between a budget and an amount.
@@ -38,19 +39,19 @@ contract G1_Headroom is Base {
         assertEq(boundBy, grandchild, "its own window, at the start");
 
         // Spend most of the root, and the binding moves up.
-        _spend(opRoot, root, 80_000_000);
+        _spend(opRoot, root, _share(80));
 
         (available, boundBy) = vault.headroom(grandchild);
-        assertEq(available, Fixtures.BUDGET6 - 80_000_000, "what the root has left");
+        assertEq(available, Fixtures.BUDGET6 - _share(80), "what the root has left");
         assertEq(boundBy, root, "and the root is now the reason");
     }
 
     function test_headroom_never_promises_more_than_the_vault_holds() public {
         vm.prank(owner);
-        vault.withdraw(root, owner, Fixtures.BUDGET6 - 1_000_000);
+        vault.withdraw(root, owner, Fixtures.BUDGET6 - _share(5));
 
         (uint128 available, bytes32 boundBy) = vault.headroom(grandchild);
-        assertEq(available, 1_000_000, "the treasury is the limit once it is the smallest");
+        assertEq(available, _share(5), "the treasury is the limit once it is the smallest");
         assertEq(boundBy, root);
     }
 
@@ -97,16 +98,5 @@ contract G1_Headroom is Base {
 
     function _seller(uint256 i) internal returns (address) {
         return makeAddr(string.concat("seller:", vm.toString(i % 16)));
-    }
-
-    function _spend(address op, bytes32 node, uint128 total) internal {
-        uint128 moved;
-        uint256 i;
-        while (moved < total) {
-            uint128 step = total - moved < Fixtures.TRANCHE6 ? total - moved : Fixtures.TRANCHE6;
-            (bool ok,,) = _draw(op, node, _seller(i++), step);
-            assertTrue(ok, "setup draw was expected to release");
-            moved += step;
-        }
     }
 }

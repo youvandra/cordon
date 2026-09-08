@@ -14,10 +14,11 @@ library Fixtures {
     uint8 internal constant NATIVE_DECIMALS = 18;
 
     /* The demo mandate. Every field is a bound the contract evaluates. */
-    uint128 internal constant BUDGET6 = 100000000;
+    uint128 internal constant BUDGET6 = 20000000;
+    uint128 internal constant LIFETIME_CAP6 = 50000000;
     uint64 internal constant WINDOW_SECONDS = 86400;
     uint8 internal constant MAX_DEPTH = 3;
-    uint128 internal constant TRANCHE6 = 5000000;
+    uint128 internal constant TRANCHE6 = 1000000;
     uint16 internal constant CONCENTRATION_BPS = 3500;
 
     /* ERC-8004 — live on Arc already. Nothing to deploy. */
@@ -28,9 +29,9 @@ library Fixtures {
        depositFor's allowance check on 2026-09-08. */
     address internal constant GATEWAY_WALLET = 0x0077777d7EBA4688BDeF3E311b846F25870A19B9;
 
-    /* Structuring beat: 10000 calls at $0.008
-       to one payee is $80. Every call is under any
+    /* Structuring beat: 2000 calls at $0.008
+       to one payee is $16. Every call is under any
        per-transfer cap; the concentration bound is what refuses it. */
-    uint256 internal constant STRUCTURING_CALLS = 10000;
+    uint256 internal constant STRUCTURING_CALLS = 2000;
     uint128 internal constant STRUCTURING_UNIT6 = 8000;
 }

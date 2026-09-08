@@ -36,6 +36,7 @@ library Fixtures {
 
     /* The demo mandate. Every field is a bound the contract evaluates. */
     uint128 internal constant BUDGET6 = ${MANDATE.budget6};
+    uint128 internal constant LIFETIME_CAP6 = ${MANDATE.lifetimeCap6};
     uint64 internal constant WINDOW_SECONDS = ${MANDATE.windowSeconds};
     uint8 internal constant MAX_DEPTH = ${MANDATE.maxDepth};
     uint128 internal constant TRANCHE6 = ${MANDATE.tranche6};

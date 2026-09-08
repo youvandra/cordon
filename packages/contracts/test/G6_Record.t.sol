@@ -130,7 +130,10 @@ contract G6_Record is Base {
         /* The grandchild draws inside its own budget and is stopped by the
            root's window. The conduct is the grandchild's; the bound is the
            root's, and the reason says so. */
-        _spend(opRoot, root, Fixtures.BUDGET6 - 4_000_000);
+        /* Leave less than one tranche, so the next draw cannot fit however
+           the mandate is sized. A fixed remainder here silently stopped
+           refusing when the tranche cap came down. */
+        _spend(opRoot, root, Fixtures.BUDGET6 - (Fixtures.TRANCHE6 / 2));
 
         vm.prank(opG);
         uint256 agentG = identity.register("https://getcordon.xyz/agent/scholar-fetch");
@@ -241,21 +244,4 @@ contract G6_Record is Base {
         record.attestRelease(refusalId);
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Helpers                                                             */
-    /* ------------------------------------------------------------------ */
-
-    /// @dev Spend a node's window down in tranche-sized draws.
-    function _spend(address op, bytes32 node, uint128 total6) private {
-        uint128 left = total6;
-        while (left > 0) {
-            uint128 step = left > Fixtures.TRANCHE6 ? Fixtures.TRANCHE6 : left;
-            /* Spread across payees so the concentration bound is not what
-               stops this — the test is about the window. */
-            address payee = left % 3 == 0 ? aisa : (left % 3 == 1 ? allium : arkham);
-            (bool ok,,) = _draw(op, node, payee, step);
-            require(ok, "setup draw was refused");
-            left -= step;
-        }
-    }
 }

@@ -5,6 +5,7 @@ import {Base} from "./Base.t.sol";
 import {MandateRegistry} from "../src/MandateRegistry.sol";
 import {TreeVault} from "../src/TreeVault.sol";
 import {Fixtures} from "./Fixtures.gen.sol";
+import {NO_LIFETIME_BOUND} from "./Bounds.sol";
 
 /**
  * G1 — the fence around the arithmetic.
@@ -131,6 +132,7 @@ contract G1_Fence is Base {
             MandateRegistry.Params({
                 operator: other,
                 budget6: Fixtures.BUDGET6,
+                lifetimeCap6: NO_LIFETIME_BOUND,
                 windowSeconds: Fixtures.WINDOW_SECONDS,
                 trancheCap6: Fixtures.TRANCHE6,
                 concentrationBps: Fixtures.CONCENTRATION_BPS,

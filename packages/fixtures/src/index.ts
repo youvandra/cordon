@@ -278,8 +278,17 @@ export const MANDATE = {
   /** No mandate is open yet. The owner signs the first one from their own
    *  wallet, and nothing here may stand in for a signature nobody gave. */
   id: PENDING_MANDATE,
-  /** TreeVault.windowBudget(root) — base units, 6 dp. */
+  /** TreeVault.windowBudget(root) — base units, 6 dp. What may be drawn in
+   *  any one window. It resets, which is why the cap below exists. */
   budget6: 20_000_000n,
+  /** TreeVault.lifetimeSpent(node) — base units, 6 dp, and it never resets.
+   *
+   *  A window budget alone is a rate, not a total: a mandate left running for
+   *  a week authorises seven windows. This is the total the owner signed for,
+   *  and the binding limit is whichever of the two is reached first. Larger
+   *  than one window on purpose, so both bounds are reachable and a reader can
+   *  see they are different things. */
+  lifetimeCap6: 50_000_000n,
   /** Equal at every depth by construction. A shorter child window resets faster. */
   windowSeconds: 86_400,
   /** MandateRegistry.maxDepth() */
@@ -318,6 +327,7 @@ export const STRENGTH: Record<string, Strength> = {
   refusal: "enforced",
   depth: "enforced",
   tranche: "enforced",
+  lifetime: "enforced",
   release: "enforced",
   revoke: "enforced",
   record: "enforced",
@@ -339,6 +349,7 @@ export const ENFORCED_BY = {
   concentration: "TreeVault.concentrationBound(node, counterparty)",
   depth: "MandateRegistry.maxDepth()",
   tranche: "TreeVault.trancheCap()",
+  lifetime: "TreeVault.lifetimeSpent(node)",
   release: "TreeVault.release(refusalId), owner signature",
   revoke: "MandateRegistry.revoke(node), subtree",
   record: "ReputationRegistry.giveFeedback(agentId, score, tags, uri)",

@@ -9,6 +9,7 @@ import {IGatewayWallet} from "../src/interfaces/IGatewayWallet.sol";
 import {MockUSDC} from "./mocks/MockUSDC.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
 import {Fixtures} from "./Fixtures.gen.sol";
+import {NO_LIFETIME_BOUND} from "./Bounds.sol";
 
 /**
  * A handler that does whatever an unsupervised tree of agents would do:
@@ -61,6 +62,7 @@ contract TreeHandler is Test {
         MandateRegistry.Params memory p = MandateRegistry.Params({
             operator: op,
             budget6: uint128(bound(budget6, 1, m.budget6)),
+            lifetimeCap6: NO_LIFETIME_BOUND,
             windowSeconds: m.windowSeconds,
             trancheCap6: uint128(bound(tranche6, 0, m.trancheCap6)),
             concentrationBps: uint16(bound(bps, 1, m.concentrationBps)),
@@ -106,6 +108,7 @@ contract G1_Invariant is Test {
             MandateRegistry.Params({
                 operator: opRoot,
                 budget6: Fixtures.BUDGET6,
+                lifetimeCap6: NO_LIFETIME_BOUND,
                 windowSeconds: Fixtures.WINDOW_SECONDS,
                 trancheCap6: Fixtures.TRANCHE6,
                 concentrationBps: Fixtures.CONCENTRATION_BPS,
@@ -177,6 +180,7 @@ contract G1_InvariantIsNotVacuous is Test {
             MandateRegistry.Params({
                 operator: opRoot,
                 budget6: Fixtures.BUDGET6,
+                lifetimeCap6: NO_LIFETIME_BOUND,
                 windowSeconds: Fixtures.WINDOW_SECONDS,
                 trancheCap6: Fixtures.TRANCHE6,
                 concentrationBps: Fixtures.CONCENTRATION_BPS,

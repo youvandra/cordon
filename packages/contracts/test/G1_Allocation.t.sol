@@ -5,6 +5,7 @@ import {Base} from "./Base.t.sol";
 import {MandateRegistry} from "../src/MandateRegistry.sol";
 import {TreeVault} from "../src/TreeVault.sol";
 import {Fixtures} from "./Fixtures.gen.sol";
+import {NO_LIFETIME_BOUND} from "./Bounds.sol";
 
 /**
  * G1 — allocation without a forecast.
@@ -23,14 +24,14 @@ contract G1_Allocation is Base {
     /// The version of the problem an owner can actually state up front.
     function test_a_fixed_split_holds_each_branch_to_its_share() public {
         vm.startPrank(opRoot);
-        bytes32 heavy = reg.spawn(root, _params(makeAddr("op:heavy"), 70_000_000));
-        bytes32 light = reg.spawn(root, _params(makeAddr("op:light"), 30_000_000));
+        bytes32 heavy = reg.spawn(root, _params(makeAddr("op:heavy"), _share(70)));
+        bytes32 light = reg.spawn(root, _params(makeAddr("op:light"), _share(30)));
         vm.stopPrank();
 
-        _spend(makeAddr("op:heavy"), heavy, 70_000_000);
-        assertEq(vault.windowSpent(heavy), 70_000_000, "the heavy branch got its share");
+        _spend(makeAddr("op:heavy"), heavy, _share(70));
+        assertEq(vault.windowSpent(heavy), _share(70), "the heavy branch got its share");
 
-        _spend(makeAddr("op:light"), light, 30_000_000);
+        _spend(makeAddr("op:light"), light, _share(30));
         assertEq(vault.windowSpent(root), Fixtures.BUDGET6, "and together they are the root's budget");
 
         (bool ok,, TreeVault.Reason reason) = _draw(makeAddr("op:light"), light, _payee(99), Fixtures.TRANCHE6);
@@ -54,11 +55,11 @@ contract G1_Allocation is Base {
         vm.stopPrank();
 
         // The work turns out to be split 70/30, which nobody knew in advance.
-        _spend(makeAddr("op:a"), a, 70_000_000);
-        _spend(makeAddr("op:b"), b, 30_000_000);
+        _spend(makeAddr("op:a"), a, _share(70));
+        _spend(makeAddr("op:b"), b, _share(30));
 
-        assertEq(vault.windowSpent(a), 70_000_000, "the branch that needed more took more");
-        assertEq(vault.windowSpent(b), 30_000_000, "the branch that needed less took less");
+        assertEq(vault.windowSpent(a), _share(70), "the branch that needed more took more");
+        assertEq(vault.windowSpent(b), _share(30), "the branch that needed less took less");
         assertEq(vault.windowSpent(root), Fixtures.BUDGET6, "and the owner's total is exactly what they signed");
 
         (bool ok,, TreeVault.Reason reason) = _draw(makeAddr("op:a"), a, _payee(99), Fixtures.TRANCHE6);
@@ -119,30 +120,5 @@ contract G1_Allocation is Base {
         assertFalse(ok, "the sibling arrives to an empty root");
         assertEq(uint256(reason), uint256(TreeVault.Reason.WindowBudget));
         assertEq(vault.windowSpent(patient), 0, "having spent nothing of its own");
-    }
-
-    /**
-     * Enough sellers that concentration never binds first.
-     *
-     * These tests are about allocation, and the concentration bound is a
-     * different bound with a different point. Three sellers is not enough: a
-     * $70 branch may take 35% of its window from any one of them, which is
-     * $24.50, and a $5 tranche only reaches $20 of that. Spreading the spend
-     * keeps the two questions apart.
-     */
-    function _payee(uint256 i) internal returns (address) {
-        return makeAddr(string.concat("seller:", vm.toString(i % 8)));
-    }
-
-    /// Spend `total` in tranche-sized draws, round-robin across sellers.
-    function _spend(address op, bytes32 node, uint128 total) internal {
-        uint128 moved;
-        uint256 i;
-        while (moved < total) {
-            uint128 step = total - moved < Fixtures.TRANCHE6 ? total - moved : Fixtures.TRANCHE6;
-            (bool ok,,) = _draw(op, node, _payee(i++), step);
-            assertTrue(ok, "setup draw was expected to release");
-            moved += step;
-        }
     }
 }

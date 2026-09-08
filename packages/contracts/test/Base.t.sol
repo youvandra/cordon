@@ -9,6 +9,7 @@ import {IGatewayWallet} from "../src/interfaces/IGatewayWallet.sol";
 import {MockUSDC} from "./mocks/MockUSDC.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
 import {Fixtures} from "./Fixtures.gen.sol";
+import {NO_LIFETIME_BOUND} from "./Bounds.sol";
 
 /**
  * The four-agent tree from the plan, built once so every gate test argues
@@ -60,6 +61,7 @@ abstract contract Base is Test {
             MandateRegistry.Params({
                 operator: opRoot,
                 budget6: Fixtures.BUDGET6,
+                lifetimeCap6: NO_LIFETIME_BOUND,
                 windowSeconds: Fixtures.WINDOW_SECONDS,
                 trancheCap6: Fixtures.TRANCHE6,
                 concentrationBps: Fixtures.CONCENTRATION_BPS,
@@ -82,15 +84,44 @@ abstract contract Base is Test {
         vm.stopPrank();
     }
 
+    /// @dev A percentage of the root's window. Tests state proportions; the
+    ///      amounts follow from the mandate, so resizing it cannot quietly
+    ///      turn a child into something wider than the tree it hangs from.
+    function _share(uint256 percent) internal pure returns (uint128) {
+        return uint128((uint256(Fixtures.BUDGET6) * percent) / 100);
+    }
+
     function _params(address op, uint128 budget6) internal pure returns (MandateRegistry.Params memory) {
         return MandateRegistry.Params({
             operator: op,
             budget6: budget6,
+            lifetimeCap6: NO_LIFETIME_BOUND,
             windowSeconds: Fixtures.WINDOW_SECONDS,
             trancheCap6: Fixtures.TRANCHE6,
             concentrationBps: Fixtures.CONCENTRATION_BPS,
             maxDepth: Fixtures.MAX_DEPTH
         });
+    }
+
+    /**
+     * Round-robin across sellers, because a single seller runs into the
+     * concentration bound and that is a different bound with a different
+     * point. Spreading the spend keeps the two questions apart.
+     */
+    function _payee(uint256 i) internal returns (address) {
+        return makeAddr(string.concat("seller:", vm.toString(i % 8)));
+    }
+
+    /// Spend `total` in tranche-sized draws, round-robin across sellers.
+    function _spend(address op, bytes32 node, uint128 total) internal {
+        uint128 moved;
+        uint256 i;
+        while (moved < total) {
+            uint128 step = total - moved < Fixtures.TRANCHE6 ? total - moved : Fixtures.TRANCHE6;
+            (bool ok,,) = _draw(op, node, _payee(i++), step);
+            assertTrue(ok, "setup draw was expected to release");
+            moved += step;
+        }
     }
 
     function _draw(address op, bytes32 node, address payee, uint128 amount6)

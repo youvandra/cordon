@@ -23,6 +23,7 @@ contract MandateRegistry {
         address owner; // the human. Set at the root, inherited, immutable
         address operator; // the daemon key permitted to draw for this node
         uint128 budget6; // trailing-window budget, 6-decimal base units
+        uint128 lifetimeCap6; // total for the life of the mandate; never resets
         uint64 windowSeconds; // equal at every depth, never smaller than the parent
         uint128 trancheCap6; // per-draw cap
         uint16 concentrationBps; // share of the window one counterparty may take
@@ -36,6 +37,7 @@ contract MandateRegistry {
     struct Params {
         address operator;
         uint128 budget6;
+        uint128 lifetimeCap6;
         uint64 windowSeconds;
         uint128 trancheCap6;
         uint16 concentrationBps;
@@ -65,6 +67,7 @@ contract MandateRegistry {
     error WindowMustEqualParent(uint64 child, uint64 parent);
     error ZeroOperator();
     error ZeroBudget();
+    error ZeroLifetimeCap();
     error ConcentrationOutOfRange(uint16 bps);
 
     /* ------------------------------------------------------------------ */
@@ -72,10 +75,16 @@ contract MandateRegistry {
     /* ------------------------------------------------------------------ */
 
     event MandateOpened(
-        bytes32 indexed node, address indexed owner, address indexed operator, uint128 budget6, uint64 windowSeconds, uint8 maxDepth
+        bytes32 indexed node,
+        address indexed owner,
+        address indexed operator,
+        uint128 budget6,
+        uint128 lifetimeCap6,
+        uint64 windowSeconds,
+        uint8 maxDepth
     );
     event MandateSpawned(
-        bytes32 indexed node, bytes32 indexed parent, address indexed operator, uint128 budget6, uint8 depth
+        bytes32 indexed node, bytes32 indexed parent, address indexed operator, uint128 budget6, uint128 lifetimeCap6, uint8 depth
     );
     event MandateRevoked(bytes32 indexed node, address indexed by);
 
@@ -89,6 +98,10 @@ contract MandateRegistry {
     function open(Params calldata p) external returns (bytes32 node) {
         if (p.operator == address(0)) revert ZeroOperator();
         if (p.budget6 == 0) revert ZeroBudget();
+        /* A mandate with no lifetime cap is the defect this field exists to
+           close: a window budget on its own is a rate, and a tree left running
+           spends it again every window. Zero is not "unlimited" here. */
+        if (p.lifetimeCap6 == 0) revert ZeroLifetimeCap();
         if (p.concentrationBps == 0 || p.concentrationBps > BPS) {
             revert ConcentrationOutOfRange(p.concentrationBps);
         }
@@ -103,6 +116,7 @@ contract MandateRegistry {
             owner: msg.sender,
             operator: p.operator,
             budget6: p.budget6,
+            lifetimeCap6: p.lifetimeCap6,
             windowSeconds: p.windowSeconds,
             trancheCap6: p.trancheCap6,
             concentrationBps: p.concentrationBps,
@@ -113,7 +127,7 @@ contract MandateRegistry {
             createdAt: uint64(block.timestamp)
         });
 
-        emit MandateOpened(node, msg.sender, p.operator, p.budget6, p.windowSeconds, p.maxDepth);
+        emit MandateOpened(node, msg.sender, p.operator, p.budget6, p.lifetimeCap6, p.windowSeconds, p.maxDepth);
     }
 
     /* ------------------------------------------------------------------ */
@@ -135,12 +149,14 @@ contract MandateRegistry {
         if (!isLive(parent)) revert ParentRevoked(parent);
         if (p.operator == address(0)) revert ZeroOperator();
         if (p.budget6 == 0) revert ZeroBudget();
+        if (p.lifetimeCap6 == 0) revert ZeroLifetimeCap();
 
         uint8 depth = m.depth + 1;
         if (depth > m.maxDepth) revert DepthExceeded(depth, m.maxDepth);
 
         // Narrowing, monotonically. Each of these is an attack if it bends.
         if (p.budget6 > m.budget6) revert NotNarrowing("budget6");
+        if (p.lifetimeCap6 > m.lifetimeCap6) revert NotNarrowing("lifetimeCap6");
         if (p.trancheCap6 > m.trancheCap6) revert NotNarrowing("trancheCap6");
         if (p.concentrationBps > m.concentrationBps) revert NotNarrowing("concentrationBps");
         if (p.concentrationBps == 0) revert ConcentrationOutOfRange(0);
@@ -157,6 +173,7 @@ contract MandateRegistry {
             owner: m.owner,
             operator: p.operator,
             budget6: p.budget6,
+            lifetimeCap6: p.lifetimeCap6,
             windowSeconds: p.windowSeconds,
             trancheCap6: p.trancheCap6,
             concentrationBps: p.concentrationBps,
@@ -167,7 +184,7 @@ contract MandateRegistry {
             createdAt: uint64(block.timestamp)
         });
 
-        emit MandateSpawned(node, parent, p.operator, p.budget6, depth);
+        emit MandateSpawned(node, parent, p.operator, p.budget6, p.lifetimeCap6, depth);
     }
 
     /* ------------------------------------------------------------------ */
