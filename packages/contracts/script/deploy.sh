@@ -26,9 +26,24 @@ echo "chain     $CHAIN_ID"
 echo "rpc       $RPC"
 echo "account   $ACCOUNT (keystore)"
 
-# The generated fixtures carry USDC and GatewayWallet, so regenerate before
-# building rather than deploying against a stale copy of either.
+# The generated fixtures carry USDC, GatewayWallet and the two ERC-8004
+# registries, so regenerate before building rather than deploying against a
+# stale copy of any of them.
 node ../fixtures/scripts/emit-solidity.ts
+
+# The same four addresses, exported so the recorder writes what the script
+# deployed against rather than leaving nulls beside real addresses. Solidity
+# reads them through vm.envOr and falls back to the same fixtures, so there is
+# still exactly one source.
+fixture() { node -e "import('../fixtures/src/index.ts').then((f) => console.log($1))"; }
+export CORDON_USDC="${CORDON_USDC:-$(fixture 'f.ARC.erc20')}"
+export CORDON_GATEWAY="${CORDON_GATEWAY:-$(fixture 'f.GATEWAY.wallet')}"
+export CORDON_IDENTITY="${CORDON_IDENTITY:-$(fixture 'f.ERC8004.identity')}"
+export CORDON_REPUTATION="${CORDON_REPUTATION:-$(fixture 'f.ERC8004.reputation')}"
+echo "usdc      $CORDON_USDC"
+echo "gateway   $CORDON_GATEWAY"
+echo "identity  $CORDON_IDENTITY"
+echo "reputatn  $CORDON_REPUTATION"
 
 SENDER="$(cast wallet address --account "$ACCOUNT")"
 echo "sender    $SENDER"
@@ -53,12 +68,15 @@ CORDON_COMMIT="$(git rev-parse HEAD 2>/dev/null || echo unknown)" \
 
 REGISTRY="$(node -e "console.log(require('./deployments/$CHAIN_ID.json').registry)")"
 VAULT="$(node -e "console.log(require('./deployments/$CHAIN_ID.json').vault)")"
+RECORD="$(node -e "console.log(require('./deployments/$CHAIN_ID.json').record)")"
 
 # G5 needs the sources readable by anyone. arcscan runs Blockscout v11.2.8,
 # confirmed against its own /api/v2/config/backend-version on 2026-09-08.
 echo
 echo "verifying sources on $VERIFIER_URL"
-for pair in "$REGISTRY:src/MandateRegistry.sol:MandateRegistry" "$VAULT:src/TreeVault.sol:TreeVault"; do
+for pair in "$REGISTRY:src/MandateRegistry.sol:MandateRegistry" \
+            "$VAULT:src/TreeVault.sol:TreeVault" \
+            "$RECORD:src/ConductRecord.sol:ConductRecord"; do
   ADDR="${pair%%:*}"
   TARGET="${pair#*:}"
   forge verify-contract "$ADDR" "$TARGET" \
@@ -71,6 +89,7 @@ done
 echo
 echo "registry  https://testnet.arcscan.app/address/$REGISTRY"
 echo "vault     https://testnet.arcscan.app/address/$VAULT"
+echo "record    https://testnet.arcscan.app/address/$RECORD"
 echo
 echo "Next: open a mandate from the owner's own wallet, then fund the vault."
 echo "Neither is this script's job — both need a signature only the owner has."

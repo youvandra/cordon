@@ -34,7 +34,7 @@ for (const tx of run.transactions ?? []) {
   }
 }
 
-for (const name of ["MandateRegistry", "TreeVault"]) {
+for (const name of ["MandateRegistry", "TreeVault", "ConductRecord"]) {
   if (!deployed[name]) {
     console.error(`the broadcast contains no ${name}; refusing to write a partial deployment`);
     process.exit(1);
@@ -54,10 +54,16 @@ writeFileSync(
       deployedAt: new Date(run.timestamp > 1e11 ? run.timestamp : run.timestamp * 1000).toISOString(),
       registry: deployed.MandateRegistry,
       vault: deployed.TreeVault,
+      record: deployed.ConductRecord,
       /* Not ours, and not deployed by this script — recorded so a reader can
          see what the vault was pointed at without reading a constructor. */
       usdc: process.env.CORDON_USDC ?? null,
       gateway: process.env.CORDON_GATEWAY ?? null,
+      /* Live already, at deterministic addresses across 40+ chains. Recorded
+         for the same reason as the two above: so a reader can see where the
+         conduct record goes without reading a constructor argument. */
+      identity: process.env.CORDON_IDENTITY ?? null,
+      reputation: process.env.CORDON_REPUTATION ?? null,
       commit: process.env.CORDON_COMMIT ?? null,
     },
     null,
