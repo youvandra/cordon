@@ -15,7 +15,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const contracts = resolve(here, "../../contracts");
 const out = resolve(here, "../src/abi.gen.ts");
 
-const WANTED = ["TreeVault", "MandateRegistry", "IERC20", "IGatewayWallet"];
+const WANTED = ["TreeVault", "MandateRegistry", "ConductRecord", "IERC20", "IGatewayWallet"];
 
 const artifact = (name) => resolve(contracts, `out/${name}.sol/${name}.json`);
 if (!WANTED.every((n) => existsSync(artifact(n)))) {
