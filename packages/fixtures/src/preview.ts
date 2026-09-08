@@ -300,3 +300,138 @@ export const AGENT_PROFILE = {
 export const txUrl = (tx: string) => `${ARC.explorer}/tx/${tx}`;
 export const addrUrl = (a: string) => `${ARC.explorer}/address/${a}`;
 export const shortTx = (tx: string) => `${tx.slice(0, 10)}…${tx.slice(-6)}`;
+
+/* ------------------------------------------------------------------ */
+/* /attest — the response, and a sample of it                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * What `GET /attest/<8004-id>` returns.
+ *
+ * The type lives here rather than in the server because two surfaces render
+ * it: `packages/attest` builds one from the chain, and the public page shows a
+ * sample of the same object. A page that draws a body the endpoint does not
+ * return is the same defect as a figure the contract does not enforce, and it
+ * is the one this project keeps finding: one fact written down twice.
+ *
+ * Every amount is a base-unit string. Money is never a JSON number.
+ */
+export interface Attestation {
+  agentId: string;
+  node: string;
+  /** Facts about the mandate, not a judgement about the agent. */
+  mandate: {
+    live: boolean;
+    revoked: boolean;
+    root: string;
+    parent: string | null;
+    depth: number;
+    operator: string;
+    budget6: string;
+  };
+  conduct: {
+    draws: number;
+    refusals: number;
+    breaches: number;
+    drawn6: string;
+    refused6: string;
+    attested: number;
+    /** Share of refusals carrying a transaction hash. 1 by construction. */
+    linkage: number;
+  };
+  refusals: {
+    id: string;
+    reason: string;
+    amount6: string;
+    counterparty: string;
+    breachedAt: string;
+    blockNumber: string;
+    transactionHash: string;
+    released: boolean;
+    attested: boolean;
+  }[];
+  /** How far the answer reaches. A record is only as complete as its range. */
+  range: { chainId: number; fromBlock: string; toBlock: string };
+  /** Where to check every line of it. */
+  verify: { vault: string; registry: string; record?: string; explorer: string };
+}
+
+/**
+ * The three contracts are written by the deploy script into
+ * `deployments/<chainId>.json` and read from there. Until that file exists
+ * they are `pending`, and the sample says so rather than carrying an address
+ * nobody can open.
+ */
+const PENDING_ADDRESS = "pending — written by the deploy script";
+
+/** The block range this sample covers. Marked as a sample, not a chain read. */
+const SAMPLE_RANGE = { fromBlock: "0", toBlock: "pending" };
+
+/** Which bound refused a draw, in the vault's own vocabulary. */
+const REASONS: Record<string, string> = {
+  [ENFORCED_BY.tranche]: "tranche-cap",
+  [ENFORCED_BY.treeBar]: "window-budget",
+  [ENFORCED_BY.concentration]: "concentration",
+  [ENFORCED_BY.revoke]: "revoked",
+};
+
+/**
+ * The sample body for one node, in the exact shape the endpoint returns.
+ *
+ * Built from the same preview tree the console renders, so the page cannot
+ * drift from the rest of the surface either. `breaches` is deliberately not
+ * `refusals`: a refusal is filed against the node that drew, and a breach
+ * against the node whose bound stopped it, which is usually an ancestor.
+ */
+export function attestationOf(node: TreeNode, root: TreeNode = TREE): Attestation {
+  const path = pathTo(node.id, root);
+  const parent = path.length > 1 ? path[path.length - 2] : null;
+  const mine = REFUSALS.filter((refusal) => refusal.node === node.id);
+  const breaches = REFUSALS.filter(
+    (refusal) => refusal.node !== node.id && pathTo(refusal.node, node).length > 0,
+  ).length;
+
+  return {
+    agentId: `${node.agentId}`,
+    node: node.address,
+    mandate: {
+      live: !node.revoked,
+      revoked: Boolean(node.revoked),
+      root: root.address,
+      parent: parent ? parent.address : null,
+      depth: node.depth,
+      operator: node.address,
+      budget6: node.budget6.toString(),
+    },
+    conduct: {
+      draws: node.draws,
+      refusals: node.refused,
+      breaches,
+      drawn6: node.spent6.toString(),
+      refused6: mine.reduce((total, refusal) => total + refusal.requested6, 0n).toString(),
+      attested: mine.filter((refusal) => !refusal.released).length,
+      /* Computed, never asserted. A bug that loses a transaction hash has to
+         show up as a number below 1 rather than as a sentence that is quietly
+         untrue. */
+      linkage: mine.length === 0 ? 1 : mine.filter((r) => Boolean(r.tx)).length / mine.length,
+    },
+    refusals: mine.map((refusal) => ({
+      id: refusal.id,
+      reason: REASONS[refusal.bound] ?? "window-budget",
+      amount6: refusal.requested6.toString(),
+      counterparty: refusal.counterparty,
+      breachedAt: refusal.bound === ENFORCED_BY.treeBar ? root.address : node.address,
+      blockNumber: "pending",
+      transactionHash: refusal.tx,
+      released: refusal.released,
+      attested: !refusal.released,
+    })),
+    range: { chainId: ARC.chainId, ...SAMPLE_RANGE },
+    verify: {
+      vault: PENDING_ADDRESS,
+      registry: PENDING_ADDRESS,
+      record: PENDING_ADDRESS,
+      explorer: ARC.explorer,
+    },
+  };
+}

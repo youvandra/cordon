@@ -658,6 +658,11 @@ main { flex: 1 1 auto; }
   line-height: 1.7;
 }
 
+/* The attestation body is the page's exhibit, not its content: a reader wants
+   to see its shape and then read what is beside it. Left uncapped it runs
+   three screens and pushes the argument off the bottom. */
+.code--body { max-height: min(58vh, 460px); overflow: auto; }
+
 /* A supporting figure: ordinary tabular numerals, because the LED face is
    rationed to the one figure a view exists to show. */
 .figure {

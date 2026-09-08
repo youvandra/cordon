@@ -12,48 +12,12 @@
  * an opinion is what the ERC-8004 baseline already has too much of, and the
  * whole argument of the record is that a measurement is a different object.
  */
-import type { Hex } from "viem";
 import { conductOf, type Ledger, type NodeRow } from "../../meter/src/index.ts";
-
-export interface Attestation {
-  agentId: string;
-  node: Hex;
-  /** Facts about the mandate, not a judgement about the agent. */
-  mandate: {
-    live: boolean;
-    revoked: boolean;
-    root: Hex;
-    parent: Hex | null;
-    depth: number;
-    operator: string;
-    budget6: string;
-  };
-  conduct: {
-    draws: number;
-    refusals: number;
-    breaches: number;
-    drawn6: string;
-    refused6: string;
-    attested: number;
-    /** Share of refusals carrying a transaction hash. 1 by construction. */
-    linkage: number;
-  };
-  refusals: {
-    id: string;
-    reason: string;
-    amount6: string;
-    counterparty: string;
-    breachedAt: Hex;
-    blockNumber: string;
-    transactionHash: Hex;
-    released: boolean;
-    attested: boolean;
-  }[];
-  /** How far the answer reaches. A record is only as complete as its range. */
-  range: { chainId: number; fromBlock: string; toBlock: string };
-  /** Where to check every line of it. */
-  verify: { vault: string; registry: string; record?: string; explorer: string };
-}
+/* The response shape lives in fixtures, where the public page reads it too. A
+   body drawn by a surface and a body returned by a server are one fact, and
+   this project has already paid twice for writing one fact down in two
+   places. */
+import type { Attestation } from "../../fixtures/src/preview.ts";
 
 export interface Sources {
   vault: string;
@@ -114,3 +78,5 @@ export function attestation(ledger: Ledger, row: NodeRow, sources: Sources): Att
     verify: sources,
   };
 }
+
+export type { Attestation };

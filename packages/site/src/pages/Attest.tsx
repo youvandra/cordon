@@ -14,18 +14,27 @@ import {
   Text,
   usePageMeta,
 } from "cordon-ui";
-import { ARC, ENFORCED_BY, MANDATE, STRENGTH, formatUsdc } from "@cordon/fixtures";
-import { TREE, flatten, headroom } from "@cordon/fixtures/preview";
+import { ATTEST, ENFORCED_BY, REGISTRY_BASELINE, formatUsdc } from "@cordon/fixtures";
+import { TREE, attestationOf, flatten } from "@cordon/fixtures/preview";
 import { RecordShell } from "../parts/RecordShell";
 import { useEntrance } from "../parts/motion";
 
 /**
  * /attest/<id> — the x402 endpoint, as a page.
  *
- * A seller pays a tenth of a cent to ask one question before serving: does this
- * buyer have a live mandate with headroom, and a clean record? The answer is
- * derived from the same contract reads the console renders, so there is no
- * second source of truth to drift.
+ * A seller pays a tenth of a cent to ask one question before serving: does
+ * this buyer hold a live mandate, and what did the contract refuse it?
+ *
+ * The body below is built by `attestationOf` in fixtures, which is the same
+ * type `packages/attest` returns from the chain. It used to be assembled here
+ * by hand and carried three fields the endpoint has never returned — a page
+ * drawing a response the server does not send is the same defect as a figure
+ * the contract does not enforce.
+ *
+ * Headroom is one of the three that went. It is a window figure, read live
+ * from the vault; the meter behind the endpoint indexes events and refuses to
+ * recompute a bound from history, because an all-time total and a rolling
+ * window look alike and only one of them refuses anything.
  */
 export default function Attest() {
   const { id } = useParams();
@@ -34,64 +43,50 @@ export default function Attest() {
     nodes.find((candidate) => String(candidate.agentId) === id) ?? nodes[0];
   usePageMeta({
     title: `Attest ${node.agentId} · Cordon`,
-    description: `One x402 call, a tenth of a cent: does ${node.label} have a live mandate with headroom and a record of staying inside it?`,
+    description: `One x402 call: does ${node.label} hold a live mandate, and what did the contract refuse it?`,
   });
   const animate = useEntrance();
 
-  /**
-   * What a seller gets for a tenth of a cent, and every field says how hard
-   * the contract stands behind it. `declaredConcentrationPct` is named that
-   * way on purpose: a machine reading this must not mistake a bound on what
-   * the daemon said for a bound on what it paid.
-   */
-  const body = {
-    agentId: node.agentId,
-    mandate: MANDATE.id,
-    chain: ARC.chainId,
-    live: true,
-    headroom: formatUsdc(headroom(node).available6).replace("$", ""),
-    headroomBoundBy: headroom(node).boundBy.label,
-    refusals: node.refused,
-    draws: node.draws,
-    depth: node.depth,
-    declaredConcentrationPct: node.concentrationPct,
-    enforcement: STRENGTH,
-  };
+  const body = attestationOf(node);
+  const price = Number(ATTEST.price6) / 1e6;
+  const linkagePct = Math.round(body.conduct.linkage * 100);
 
   return (
     <RecordShell>
       <Container width="wide" className="stackpage">
         <header className="public__head">
           <Text variant="micro" tone="dim" as="p" className="eyebrow">
-            x402 · $0.001 per call
+            x402 · ${price.toFixed(3)} per call
           </Text>
           <Headline
             animate={animate}
             lines={["One question,", "asked before serving."]}
           />
           <Text variant="lead" tone="copy" as="p" className="public__lede">
-            Does this buyer have a live mandate with headroom, and a record of
-            staying inside it? A seller pays a tenth of a cent rather than
-            trusting a claim.
+            Does this buyer hold a live mandate, and what did the contract
+            refuse it? A seller pays a tenth of a cent rather than trusting a
+            claim, and every line of the answer names the transaction it came
+            from.
           </Text>
-          <Preview note="endpoint shape is final; this response is a sample" />
+          <Preview note="the shape is the server's own; these figures are fixtures" />
         </header>
 
         <Grid columns={2} min={340} gap="lg" align="start">
           <Card>
             <CardHeader>
               <Text variant="micro" tone="dim" as="span" className="eyebrow">
-                GET /attest/{node.agentId}
+                GET {ATTEST.resourcePath}/{node.agentId}
               </Text>
             </CardHeader>
             <CardBody>
-              <pre className="code mono">{JSON.stringify(body, null, 2)}</pre>
-              <Enforced>{ENFORCED_BY.budget}</Enforced>
+              <pre className="code code--body mono">{JSON.stringify(body, null, 2)}</pre>
+              <Enforced>{ENFORCED_BY.refusal}</Enforced>
             </CardBody>
           </Card>
 
           <Stack direction="column" gap="lg">
-            {/* This page's one hero figure: what a seller actually asks for. */}
+            {/* This page's one hero figure: the property that makes the answer
+                worth paying for, and the baseline it is measured against. */}
             <Text variant="micro" tone="dim" as="h2" id="the-answer" className="eyebrow visually-hidden">
               What the endpoint answers
             </Text>
@@ -99,19 +94,19 @@ export default function Attest() {
               animate={animate}
               title={
                 <>
-                  Headroom, right now
+                  Refusals naming their transaction
                   <br />
-                  What this buyer may still draw
+                  In this record, and in the registry
                 </>
               }
-              value={body.headroom}
-              unit="USDC"
-              progress={0.29}
+              value={`${linkagePct}`}
+              unit="%"
+              progress={body.conduct.linkage}
               caption={
                 <>
-                  Derived inside the contract,
+                  {REGISTRY_BASELINE.noLinkageLow}–{REGISTRY_BASELINE.noLinkageHigh}% of
                   <br />
-                  never accepted as a parameter
+                  existing feedback carries none
                 </>
               }
               glaze="rose"
@@ -120,15 +115,37 @@ export default function Attest() {
             <Card>
               <CardBody>
                 <Stack direction="column" gap="sm" align="start">
-                  <Tag tone="positive" size="sm" dot>
-                    mandate live
+                  <Tag tone={body.mandate.live ? "positive" : "critical"} size="sm" dot>
+                    {body.mandate.live ? "mandate live" : "mandate revoked"}
                   </Tag>
                   <Text variant="body" tone="copy" as="p">
-                    {node.refused} refusals in {node.draws.toLocaleString()}{" "}
-                    draws, every one of them naming the transaction that
-                    produced it.
+                    {body.conduct.refusals} refusals in{" "}
+                    {body.conduct.draws.toLocaleString()} draws, against a
+                    mandate of {formatUsdc(BigInt(body.mandate.budget6))} at
+                    depth {body.mandate.depth}.
+                  </Text>
+                  <Text variant="body" tone="copy" as="p">
+                    {body.conduct.attested} of them are published in the
+                    reputation registry. The rest were signed off by a named
+                    human, and the answer says which.
                   </Text>
                   <Enforced>{ENFORCED_BY.record}</Enforced>
+                </Stack>
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardBody>
+                <Stack direction="column" gap="sm" align="start">
+                  <Text variant="micro" tone="dim" as="p" className="eyebrow">
+                    Not in the answer
+                  </Text>
+                  <Text variant="body" tone="copy" as="p">
+                    No score, and no headroom. A score is an opinion; headroom
+                    is a live window the vault holds, and an indexer that
+                    recomputed it from history would return a number that
+                    refuses nothing.
+                  </Text>
                 </Stack>
               </CardBody>
             </Card>

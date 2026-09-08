@@ -28,7 +28,7 @@ function Masthead() {
       <div className="top__end">
         <a href={CONSOLE_URL}>
           <Button variant="primary" size="sm" magnetic>
-            Open console
+            Launch console
           </Button>
         </a>
       </div>
