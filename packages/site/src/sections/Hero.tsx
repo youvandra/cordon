@@ -14,6 +14,11 @@ import { Appear } from "../parts/motion";
  * The figure sits on the page rather than inside a card. A panel around it
  * turns the mechanism into an illustration of a product screenshot; on the
  * open background it reads as the thing itself.
+ *
+ * It carries no words, and it lost its caption with them. A drawing captioned
+ * "one mandate, handed down to two workers" is a diagram being explained; the
+ * lede two lines up already says it, and saying it twice on one screen made
+ * the figure look like it could not stand on its own.
  */
 export function Hero() {
   return (
@@ -72,7 +77,6 @@ export function Hero() {
         </div>
 
         <Appear className="hero__figure" from={{ opacity: 0, y: 16 }} delay={0.42}>
-          <p className="hero__caption">One mandate, handed down to two workers</p>
           <Allowances />
         </Appear>
       </div>
