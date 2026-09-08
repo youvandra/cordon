@@ -1,12 +1,13 @@
 {
   "chainId": 5042002,
   "deployedAt": "2026-09-08T18:08:35.566Z",
+  "fromBlock": "61110308",
   "registry": "0xa50d9454e71acf152399c872815ae6895cb53229",
   "vault": "0x045b2050aadaff4b80a2325d63648c09f15ab1f3",
   "record": "0x12d15135b5bba8eef0d1098aa65a15af503d09c9",
-  "usdc": "0x3600000000000000000000000000000000000000",
-  "gateway": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
-  "identity": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
-  "reputation": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
-  "commit": "327bb926ebdfca97ed1c4d8d6c92a72701acc5f7"
+  "usdc": null,
+  "gateway": null,
+  "identity": null,
+  "reputation": null,
+  "commit": "05a29b724936bdeb2db47860c42f6f082ef61d31"
 }

@@ -41,6 +41,22 @@ for (const name of ["MandateRegistry", "TreeVault", "ConductRecord"]) {
   }
 }
 
+/* The block the contracts came into existence in.
+ *
+ * A reader of these events has to start somewhere, and zero is the wrong
+ * answer twice: it is tens of millions of empty blocks on a chain that has
+ * been up for a while, and Arc's public RPC answers `pruned history
+ * unavailable` rather than returning them. Nothing these three contracts have
+ * to say predates their own deployment. */
+const blocks = (run.receipts ?? [])
+  .map((r) => (r.blockNumber == null ? null : BigInt(r.blockNumber)))
+  .filter((b) => b !== null);
+if (blocks.length === 0) {
+  console.error("the broadcast has no receipts, so there is no block to start reading from");
+  process.exit(1);
+}
+const fromBlock = blocks.reduce((a, b) => (b < a ? b : a));
+
 const out = resolve(here, `../deployments/${chainId}.json`);
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(
@@ -52,6 +68,8 @@ writeFileSync(
          the first recorded deployment in the year 58655. Accept either, since
          a unit that changed once can change again. */
       deployedAt: new Date(run.timestamp > 1e11 ? run.timestamp : run.timestamp * 1000).toISOString(),
+      /* Where a reader of these events starts. See above: not zero. */
+      fromBlock: fromBlock.toString(),
       registry: deployed.MandateRegistry,
       vault: deployed.TreeVault,
       record: deployed.ConductRecord,

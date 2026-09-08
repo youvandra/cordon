@@ -91,11 +91,14 @@ export class Recorder {
       chain: this.deps.chain,
       account: wallet.account!,
     });
-    await this.deps.publicClient.waitForTransactionReceipt({ hash: registered });
+    const receipt = await this.deps.publicClient.waitForTransactionReceipt({ hash: registered });
 
     /* The registry assigns the id, so it is read back rather than predicted —
-       an id we guessed would bind the wrong token on a busy chain. */
-    const agentId = await this.lastRegistered(wallet.account!.address);
+       an id we guessed would bind the wrong token on a busy chain. Read from
+       the block that registration landed in: the event cannot be older than
+       the transaction that emitted it, and a public RPC that prunes answers
+       a scan from zero with an error rather than with the log. */
+    const agentId = await this.lastRegistered(wallet.account!.address, receipt.blockNumber);
     if (agentId === null) return null;
 
     const bound = await wallet.writeContract({
@@ -138,8 +141,9 @@ export class Recorder {
   }
 
   /** The most recent identity this address registered, from the registry's own
-   *  event. Reading it back is the only way to learn an id the registry chose. */
-  private async lastRegistered(owner: Address): Promise<bigint | null> {
+   *  event. Reading it back is the only way to learn an id the registry chose.
+   *  `fromBlock` is the block the registration landed in, not a guess. */
+  private async lastRegistered(owner: Address, fromBlock: bigint): Promise<bigint | null> {
     const logs = await this.deps.publicClient.getLogs({
       address: this.deps.identity,
       event: {
@@ -152,7 +156,7 @@ export class Recorder {
         ],
       },
       args: { owner },
-      fromBlock: 0n,
+      fromBlock,
       toBlock: "latest",
     });
     const last = logs[logs.length - 1];

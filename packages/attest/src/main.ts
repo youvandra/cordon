@@ -38,7 +38,7 @@ const argv = process.argv.slice(2);
 const chainId = Number(flag(argv, "chain") ?? process.env.CORDON_CHAIN_ID ?? ARC.chainId);
 const rpc = flag(argv, "rpc") ?? process.env.CORDON_RPC ?? ARC.rpc;
 const port = Number(flag(argv, "port") ?? process.env.CORDON_ATTEST_PORT ?? 8405);
-const fromBlock = BigInt(flag(argv, "from") ?? process.env.CORDON_FROM_BLOCK ?? "0");
+const fromArg = flag(argv, "from") ?? process.env.CORDON_FROM_BLOCK;
 const snapshot = flag(argv, "out") ?? resolve(here, `../ledger.${chainId}.json`);
 
 const key = process.env.CORDON_ATTEST_KEY as Hex | undefined;
@@ -58,7 +58,14 @@ const contracts = JSON.parse(readFileSync(deployment, "utf8")) as {
   registry: Address;
   vault: Address;
   record?: Address;
+  fromBlock?: string;
 };
+
+/* Where reading starts. Zero is not a slower version of the deployment block:
+   Arc's public RPC prunes, answers `pruned history unavailable` and the sync
+   fails outright. Nothing these contracts have to say predates them. An
+   explicit --from still wins, since a narrower range invents nothing. */
+const fromBlock = fromArg === undefined ? BigInt(contracts.fromBlock ?? "0") : BigInt(fromArg);
 
 const chain = defineChain({
   id: chainId,

@@ -25,7 +25,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 interface Args {
   chainId: number;
   rpc: string;
-  fromBlock: bigint;
+  fromBlock: string | undefined;
   out: string;
   port: number;
   bind: string;
@@ -53,7 +53,10 @@ function parse(argv: string[]): Args {
   return {
     chainId,
     rpc: args.rpc ?? process.env.CORDON_RPC ?? ARC.rpc,
-    fromBlock: BigInt(args.from ?? process.env.CORDON_FROM_BLOCK ?? "0"),
+    /* Left undefined here and resolved from the deployment below, because
+       the honest default is the block the contracts were created in and that
+       file is the only place it is written down. */
+    fromBlock: args.from ?? process.env.CORDON_FROM_BLOCK,
     out: args.out ?? resolve(here, `../ledger.${chainId}.json`),
     port: Number(args.port ?? process.env.CORDON_METER_PORT ?? 8404),
     bind: args.bind ?? process.env.CORDON_BIND ?? "127.0.0.1",
@@ -62,7 +65,12 @@ function parse(argv: string[]): Args {
   };
 }
 
-function contractsFor(chainId: number): { registry: Address; vault: Address; record?: Address } {
+function contractsFor(chainId: number): {
+  registry: Address;
+  vault: Address;
+  record?: Address;
+  fromBlock: bigint;
+} {
   const path = resolve(here, `../../contracts/deployments/${chainId}.json`);
   if (!existsSync(path)) {
     console.error(`no deployment recorded for chain ${chainId}: ${path}`);
@@ -73,12 +81,25 @@ function contractsFor(chainId: number): { registry: Address; vault: Address; rec
     registry: Address;
     vault: Address;
     record?: Address;
+    fromBlock?: string;
   };
-  return { registry: file.registry, vault: file.vault, record: file.record };
+  /* Reading from zero is not a slower version of reading from the deployment:
+     Arc's public RPC answers `pruned history unavailable` and the sync fails
+     outright. A deployment recorded before this field existed has none, and
+     zero is what it used to mean. */
+  return {
+    registry: file.registry,
+    vault: file.vault,
+    record: file.record,
+    fromBlock: BigInt(file.fromBlock ?? "0"),
+  };
 }
 
 const args = parse(process.argv.slice(2));
-const contracts = contractsFor(args.chainId);
+const { fromBlock: deployedAt, ...contracts } = contractsFor(args.chainId);
+/* An explicit --from still wins: reading a narrower range is a thing an
+   operator may want, and it cannot invent history that was never there. */
+const fromBlock = args.fromBlock === undefined ? deployedAt : BigInt(args.fromBlock);
 
 const chain = defineChain({
   id: args.chainId,
@@ -93,7 +114,7 @@ let ledger: Ledger | undefined = existsSync(args.out)
   : undefined;
 
 async function tick(): Promise<void> {
-  ledger = await sync(client, { contracts, fromBlock: args.fromBlock }, ledger);
+  ledger = await sync(client, { contracts, fromBlock }, ledger);
   writeFileSync(args.out, serialize(ledger));
 }
 
