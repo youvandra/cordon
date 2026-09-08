@@ -278,6 +278,10 @@ export const STRENGTH: Record<string, Strength> = {
   release: "enforced",
   revoke: "enforced",
   record: "enforced",
+  /* `depositFor` credits the depositor parameter, checked on chain, so the
+     top-up itself is enforced. What is declared is who the operator then pays
+     out of that balance, and that is the `concentration` row below. */
+  gatewayTopUp: "enforced",
   concentration: "declared",
 };
 
@@ -296,6 +300,25 @@ export const ENFORCED_BY = {
   revoke: "MandateRegistry.revoke(node), subtree",
   record: "ReputationRegistry.giveFeedback(agentId, score, tags, uri)",
 } as const;
+
+/**
+ * The strength of a bound, looked up by the function that enforces it.
+ *
+ * Surfaces hold the function string, because that is the thing they display;
+ * the strength has to come from the same row that supplied the string, or a
+ * page ends up printing `concentrationBound` under an "enforced" chip. This
+ * is derived from `STRENGTH` rather than written again, so adding a bound in
+ * one place cannot leave the other behind.
+ *
+ * An unmapped function reads `declared`. That default is deliberate: the
+ * failure mode to avoid is a surface claiming enforcement nobody checked, and
+ * `<Enforced>` on its own defaults the other way.
+ */
+const STRENGTH_BY_FN: Record<string, Strength> = Object.fromEntries(
+  Object.entries(ENFORCED_BY).map(([key, fn]) => [fn, STRENGTH[key] ?? "declared"]),
+);
+
+export const strengthOf = (fn: string): Strength => STRENGTH_BY_FN[fn] ?? "declared";
 
 /* ------------------------------------------------------------------ */
 /* Gates                                                               */
