@@ -97,6 +97,7 @@ function translate(log: unknown): Event | null {
         owner: a.owner as Address,
         operator: a.operator as Address,
         budget6: a.budget6 as bigint,
+        lifetimeCap6: a.lifetimeCap6 as bigint,
         windowSeconds: Number(a.windowSeconds),
         maxDepth: Number(a.maxDepth),
       };
@@ -108,6 +109,7 @@ function translate(log: unknown): Event | null {
         parent: a.parent as Hex,
         operator: a.operator as Address,
         budget6: a.budget6 as bigint,
+        lifetimeCap6: a.lifetimeCap6 as bigint,
         depth: Number(a.depth),
       };
 

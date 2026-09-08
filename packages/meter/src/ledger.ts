@@ -28,6 +28,9 @@ export const REASONS = [
   "window-budget",
   "concentration",
   "vault-balance",
+  /* Appended, never inserted: the index is the on-chain enum value, so a new
+     reason goes on the end or every stored refusal changes meaning. */
+  "lifetime-cap",
 ] as const;
 export type Reason = (typeof REASONS)[number];
 
@@ -40,8 +43,8 @@ export interface Site {
 }
 
 export type Event =
-  | ({ kind: "MandateOpened"; node: Hex; owner: Address; operator: Address; budget6: bigint; windowSeconds: number; maxDepth: number } & Site)
-  | ({ kind: "MandateSpawned"; node: Hex; parent: Hex; operator: Address; budget6: bigint; depth: number } & Site)
+  | ({ kind: "MandateOpened"; node: Hex; owner: Address; operator: Address; budget6: bigint; lifetimeCap6: bigint; windowSeconds: number; maxDepth: number } & Site)
+  | ({ kind: "MandateSpawned"; node: Hex; parent: Hex; operator: Address; budget6: bigint; lifetimeCap6: bigint; depth: number } & Site)
   | ({ kind: "MandateRevoked"; node: Hex; by: Address } & Site)
   | ({ kind: "Funded"; root: Hex; from: Address; amount6: bigint } & Site)
   | ({ kind: "Withdrawn"; root: Hex; to: Address; amount6: bigint } & Site)
@@ -59,6 +62,9 @@ export interface NodeRow {
   operator: Address;
   depth: number;
   budget6: bigint;
+  /** The total this mandate may ever draw. It never rolls, so unlike
+   *  `budget6` it is not a rate — see `lifetimeOf`. */
+  lifetimeCap6: bigint;
   revoked: boolean;
   /** ERC-8004 identity, once its operator bound one. */
   agentId: bigint | null;
@@ -156,6 +162,7 @@ function apply(ledger: Ledger, event: Event): void {
         operator: event.operator,
         depth: 0,
         budget6: event.budget6,
+        lifetimeCap6: event.lifetimeCap6,
         openedAt: site(event),
       });
       return;
@@ -172,6 +179,7 @@ function apply(ledger: Ledger, event: Event): void {
         operator: event.operator,
         depth: event.depth,
         budget6: event.budget6,
+        lifetimeCap6: event.lifetimeCap6,
         openedAt: site(event),
       });
       return;
@@ -271,7 +279,7 @@ function site(event: Site): Site {
 
 function blank(
   id: Hex,
-  fields: Pick<NodeRow, "parent" | "root" | "operator" | "depth" | "budget6" | "openedAt">,
+  fields: Pick<NodeRow, "parent" | "root" | "operator" | "depth" | "budget6" | "lifetimeCap6" | "openedAt">,
 ): NodeRow {
   return {
     node: id,
@@ -318,6 +326,9 @@ export function refusalsOf(ledger: Ledger, node: Hex): RefusalRow[] {
 export interface Conduct {
   node: Hex;
   agentId: bigint | null;
+  /** The total signed for and what is left of it. A record that shows only a
+   *  window shows a rate, and a reader takes a rate for a total. */
+  lifetime: Lifetime;
   draws: number;
   refusals: number;
   breaches: number;
@@ -336,6 +347,7 @@ export function conductOf(ledger: Ledger, nodeId: Hex): Conduct | null {
   return {
     node: row.node,
     agentId: row.agentId,
+    lifetime: lifetimeOf(ledger, row),
     draws: row.draws,
     refusals: row.refusals,
     breaches: row.breaches,
@@ -344,6 +356,39 @@ export function conductOf(ledger: Ledger, nodeId: Hex): Conduct | null {
     attested: rows.filter((r) => r.attested !== null).length,
     linkage: rows.length === 0 ? 1 : linked / rows.length,
     rows,
+  };
+}
+
+/**
+ * What is left of the total the owner signed for, and whether that figure is
+ * whole.
+ *
+ * The lifetime is not in an event of its own: `AncestorDebited` carries the
+ * window figures, and one is emitted per ancestor on every draw, so the sum of
+ * those debits at a node is what the contract holds in `_lifetimeSpent` — the
+ * two are written in the same loop, from the same amount, and neither is
+ * touched by a release. Summing them is therefore a reading of the chain
+ * rather than a model of it.
+ *
+ * It is only whole if the ledger read the node from birth. `complete` states
+ * that, and a caller that cares must check it: a lifetime total over a partial
+ * range is smaller than the truth, which is the direction that flatters. Read
+ * `TreeVault.lifetimeSpent(node)` when the answer has to be exact.
+ */
+export interface Lifetime {
+  cap6: bigint;
+  spent6: bigint;
+  left6: bigint;
+  complete: boolean;
+}
+
+export function lifetimeOf(ledger: Ledger, row: NodeRow): Lifetime {
+  const spent6 = row.debited6;
+  return {
+    cap6: row.lifetimeCap6,
+    spent6,
+    left6: row.lifetimeCap6 > spent6 ? row.lifetimeCap6 - spent6 : 0n,
+    complete: row.openedAt.blockNumber >= ledger.fromBlock,
   };
 }
 

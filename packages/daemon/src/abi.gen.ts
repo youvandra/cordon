@@ -216,6 +216,25 @@ export const TreeVaultAbi = [
   },
   {
     "type": "function",
+    "name": "lifetimeSpent",
+    "inputs": [
+      {
+        "name": "node",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "refusal",
     "inputs": [
       {
@@ -778,6 +797,11 @@ export const MandateRegistryAbi = [
             "internalType": "uint128"
           },
           {
+            "name": "lifetimeCap6",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
             "name": "windowSeconds",
             "type": "uint64",
             "internalType": "uint64"
@@ -838,6 +862,11 @@ export const MandateRegistryAbi = [
           },
           {
             "name": "budget6",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "lifetimeCap6",
             "type": "uint128",
             "internalType": "uint128"
           },
@@ -949,6 +978,11 @@ export const MandateRegistryAbi = [
             "internalType": "uint128"
           },
           {
+            "name": "lifetimeCap6",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
             "name": "windowSeconds",
             "type": "uint64",
             "internalType": "uint64"
@@ -1004,6 +1038,12 @@ export const MandateRegistryAbi = [
       },
       {
         "name": "budget6",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      },
+      {
+        "name": "lifetimeCap6",
         "type": "uint128",
         "indexed": false,
         "internalType": "uint128"
@@ -1066,6 +1106,12 @@ export const MandateRegistryAbi = [
       },
       {
         "name": "budget6",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      },
+      {
+        "name": "lifetimeCap6",
         "type": "uint128",
         "indexed": false,
         "internalType": "uint128"
@@ -1168,6 +1214,11 @@ export const MandateRegistryAbi = [
   {
     "type": "error",
     "name": "ZeroBudget",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroLifetimeCap",
     "inputs": []
   },
   {

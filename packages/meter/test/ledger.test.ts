@@ -12,6 +12,7 @@ import {
   conductOf,
   emptyLedger,
   reduce,
+  lifetimeOf,
   refusalsOf,
   subtree,
   topCounterparty,
@@ -57,13 +58,13 @@ function tree(): Event[] {
   block = 1n;
   index = 0;
   const events: Event[] = [
-    at({ kind: "MandateOpened", node: ROOT, owner: OWNER, operator: OP_ROOT, budget6: 100_000_000n, windowSeconds: 86_400, maxDepth: 3 } as const),
+    at({ kind: "MandateOpened", node: ROOT, owner: OWNER, operator: OP_ROOT, budget6: 100_000_000n, lifetimeCap6: 250_000_000n, windowSeconds: 86_400, maxDepth: 3 } as const),
     at({ kind: "Funded", root: ROOT, from: OWNER, amount6: 100_000_000n } as const),
   ];
   nextBlock();
   events.push(
-    at({ kind: "MandateSpawned", node: CHILD, parent: ROOT, operator: OP_CHILD, budget6: 60_000_000n, depth: 1 } as const),
-    at({ kind: "MandateSpawned", node: GRAND, parent: CHILD, operator: OP_GRAND, budget6: 30_000_000n, depth: 2 } as const),
+    at({ kind: "MandateSpawned", node: CHILD, parent: ROOT, operator: OP_CHILD, budget6: 60_000_000n, lifetimeCap6: 150_000_000n, depth: 1 } as const),
+    at({ kind: "MandateSpawned", node: GRAND, parent: CHILD, operator: OP_GRAND, budget6: 30_000_000n, lifetimeCap6: 150_000_000n, depth: 2 } as const),
   );
   nextBlock();
   return events;
@@ -229,4 +230,46 @@ test("an event about a node this range never saw opened is not invented into exi
 
   assert.deepEqual(ledger.nodes, {});
   assert.equal(conductOf(ledger, CHILD), null);
+});
+
+test("a lifetime total counts every window, so a window that resets does not hide it", () => {
+  /* The defect this guards is the one the contract's own lifetime gate was
+     written for, arriving on the read side: an indexer that reports the
+     window figure as the total says a mandate is fresh at the start of every
+     window, when what the owner signed for is being spent down. */
+  const ledger = reduce(emptyLedger(5042002), [
+    ...tree(),
+    ...draw(GRAND, [GRAND, CHILD, ROOT], AISA, 40_000_000n),
+    ...draw(GRAND, [GRAND, CHILD, ROOT], ALLIUM, 40_000_000n),
+  ]);
+
+  const root = lifetimeOf(ledger, ledger.nodes[ROOT.toLowerCase() as Hex]!);
+  assert.equal(root.cap6, 250_000_000n);
+  assert.equal(root.spent6, 80_000_000n, "both windows count, and neither rolls off");
+  assert.equal(root.left6, 170_000_000n);
+
+  /* A child may be given a narrower total than its parent, and its own
+     spending is its own — the parent carries the subtree, the child does not
+     carry its parent. */
+  const child = lifetimeOf(ledger, ledger.nodes[CHILD.toLowerCase() as Hex]!);
+  assert.equal(child.cap6, 150_000_000n);
+  assert.equal(child.spent6, 80_000_000n);
+});
+
+test("a lifetime read over a range that starts after the node was opened says so", () => {
+  /* A total summed from a partial range is smaller than the truth, which is
+     the direction that flatters. A surface may show it; it may not show it as
+     the total. */
+  const events = tree();
+  const ledger = reduce(emptyLedger(5042002, 2n), events.filter((e) => e.blockNumber >= 2n));
+
+  const child = ledger.nodes[CHILD.toLowerCase() as Hex]!;
+  assert.equal(lifetimeOf(ledger, child).complete, true, "this node was opened inside the range");
+
+  const whole = reduce(emptyLedger(5042002, 2n), events);
+  assert.equal(
+    lifetimeOf(whole, whole.nodes[ROOT.toLowerCase() as Hex]!).complete,
+    false,
+    "the root was opened in block 1 and the range starts at 2",
+  );
 });
