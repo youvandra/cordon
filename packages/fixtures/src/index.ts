@@ -340,9 +340,17 @@ export const SURFACES = [
     name: "MCP",
     shape: "LLM loop with tools — Claude Desktop, Claude Code, MCP runtimes",
     cost: "one config block",
+    /* The block the MCP server actually reads. It used to name
+       CORDON_MANDATE and CORDON_CHAIN, which no code has ever looked at — a
+       config a reader could copy and watch fail. */
     snippet: `{ "mcpServers": { "cordon": {
     "command": "npx", "args": ["-y", "@cordon/mcp"],
-    "env": { "CORDON_MANDATE": "0x7f3a...", "CORDON_CHAIN": "arc" } } } }`,
+    "env": {
+      "CORDON_NODE_ME": "0x7f3a…",
+      "CORDON_KEY_ME": "…",
+      "CORDON_VAULT": "0x…",
+      "CORDON_REGISTRY": "0x…"
+    } } } }`,
   },
   {
     id: "proxy",

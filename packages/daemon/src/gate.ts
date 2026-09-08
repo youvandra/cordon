@@ -52,7 +52,9 @@ export interface DrawOutcome {
 export class Gate {
   private readonly publicClient: PublicClient;
   private readonly wallets = new Map<Hex, WalletClient>();
+  private readonly pending = new Map<string, Hex>();
   private readonly config: Config;
+  private readonly chain: ReturnType<typeof defineChain>;
 
   constructor(config: Config) {
     this.config = config;
@@ -63,6 +65,7 @@ export class Gate {
       rpcUrls: { default: { http: [config.rpcUrl] } },
     });
 
+    this.chain = chain;
     this.publicClient = createPublicClient({ chain, transport: http(config.rpcUrl) });
 
     for (const { node, keyEnv } of config.keys) {
@@ -82,6 +85,38 @@ export class Gate {
   /** The nodes this daemon can act for. It holds no other key. */
   nodes(): Hex[] {
     return [...this.wallets.keys()];
+  }
+
+  /**
+   * Take custody of a key for a node spawned at run time.
+   *
+   * A sub-agent created mid-run needs an operator, and the claim is that the
+   * daemon holds it and the agent holds none. The key stays in this process's
+   * memory: it is never returned to a caller, never logged, and never written
+   * to disk. A key an agent could read is a key it holds.
+   *
+   * The node is bound after the fact, once the registry has assigned it, which
+   * is why this takes the key and `bindOperator` takes the node.
+   */
+  addOperator(secret: Hex): Address {
+    const account = privateKeyToAccount(secret);
+    this.pending.set(account.address.toLowerCase(), secret);
+    return account.address;
+  }
+
+  /** Attach a previously added key to the node the registry gave it. */
+  bindOperator(node: Hex, operator: Address): void {
+    const secret = this.pending.get(operator.toLowerCase());
+    if (!secret) throw new Error(`no key held for operator ${operator}`);
+    this.wallets.set(
+      node.toLowerCase() as Hex,
+      createWalletClient({
+        account: privateKeyToAccount(secret),
+        chain: this.chain,
+        transport: http(this.config.rpcUrl),
+      }),
+    );
+    this.pending.delete(operator.toLowerCase());
   }
 
   private walletFor(node: Hex): WalletClient {
@@ -173,7 +208,13 @@ export class Gate {
       try {
         const event = decodeEventLog({ abi: MandateRegistryAbi, data: log.data, topics: log.topics });
         if (event.eventName === "MandateSpawned") {
-          return { node: (event.args as { node: Hex }).node, txHash };
+          const node = (event.args as { node: Hex }).node;
+          /* If this daemon is holding the child's key, attach it now — the
+             node id did not exist until the registry assigned it. */
+          if (this.pending.has(params.operator.toLowerCase())) {
+            this.bindOperator(node, params.operator);
+          }
+          return { node, txHash };
         }
       } catch {
         continue;
