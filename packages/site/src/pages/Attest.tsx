@@ -33,7 +33,7 @@ export default function Attest() {
   const node =
     nodes.find((candidate) => String(candidate.agentId) === id) ?? nodes[0];
   usePageMeta({
-    title: `Attest ${node.agentId} — Cordon`,
+    title: `Attest ${node.agentId} · Cordon`,
     description: `One x402 call, a tenth of a cent: does ${node.label} have a live mandate with headroom and a record of staying inside it?`,
   });
   const animate = useEntrance();

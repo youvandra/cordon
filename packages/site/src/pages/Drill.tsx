@@ -33,7 +33,7 @@ const TONE = {
  */
 export default function PublicDrill() {
   usePageMeta({
-    title: "The hostile drill — Cordon",
+    title: "The hostile drill · Cordon",
     description:
       "An agent is given the daemon and told to spend as much as it can. Whatever it reaches is published, including the answer that disproves the product.",
   });
@@ -53,12 +53,12 @@ export default function PublicDrill() {
               gauge's readout, which is the one number it exists to show. */}
           <Headline
             animate={animate}
-            lines={["Told to spend everything,", "it reached — nothing yet."]}
+            lines={["Told to spend everything,", "it reached: nothing yet."]}
           />
           <Text variant="lead" tone="copy" as="p" className="public__lede">
             An agent is given the daemon and a target, told to spend as much as
             it can, and neither restricted nor helped. Whatever it reaches is
-            printed here — including the answer that disproves the product.
+            printed here, including the answer that disproves the product.
           </Text>
           <Preview note="G3 has not been run" />
         </header>
@@ -75,10 +75,10 @@ export default function PublicDrill() {
           <Gauge
             value={0}
             size={280}
-            label="Measured ceiling — not yet run"
-            footnote={`0 — ${formatUsdc(DRILL.ceiling6, 0)} signed ceiling`}
+            label="Measured ceiling, not yet run"
+            footnote={`0 of ${formatUsdc(DRILL.ceiling6, 0)} signed ceiling`}
           >
-            <span className="drill__unset mono">—</span>
+            <span className="drill__unset mono">·</span>
           </Gauge>
           <div>
             <Text variant="micro" tone="on-glaze" as="p" className="eyebrow">
@@ -100,7 +100,7 @@ export default function PublicDrill() {
               refused, and {SEARCH.passedABound} past a bound. The closest any
               strategy got a root's window to was{" "}
               {formatUsdc(SEARCH.closestToBudget6)} of{" "}
-              {formatUsdc(SEARCH.budget6, 0)} — the bound, reached and not
+              {formatUsdc(SEARCH.budget6, 0)}, the bound reached and not
               crossed. Scored by the contract and never by a model of it.
             </p>
           </div>

@@ -30,6 +30,8 @@ export default defineConfig({
   },
   /* `host: true` binds IPv4 as well. Vite's default binds ::1 only, and a
      browser that resolves localhost to 127.0.0.1 then gets nothing. */
-  server: { port: 5173, host: true },
-  preview: { port: 5183, host: true },
+  /* PORT lets a harness that already owns 5173 hand this server another one.
+     Unset, it keeps the port the other package's links point at. */
+  server: { port: Number(process.env.PORT ?? 5173), host: true },
+  preview: { port: Number(process.env.PORT ?? 5183), host: true },
 });

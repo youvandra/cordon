@@ -51,8 +51,8 @@ export function RecordShell({ children }: { children: ReactNode }) {
         <div className="foot__inner">
           <Logo size={16} />
           <Text variant="micro" tone="dim" as="p">
-            One budget for a tree of agents, enforced on chain. Arc{" "}
-            {ARC.chainId}, testnet — nothing here is live money.
+            One budget for a tree of agents, enforced on chain. Arc testnet ·
+            nothing here is live money.
           </Text>
           <nav aria-label="Cordon" className="foot__links">
             <Link to="/">The argument</Link>

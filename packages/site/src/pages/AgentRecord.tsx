@@ -63,7 +63,7 @@ export default function AgentRecord() {
   const node =
     nodes.find((candidate) => String(candidate.agentId) === id) ?? nodes[0];
   usePageMeta({
-    title: `Agent ${node.agentId} — conduct record — Cordon`,
+    title: `Agent ${node.agentId} · conduct record · Cordon`,
     description: `What ${node.label} asked for, what its mandate allowed, and which draws the contract refused. Every entry names the transaction that produced it.`,
   });
   const animate = useEntrance();
@@ -264,7 +264,7 @@ export default function AgentRecord() {
                 numeric: true,
                 width: 96,
                 cell: (entry) =>
-                  entry.amount6 === undefined ? "—" : formatUsdc(entry.amount6),
+                  entry.amount6 === undefined ? "·" : formatUsdc(entry.amount6),
               },
               {
                 id: "tx",
