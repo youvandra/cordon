@@ -106,12 +106,18 @@ const server = createAttestApi({
   },
 });
 
-server.listen(port, () => {
+/* Loopback by default. This process holds the only key in the package and a
+   default of 0.0.0.0 puts it on the public internet the moment the box has an
+   open port, which is a firewall rule away from being wrong. A deployment that
+   wants it exposed says so; nginx in front needs nothing but the default. */
+const bind = flag(argv, "bind") ?? process.env.CORDON_BIND ?? "127.0.0.1";
+
+server.listen(port, bind, () => {
   console.log(`attest chain ${chainId} via ${rpc}`);
   console.log(`       blocks ${ledger!.fromBlock}–${ledger!.toBlock}`);
   console.log(`       ${ATTEST.resourcePath}/:agentId  ${Number(ATTEST.price6) / 1e6} in ${domain.name}`);
   console.log(`       paid to ${payTo}, submitted by ${collector.submitter}`);
-  console.log(`       on :${port}`);
+  console.log(`       on ${bind}:${port}`);
 });
 
 setInterval(() => {

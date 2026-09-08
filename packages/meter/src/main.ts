@@ -28,6 +28,7 @@ interface Args {
   fromBlock: bigint;
   out: string;
   port: number;
+  bind: string;
   once: boolean;
   intervalMs: number;
 }
@@ -55,6 +56,7 @@ function parse(argv: string[]): Args {
     fromBlock: BigInt(args.from ?? process.env.CORDON_FROM_BLOCK ?? "0"),
     out: args.out ?? resolve(here, `../ledger.${chainId}.json`),
     port: Number(args.port ?? process.env.CORDON_METER_PORT ?? 8404),
+    bind: args.bind ?? process.env.CORDON_BIND ?? "127.0.0.1",
     once: flags.has("once"),
     intervalMs: Number(args.interval ?? 5_000),
   };
@@ -103,7 +105,12 @@ console.log(`       snapshot ${args.out}`);
 
 if (!args.once) {
   const server = createReadApi(() => ledger!);
-  server.listen(args.port, () => console.log(`       read api on :${args.port}`));
+  /* Loopback by default, same as attest. This API is read-only and public by
+     intent, but "public" means through the origin that serves the pages, so
+     the console needs no CORS and there is one place to look at the logs. */
+  server.listen(args.port, args.bind, () =>
+    console.log(`       read api on ${args.bind}:${args.port}`),
+  );
 
   setInterval(() => {
     tick().catch((error: unknown) => {
