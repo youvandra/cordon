@@ -194,7 +194,7 @@ export default function Setup() {
 export CORDON_CHAIN=arc
 
 npx -y @cordon/mcp                        # MCP
-export HTTP_PROXY=http://localhost:8402   # anything else`}</pre>
+export HTTP_PROXY=http://localhost:8403   # anything else`}</pre>
                 <Stack direction="row" gap="sm" align="center" wrap>
                   <Cta
                     magnetic
