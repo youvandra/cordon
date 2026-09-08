@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "./interfaces/IERC20.sol";
+import {IGatewayWallet} from "./interfaces/IGatewayWallet.sol";
 import {SafeTransfer} from "./SafeTransfer.sol";
 import {MandateRegistry} from "./MandateRegistry.sol";
 
@@ -61,7 +62,7 @@ contract TreeVault {
     struct Refusal {
         bytes32 node; // where the draw was attempted
         bytes32 breachedAt; // which node's bound stopped it — often an ancestor
-        address payee;
+        address counterparty; // declared, not enforced — see the note above
         uint128 amount6;
         Reason reason;
         uint64 at;
@@ -76,6 +77,7 @@ contract TreeVault {
 
     IERC20 public immutable usdc;
     MandateRegistry public immutable registry;
+    IGatewayWallet public immutable gateway;
 
     /* ------------------------------------------------------------------ */
     /* Storage                                                             */
@@ -85,7 +87,9 @@ contract TreeVault {
     mapping(bytes32 => uint128) public treasury6;
 
     mapping(bytes32 => Window) private _nodeWindow;
-    mapping(bytes32 => mapping(address => Window)) private _payeeWindow;
+    /// @dev Keyed by DECLARED counterparty. Bounds an honest daemon; a lying
+    ///      one is caught by reconciliation, not here.
+    mapping(bytes32 => mapping(address => Window)) private _counterpartyWindow;
 
     Refusal[] private _refusals;
 
@@ -97,7 +101,7 @@ contract TreeVault {
     error NotOwner(bytes32 root, address caller);
     error NotARoot(bytes32 node);
     error ZeroAmount();
-    error ZeroPayee();
+    error ZeroCounterparty();
     error InsufficientTreasury(bytes32 root, uint128 have, uint128 want);
     error UnknownRefusal(uint256 id);
     error AlreadyReleased(uint256 id);
@@ -108,16 +112,35 @@ contract TreeVault {
 
     event Funded(bytes32 indexed root, address indexed from, uint128 amount6);
     event Withdrawn(bytes32 indexed root, address indexed to, uint128 amount6);
-    event Drawn(bytes32 indexed node, address indexed payee, uint128 amount6, bytes32 indexed root);
+    /**
+     * @param counterparty who the daemon says it is about to pay. Declared on
+     *        chain before the fact, never verified by this contract, and the
+     *        left-hand side of the reconciliation that catches a daemon lying.
+     * @param beneficiary whose Gateway balance was topped up — the drawing
+     *        node's own operator, and nobody else's.
+     */
+    event Drawn(
+        bytes32 indexed node,
+        address indexed counterparty,
+        address beneficiary,
+        uint128 amount6,
+        bytes32 indexed root
+    );
     event AncestorDebited(bytes32 indexed node, bytes32 indexed ancestor, uint128 amount6, uint128 spent6, uint128 budget6);
     event Refused(
-        uint256 indexed refusalId, bytes32 indexed node, bytes32 indexed breachedAt, address payee, uint128 amount6, Reason reason
+        uint256 indexed refusalId,
+        bytes32 indexed node,
+        bytes32 indexed breachedAt,
+        address counterparty,
+        uint128 amount6,
+        Reason reason
     );
-    event Released(uint256 indexed refusalId, address indexed by, address indexed payee, uint128 amount6);
+    event Released(uint256 indexed refusalId, address indexed by, address indexed counterparty, uint128 amount6);
 
-    constructor(IERC20 usdc_, MandateRegistry registry_) {
+    constructor(IERC20 usdc_, MandateRegistry registry_, IGatewayWallet gateway_) {
         usdc = usdc_;
         registry = registry_;
+        gateway = gateway_;
     }
 
     /* ------------------------------------------------------------------ */
@@ -150,31 +173,39 @@ contract TreeVault {
     /* ------------------------------------------------------------------ */
 
     /**
-     * @notice Release `amount6` to `payee` on behalf of `node`, or refuse.
+     * @notice Top up this node's Gateway balance by `amount6` for a purchase
+     *         from `counterparty`, or refuse.
      *
-     * The counterparty and the notional are not claims the caller makes about
-     * the payment — they ARE the payment. `payee` receives the money and
-     * `amount6` is what leaves the vault, so neither can be spoofed to dodge
-     * the concentration bound. A value the caller controls is not a constraint;
-     * a value that is the transfer itself is one.
+     * The notional is not a claim: `amount6` is what leaves the vault, so it
+     * cannot be understated. The counterparty is a claim, and this contract is
+     * careful about the difference. The daemon reads it from the seller's own
+     * 402 challenge and declares it here before paying; the agent above the
+     * daemon cannot express a counterparty at all, because the tool it holds
+     * takes a URL and there is no transfer tool. A daemon that declares one
+     * seller and pays another is not refused by this function — no contract
+     * can read a burn intent — it is caught by reconciliation afterwards.
      *
-     * @return released true when the money moved
+     * The money goes to `GatewayWallet.depositFor`, crediting this node's
+     * operator. Sized to the purchase, so the balance sitting outside this
+     * contract between purchases is one tranche at most.
+     *
+     * @return released true when the top-up happened
      * @return refusalId 0 when released, otherwise the id of the record
      * @return reason    which bound stopped it
      */
-    function draw(bytes32 node, address payee, uint128 amount6)
+    function draw(bytes32 node, address counterparty, uint128 amount6)
         external
         returns (bool released, uint256 refusalId, Reason reason)
     {
         MandateRegistry.Mandate memory m = registry.mandate(node);
         if (msg.sender != m.operator) revert NotOperator(node, msg.sender);
         if (amount6 == 0) revert ZeroAmount();
-        if (payee == address(0)) revert ZeroPayee();
+        if (counterparty == address(0)) revert ZeroCounterparty();
 
         bytes32[] memory ancestry = registry.path(node);
 
         bytes32 breachedAt;
-        (reason, breachedAt) = _evaluate(node, m, ancestry, payee, amount6);
+        (reason, breachedAt) = _evaluate(node, m, ancestry, counterparty, amount6);
 
         if (reason != Reason.None) {
             // No window is touched here. A refusal consumes no budget.
@@ -182,7 +213,7 @@ contract TreeVault {
                 Refusal({
                     node: node,
                     breachedAt: breachedAt,
-                    payee: payee,
+                    counterparty: counterparty,
                     amount6: amount6,
                     reason: reason,
                     at: uint64(block.timestamp),
@@ -190,14 +221,19 @@ contract TreeVault {
                 })
             );
             refusalId = _refusals.length;
-            emit Refused(refusalId, node, breachedAt, payee, amount6, reason);
+            emit Refused(refusalId, node, breachedAt, counterparty, amount6, reason);
             return (false, refusalId, reason);
         }
 
-        _commit(ancestry, payee, amount6);
+        _commit(ancestry, counterparty, amount6);
         treasury6[m.root] -= amount6;
-        usdc.send(payee, amount6);
-        emit Drawn(node, payee, amount6, m.root);
+
+        /* Approved for exactly this deposit and consumed by it. The vault
+           never carries a standing allowance to anyone, including Circle. */
+        usdc.allow(address(gateway), amount6);
+        gateway.depositFor(address(usdc), m.operator, amount6);
+
+        emit Drawn(node, counterparty, m.operator, amount6, m.root);
         return (true, 0, Reason.None);
     }
 
@@ -211,7 +247,7 @@ contract TreeVault {
         bytes32 node,
         MandateRegistry.Mandate memory m,
         bytes32[] memory ancestry,
-        address payee,
+        address counterparty,
         uint128 amount6
     ) private view returns (Reason, bytes32) {
         // A revoked ancestor kills the branch. This is a refusal, not a revert,
@@ -229,9 +265,9 @@ contract TreeVault {
             uint128 spent = _spent(_nodeWindow[ancestry[i]], a.windowSeconds);
             if (spent + amount6 > a.budget6) return (Reason.WindowBudget, ancestry[i]);
 
-            uint128 toPayee = _spent(_payeeWindow[ancestry[i]][payee], a.windowSeconds);
+            uint128 declared = _spent(_counterpartyWindow[ancestry[i]][counterparty], a.windowSeconds);
             uint128 limit = uint128((uint256(a.budget6) * a.concentrationBps) / BPS);
-            if (toPayee + amount6 > limit) return (Reason.Concentration, ancestry[i]);
+            if (declared + amount6 > limit) return (Reason.Concentration, ancestry[i]);
         }
 
         if (treasury6[m.root] < amount6) return (Reason.VaultBalance, m.root);
@@ -240,7 +276,7 @@ contract TreeVault {
     }
 
     /// @dev Ancestor debit. Every node on the path pays for this draw.
-    function _commit(bytes32[] memory ancestry, address payee, uint128 amount6) private {
+    function _commit(bytes32[] memory ancestry, address counterparty, uint128 amount6) private {
         for (uint256 i = 0; i < ancestry.length; ++i) {
             bytes32 id = ancestry[i];
             MandateRegistry.Mandate memory a = registry.mandate(id);
@@ -249,9 +285,9 @@ contract TreeVault {
             w.spent += amount6;
             _nodeWindow[id] = w;
 
-            Window memory pw = _roll(_payeeWindow[id][payee], a.windowSeconds);
-            pw.spent += amount6;
-            _payeeWindow[id][payee] = pw;
+            Window memory cw = _roll(_counterpartyWindow[id][counterparty], a.windowSeconds);
+            cw.spent += amount6;
+            _counterpartyWindow[id][counterparty] = cw;
 
             emit AncestorDebited(ancestry[0], id, amount6, w.spent, a.budget6);
         }
@@ -286,8 +322,9 @@ contract TreeVault {
 
         r.released = true;
         treasury6[m.root] = have - r.amount6;
-        usdc.send(r.payee, r.amount6);
-        emit Released(refusalId, msg.sender, r.payee, r.amount6);
+        usdc.allow(address(gateway), r.amount6);
+        gateway.depositFor(address(usdc), registry.mandate(r.node).operator, r.amount6);
+        emit Released(refusalId, msg.sender, r.counterparty, r.amount6);
     }
 
     /* ------------------------------------------------------------------ */
@@ -366,18 +403,18 @@ contract TreeVault {
         returns (uint128 spent6, uint128 limit6)
     {
         MandateRegistry.Mandate memory m = registry.mandate(node);
-        spent6 = _spent(_payeeWindow[node][counterparty], m.windowSeconds);
+        spent6 = _spent(_counterpartyWindow[node][counterparty], m.windowSeconds);
         limit6 = uint128((uint256(m.budget6) * m.concentrationBps) / BPS);
     }
 
     /// @notice What `draw` would answer right now, without changing anything.
-    function evaluate(bytes32 node, address payee, uint128 amount6)
+    function evaluate(bytes32 node, address counterparty, uint128 amount6)
         external
         view
         returns (Reason reason, bytes32 breachedAt)
     {
         MandateRegistry.Mandate memory m = registry.mandate(node);
-        return _evaluate(node, m, registry.path(node), payee, amount6);
+        return _evaluate(node, m, registry.path(node), counterparty, amount6);
     }
 
     function refusal(uint256 id) external view returns (Refusal memory) {

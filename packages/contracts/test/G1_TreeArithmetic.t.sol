@@ -136,9 +136,19 @@ contract G1_TreeArithmetic is Base {
             _draw(ops[n], nodes[n], aisa, amount);
         }
 
-        uint256 paidOut = usdc.balanceOf(aisa);
-        assertEq(paidOut + usdc.balanceOf(address(vault)), Fixtures.BUDGET6, "nothing appeared and nothing vanished");
-        assertEq(vault.treasury6(root), uint128(Fixtures.BUDGET6 - paidOut), "the ledger matches the balance");
+        // Released money now sits in Gateway rather than with a seller: the
+        // draw is a top-up, and the payment out of it happens off chain.
+        uint256 released = usdc.balanceOf(address(gateway));
+        assertEq(released + usdc.balanceOf(address(vault)), Fixtures.BUDGET6, "nothing appeared and nothing vanished");
+        assertEq(vault.treasury6(root), uint128(Fixtures.BUDGET6 - released), "the ledger matches the balance");
+        assertEq(
+            gateway.availableBalance(address(usdc), opRoot)
+                + gateway.availableBalance(address(usdc), opA)
+                + gateway.availableBalance(address(usdc), opB)
+                + gateway.availableBalance(address(usdc), opG),
+            released,
+            "and every cent of it is credited to the daemon that drew it"
+        );
     }
 
     function _spendAcross(address op, bytes32 node, address payee, uint256 times) internal {

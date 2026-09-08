@@ -208,12 +208,44 @@ export const MANDATE = {
   owner: "0xB1f4A2c7093Ed5688cA0Fb2371d9E4c806a3F17d",
 } as const;
 
+/**
+ * How strongly the contract stands behind a figure. Rule 1, made precise.
+ *
+ * Most of what Cordon shows is `enforced`: the money does not move unless the
+ * contract agrees. One thing is not, and saying so is the difference between a
+ * control and a story. A payment out of a Circle Gateway balance is a burn
+ * intent signed off chain, and the seller is a field inside that signature, so
+ * no contract can read it. See `GATEWAY` above.
+ *
+ * `declared` therefore means: the daemon states the counterparty on chain
+ * before paying, and the contract bounds that statement. An honest daemon
+ * cannot concentrate its spend past the bound. A dishonest one is caught after
+ * the fact by reconciling declarations against settlement — which needs a
+ * settlement source we have not yet verified, so nothing may claim it today.
+ */
+export type Strength = "enforced" | "declared";
+
+export const STRENGTH: Record<string, Strength> = {
+  budget: "enforced",
+  headroom: "enforced",
+  treeBar: "enforced",
+  refusal: "enforced",
+  depth: "enforced",
+  tranche: "enforced",
+  release: "enforced",
+  revoke: "enforced",
+  record: "enforced",
+  concentration: "declared",
+};
+
 /** Enforcing function for every figure the console renders. Rule 1. */
 export const ENFORCED_BY = {
   budget: "TreeVault.windowSpent(node)",
   headroom: "TreeVault.headroom(node)",
   treeBar: "TreeVault.ancestorDebit(node, amount)",
   refusal: "TreeVault.evaluate(node, amount) -> Refused",
+  gatewayTopUp: "GatewayWallet.depositFor(usdc, operator, amount)",
+  /** Bounds the counterparty the daemon declared, not the one it paid. */
   concentration: "TreeVault.concentrationBound(node, counterparty)",
   depth: "MandateRegistry.maxDepth()",
   tranche: "TreeVault.trancheCap()",

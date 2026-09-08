@@ -145,13 +145,17 @@ contract G1_Refusal is Base {
     /* Release — the human exit                                            */
     /* ------------------------------------------------------------------ */
 
-    function test_release_pays_the_refused_counterparty_and_leaves_the_refusal_standing() public {
+    function test_release_funds_the_refused_purchase_and_leaves_the_refusal_standing() public {
         (, uint256 id,) = _draw(opG, grandchild, aisa, Fixtures.TRANCHE6 + 1);
 
         vm.prank(owner);
         vault.release(id);
 
-        assertEq(usdc.balanceOf(aisa), Fixtures.TRANCHE6 + 1, "the named human moved the money");
+        assertEq(
+            gateway.availableBalance(address(usdc), opG),
+            Fixtures.TRANCHE6 + 1,
+            "the named human funded the purchase that was refused"
+        );
 
         TreeVault.Refusal memory r = vault.refusal(id);
         assertTrue(r.released, "the exception is recorded");

@@ -5,7 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {MandateRegistry} from "../src/MandateRegistry.sol";
 import {TreeVault} from "../src/TreeVault.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
+import {IGatewayWallet} from "../src/interfaces/IGatewayWallet.sol";
 import {MockUSDC} from "./mocks/MockUSDC.sol";
+import {MockGateway} from "./mocks/MockGateway.sol";
 import {Fixtures} from "./Fixtures.gen.sol";
 
 /**
@@ -86,6 +88,7 @@ contract G1_Invariant is Test {
     MandateRegistry internal reg;
     TreeVault internal vault;
     MockUSDC internal usdc;
+    MockGateway internal gateway;
     TreeHandler internal handler;
 
     address internal owner = makeAddr("owner");
@@ -95,7 +98,8 @@ contract G1_Invariant is Test {
     function setUp() public {
         reg = new MandateRegistry();
         usdc = new MockUSDC();
-        vault = new TreeVault(IERC20(address(usdc)), reg);
+        gateway = new MockGateway();
+        vault = new TreeVault(IERC20(address(usdc)), reg, IGatewayWallet(address(gateway)));
 
         vm.prank(owner);
         root = reg.open(
@@ -155,6 +159,7 @@ contract G1_InvariantIsNotVacuous is Test {
     MandateRegistry internal reg;
     TreeVault internal vault;
     MockUSDC internal usdc;
+    MockGateway internal gateway;
     TreeHandler internal handler;
 
     address internal owner = makeAddr("owner");
@@ -164,7 +169,8 @@ contract G1_InvariantIsNotVacuous is Test {
     function setUp() public {
         reg = new MandateRegistry();
         usdc = new MockUSDC();
-        vault = new TreeVault(IERC20(address(usdc)), reg);
+        gateway = new MockGateway();
+        vault = new TreeVault(IERC20(address(usdc)), reg, IGatewayWallet(address(gateway)));
 
         vm.prank(owner);
         root = reg.open(

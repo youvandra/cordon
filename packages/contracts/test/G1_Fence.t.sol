@@ -19,19 +19,67 @@ contract G1_Fence is Base {
     /* Derived values, not declared ones                                   */
     /* ------------------------------------------------------------------ */
 
-    function test_the_counterparty_cannot_be_spoofed_because_it_is_the_transfer_target() public {
-        // There is no "counterparty" argument to lie about. The address the
-        // bound is applied to is the address that receives the money, so a
-        // caller can only dodge the concentration bound by paying someone else.
+    /**
+     * The notional cannot be spoofed. The counterparty can, and this says so.
+     *
+     * A draw tops up the node's Gateway balance; the payment out of it is a
+     * burn intent signed off chain, and `destinationRecipient` lives inside
+     * that signature. No contract reads it. So the contract bounds what the
+     * daemon DECLARES, which stops an honest daemon from concentrating its
+     * spend, and reconciliation afterwards is what catches a dishonest one.
+     */
+    function test_the_declared_counterparty_is_bounded_even_though_it_is_only_declared() public {
         (bool ok,,) = _draw(opG, grandchild, aisa, Fixtures.TRANCHE6);
         assertTrue(ok);
 
-        assertEq(usdc.balanceOf(aisa), Fixtures.TRANCHE6, "the money went where the bound was measured");
-        (uint128 spent6,) = vault.concentrationBound(grandchild, aisa);
-        assertEq(spent6, Fixtures.TRANCHE6, "and the bound was measured where the money went");
+        assertEq(usdc.balanceOf(aisa), 0, "the seller is not paid by this contract");
+        assertEq(
+            gateway.availableBalance(address(usdc), opG),
+            Fixtures.TRANCHE6,
+            "the drawing node's own daemon was credited, and nobody else"
+        );
 
-        (uint128 otherSpent,) = vault.concentrationBound(grandchild, allium);
-        assertEq(otherSpent, 0, "nobody else was charged for it");
+        (uint128 spent6,) = vault.concentrationBound(grandchild, aisa);
+        assertEq(spent6, Fixtures.TRANCHE6, "and the declaration was recorded against that seller");
+
+        (uint128 other,) = vault.concentrationBound(grandchild, allium);
+        assertEq(other, 0, "nobody else was charged for it");
+    }
+
+    /**
+     * The limit of the claim, asserted rather than avoided.
+     *
+     * Once a balance exists in Gateway, its depositor can send it anywhere
+     * with one off-chain signature. This test performs exactly that, and it
+     * passes — because pretending otherwise is how a control becomes a story.
+     * What bounds the damage is that the draw was sized to the purchase, so
+     * what a daemon can misdirect is one tranche, not a budget.
+     */
+    function test_a_daemon_can_misdirect_a_tranche_and_the_contract_cannot_stop_it() public {
+        _draw(opG, grandchild, aisa, Fixtures.TRANCHE6);
+
+        address elsewhere = makeAddr("somewhere the owner never approved");
+        vm.prank(opG);
+        gateway.spendOffChain(address(usdc), elsewhere, Fixtures.TRANCHE6);
+
+        assertEq(usdc.balanceOf(elsewhere), Fixtures.TRANCHE6, "no contract sees a burn intent");
+
+        // What the contract does guarantee: it was one tranche, the declaration
+        // is on chain, and the mismatch is now provable against settlement.
+        assertEq(gateway.availableBalance(address(usdc), opG), 0, "and nothing more was there to take");
+        (uint128 declared,) = vault.concentrationBound(grandchild, aisa);
+        assertEq(declared, Fixtures.TRANCHE6, "the claim it made is on the record");
+    }
+
+    /// A node's draw credits its own operator only. One daemon's key cannot
+    /// be topped up by another branch's draw.
+    function test_a_draw_credits_only_the_drawing_nodes_own_daemon() public {
+        _draw(opG, grandchild, aisa, Fixtures.TRANCHE6);
+
+        address[3] memory others = [opRoot, opA, opB];
+        for (uint256 i = 0; i < others.length; ++i) {
+            assertEq(gateway.availableBalance(address(usdc), others[i]), 0, "no other daemon was funded");
+        }
     }
 
     function test_the_notional_cannot_be_understated_because_it_is_what_leaves_the_vault() public {
@@ -42,6 +90,15 @@ contract G1_Fence is Base {
 
         assertEq(vault.treasury6(root), treasuryBefore - amount, "the ledger moved by the drawn amount");
         assertEq(vault.windowSpent(root), amount, "and the window moved by the same one");
+        assertEq(gateway.availableBalance(address(usdc), opG), amount, "and so did the balance it created");
+    }
+
+    /// The vault holds no standing authorisation to anyone, Circle included.
+    /// Each deposit approves exactly its own amount and consumes it.
+    function test_the_vault_never_carries_a_standing_allowance() public {
+        assertEq(usdc.allowance(address(vault), address(gateway)), 0, "none before");
+        _draw(opG, grandchild, aisa, Fixtures.TRANCHE6);
+        assertEq(usdc.allowance(address(vault), address(gateway)), 0, "and none left after");
     }
 
     /* ------------------------------------------------------------------ */
@@ -55,8 +112,15 @@ contract G1_Fence is Base {
 
         address[4] memory daemons = [opRoot, opA, opB, opG];
         for (uint256 i = 0; i < daemons.length; ++i) {
-            assertEq(usdc.balanceOf(daemons[i]), 0, "a daemon key never holds funds");
+            assertEq(usdc.balanceOf(daemons[i]), 0, "a daemon key never holds USDC");
             assertEq(usdc.allowance(address(vault), daemons[i]), 0, "and never holds an allowance on the vault");
+            // What it does hold is a Gateway balance, and only the tranche it
+            // was just given for the purchase it just declared.
+            assertLe(
+                gateway.availableBalance(address(usdc), daemons[i]),
+                Fixtures.TRANCHE6,
+                "never more than one tranche outside the vault"
+            );
         }
     }
 

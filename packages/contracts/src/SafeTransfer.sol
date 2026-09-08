@@ -15,6 +15,12 @@ library SafeTransfer {
         if (!ok || (data.length != 0 && !abi.decode(data, (bool)))) revert TransferFailed();
     }
 
+    function allow(IERC20 token, address spender, uint256 value) internal {
+        (bool ok, bytes memory data) =
+            address(token).call(abi.encodeCall(IERC20.approve, (spender, value)));
+        if (!ok || (data.length != 0 && !abi.decode(data, (bool)))) revert TransferFailed();
+    }
+
     function pull(IERC20 token, address from, address to, uint256 value) internal {
         (bool ok, bytes memory data) =
             address(token).call(abi.encodeCall(IERC20.transferFrom, (from, to, value)));

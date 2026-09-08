@@ -5,7 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {MandateRegistry} from "../src/MandateRegistry.sol";
 import {TreeVault} from "../src/TreeVault.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
+import {IGatewayWallet} from "../src/interfaces/IGatewayWallet.sol";
 import {MockUSDC} from "./mocks/MockUSDC.sol";
+import {MockGateway} from "./mocks/MockGateway.sol";
 import {Fixtures} from "./Fixtures.gen.sol";
 
 /**
@@ -24,6 +26,7 @@ abstract contract Base is Test {
     MandateRegistry internal reg;
     TreeVault internal vault;
     MockUSDC internal usdc;
+    MockGateway internal gateway;
 
     address internal owner = makeAddr("owner");
     address internal opRoot = makeAddr("daemon:root");
@@ -48,7 +51,8 @@ abstract contract Base is Test {
         vm.startPrank(deployer);
         reg = new MandateRegistry();
         usdc = new MockUSDC();
-        vault = new TreeVault(IERC20(address(usdc)), reg);
+        gateway = new MockGateway();
+        vault = new TreeVault(IERC20(address(usdc)), reg, IGatewayWallet(address(gateway)));
         vm.stopPrank();
 
         vm.prank(owner);
