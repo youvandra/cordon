@@ -27,7 +27,20 @@ export const ARC = {
   faucet: "https://faucet.circle.com",
   /** Gas token is USDC, native, 18 decimals. */
   nativeDecimals: 18,
-  /** The ERC-20 view of the same balance. balanceOf truncates below 1e-6. */
+  /**
+   * The ERC-20 view of the same balance. balanceOf truncates below 1e-6.
+   *
+   * This predeploy is a real FiatTokenV2, confirmed against the live chain on
+   * 8 Sep 2026: it answers `DOMAIN_SEPARATOR()`, `authorizationState` and
+   * `nonces`, and `transferWithAuthorization` reverts with its own
+   * "FiatTokenV2: authorization is expired". An unknown selector reverts, so
+   * none of that is a fallback answering yes to everything. Its separator is
+   * what name "USDC" at version "2" on this chain hashes to, which is why
+   * x402 `exact` can settle here at all. No figure from that run is written
+   * down: `attest/src/collect.ts` reads the domain off the token at startup
+   * and is the only authority on it, because a domain one character out fails
+   * at settlement and looks like the payer's fault.
+   */
   erc20: "0x3600000000000000000000000000000000000000",
   erc20Decimals: 6,
   mainnetLaunched: false,
