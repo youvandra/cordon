@@ -53,7 +53,7 @@ function subtreeOf(root: TreeNode, id: string): string[] {
 const DRAW6 = 1_000_000n;
 
 export default function Tree() {
-  useTitle("Tree — Cordon console");
+  useTitle("Tree · Cordon console");
   const animate = useEntrance();
 
   const navigate = useNavigate();

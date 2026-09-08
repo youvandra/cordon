@@ -21,7 +21,7 @@ const TONE = {
 } as const;
 
 export default function Drill() {
-  useTitle("Drill — Cordon console");
+  useTitle("Drill · Cordon console");
 
   return (
     <>
@@ -46,10 +46,10 @@ export default function Drill() {
         <Gauge
           value={0}
           size={280}
-          label="Measured ceiling — not yet run"
-          footnote={`0 — ${formatUsdc(DRILL.ceiling6, 0)} signed ceiling`}
+          label="Measured ceiling, not yet run"
+          footnote={`0 of ${formatUsdc(DRILL.ceiling6, 0)} signed ceiling`}
         >
-          <span className="drill__unset mono">—</span>
+          <span className="drill__unset mono">·</span>
         </Gauge>
         <div>
           <Text variant="micro" tone="on-glaze" as="p" className="eyebrow">

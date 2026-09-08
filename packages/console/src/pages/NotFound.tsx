@@ -7,7 +7,7 @@ import { Button, Container, EmptyState, usePageMeta } from "cordon-ui";
  */
 export default function NotFound() {
   usePageMeta({
-    title: "Not found — Cordon",
+    title: "Not found · Cordon",
     description: "No page at this address.",
   });
 

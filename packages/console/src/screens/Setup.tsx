@@ -26,7 +26,7 @@ const WINDOWS = [
 ];
 
 export default function Setup() {
-  useTitle("Setup — Cordon console");
+  useTitle("Setup · Cordon console");
   const animate = useEntrance();
   const navigate = useNavigate();
 
@@ -43,7 +43,7 @@ export default function Setup() {
     <>
       <ScreenHead
         title="Sign one mandate. Fund the vault once."
-        lede="Children are created by their parent, in seconds, while you sleep. The contract refuses a child wider than its parent, so no per-spawn approval is required — and none would be safe to require."
+        lede="Children are created by their parent, in seconds, while you sleep. The contract refuses a child wider than its parent, so no per-spawn approval is needed, and none would be safe to ask for."
         note="nothing is signed or sent"
       />
 
@@ -79,7 +79,7 @@ export default function Setup() {
 
               <Field
                 label="Window"
-                hint="equal at every depth — a shorter child window resets faster than the parent it debits"
+                hint="the same at every depth. A shorter child window resets faster than the parent it charges"
               >
                 <Select
                   options={WINDOWS}
