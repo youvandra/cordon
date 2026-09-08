@@ -274,12 +274,16 @@ export const REFUSALS: Refusal[] = [
     nodeLabel: "address-enrich",
     bound: ENFORCED_BY.treeBar,
     boundLabel: "ancestor debit, at the root window",
-    requested6: 200_000_000n,
-    /* What the root window had left, which is the whole point of this refusal:
-       the node's own limit was untouched and an ancestor's was not. Derived,
-       because a headroom typed beside a budget it no longer matches is the
-       figure a reader would use to check the arithmetic. */
-    headroom6: MANDATE.budget6 - TREE.spent6,
+    /* A whole tranche, because the tranche cap is evaluated before the window
+       and a request larger than one tranche never reaches the root's bound at
+       all. A refusal labelled with a bound the contract would not have got to
+       is a figure this project may not print. */
+    requested6: MANDATE.tranche6,
+    /* What the root window had left when this happened, which is the whole
+       point of this refusal: the node's own limit was untouched and an
+       ancestor's was not. A past window, not the one on the tree screen —
+       that window rolled two days ago, which is what windows do. */
+    headroom6: MANDATE.tranche6 / 4n,
     counterparty: "api.arkm.com/x402/intelligence/address-enriched-batch",
     at: "2026-09-07 09:41:22Z",
     tx: "0x6c1f9a7be0a54d3f2b8e77c419ad0e5b3f81c92d47ae6b05d1f3a2c88e740b19",
@@ -366,6 +370,12 @@ export interface RecordEntry {
   tx: string;
 }
 
+/** The amount a record entry names, taken from the refusal it belongs to.
+ *  Typed twice, the ledger row and the refusal card disagree the first time
+ *  either is edited. */
+const refused6 = (tx: string): bigint =>
+  REFUSALS.find((refusal) => refusal.tx === tx)!.requested6;
+
 export const RECORD: RecordEntry[] = [
   {
     kind: "feedback",
@@ -377,21 +387,21 @@ export const RECORD: RecordEntry[] = [
     kind: "refusal",
     at: "2026-09-07 09:41:22Z",
     detail: "refused, no room left in the root window",
-    amount6: 200_000_000n,
+    amount6: refused6("0x6c1f9a7be0a54d3f2b8e77c419ad0e5b3f81c92d47ae6b05d1f3a2c88e740b19"),
     tx: "0x6c1f9a7be0a54d3f2b8e77c419ad0e5b3f81c92d47ae6b05d1f3a2c88e740b19",
   },
   {
     kind: "refusal",
     at: "2026-09-07 08:12:04Z",
     detail: "refused, this seller has taken its share",
-    amount6: 1_000_000n,
+    amount6: refused6("0x9a03e51cd7b2480fa16c3e9d5528b70f4c1ae836209db47f5c0a1e6b83d2947c"),
     tx: "0x9a03e51cd7b2480fa16c3e9d5528b70f4c1ae836209db47f5c0a1e6b83d2947c",
   },
   {
     kind: "draw",
     at: "2026-09-07 08:11:58Z",
     detail: "tranche released for api.arkm.com/x402/balances/entity",
-    amount6: 1_000_000n,
+    amount6: MANDATE.tranche6,
     tx: "0x77f0b3a9e21c48d5069ba3e7c1d84f20395ea6bc7014d9f2a8e35c60b19d4e2f",
   },
   {
