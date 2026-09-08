@@ -16,6 +16,12 @@ const local = (path: string) => fileURLToPath(new URL(path, import.meta.url));
  * that map and yields a build whose animations never start.
  */
 export default defineConfig({
+  /* The console ships inside the site's origin, at /console/, which is what
+     `lib/links.ts` already assumes and what the routes here are already
+     written as. Without this the build emits /assets/… and collides with the
+     site's own bundle: same names, one directory, whichever deploys last
+     wins and the other surface loads nothing. The trailing slash matters. */
+  base: "/console/",
   plugins: [react()],
   resolve: {
     alias: [
