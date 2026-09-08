@@ -52,6 +52,9 @@ sudo ln -sf /etc/nginx/sites-available/cordon /etc/nginx/sites-enabled/cordon
 sudo nginx -t && sudo systemctl reload nginx
 ./ops/bin/cordon-publish.sh
 
+# check the real bundle before DNS exists: http://43.134.86.221:9081/
+# amw owns 9080 on this box, so grep the box before claiming a port
+
 # 3. certificates, once DNS resolves
 sudo certbot certonly --webroot -w /var/www/cordon \
   -d getcordon.xyz -d www.getcordon.xyz
