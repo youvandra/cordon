@@ -13,10 +13,19 @@ export function ScreenHead({
   title,
   lede,
   note,
+  actions,
 }: {
   title: React.ReactNode;
   lede?: React.ReactNode;
   note?: string;
+  /**
+   * What to do next, in the corner the label was in.
+   *
+   * A screen that has finished its own job has no state left to caption, and
+   * the space is better spent on the two things the reader can do with what
+   * they just made. Given actions, the label goes.
+   */
+  actions?: React.ReactNode;
 }) {
   return (
     <header className="screen__head">
@@ -28,7 +37,7 @@ export function ScreenHead({
           </Text>
         ) : null}
       </div>
-      <Preview note={note} />
+      {actions ?? <Preview note={note} />}
     </header>
   );
 }

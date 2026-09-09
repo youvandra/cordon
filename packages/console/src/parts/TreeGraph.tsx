@@ -38,7 +38,7 @@ export interface GraphNode {
    in the demo tree truncated, and a truncated name is a node you cannot tell
    from its sibling. */
 const NODE_W = 240;
-const NODE_H = 92;
+const NODE_H = 116;
 const GAP_X = 28;
 const GAP_Y = 56;
 
@@ -133,39 +133,56 @@ export function TreeGraph({
                 type="button"
                 className="graph__node"
                 data-revoked={node.revoked ? "" : undefined}
+                data-root={node.parent === null ? "" : undefined}
+                data-bound={node.heldBy ? "" : undefined}
                 data-selected={selected === node.id ? "" : undefined}
                 style={{ left: node.x, top: node.y, width: NODE_W, height: NODE_H }}
                 onClick={onSelect ? () => onSelect(node.id) : undefined}
               >
                 <span className="graph__head">
                   <span className="graph__label">{node.label}</span>
-                  {node.revoked ? (
-                    <Tag tone="critical" size="sm">
-                      revoked
-                    </Tag>
-                  ) : node.refusals ? (
-                    <span className="graph__refusals mono">{node.refusals} refused</span>
+                  {node.parent === null ? (
+                    <span className="graph__role">root</span>
                   ) : null}
                 </span>
 
-                {/* The bar is this node's own window. The figure under it is
-                    what it may actually draw, which is a different number
-                    whenever something above it is tighter — and that gap is
-                    the argument the whole screen exists to make. */}
-                <span className="graph__bar" aria-hidden="true">
-                  <span
-                    className="graph__fill"
-                    style={{ width: `${Math.min(100, share)}%` }}
-                    data-hot={share >= 95 ? "" : undefined}
-                  />
+                {/* Two numbers, and the distance between them is the argument.
+                    The bar is this node's own window; the figure under it is
+                    what it may actually draw, which is smaller whenever
+                    something above it is tighter. */}
+                <span className="graph__meter">
+                  <span className="graph__spent mono">
+                    {formatUsdc(node.spent6)} <span className="graph__of">of</span>{" "}
+                    {formatUsdc(node.budget6)}
+                  </span>
+                  <span className="graph__bar" aria-hidden="true">
+                    <span
+                      className="graph__fill"
+                      style={{ width: `${Math.min(100, share)}%` }}
+                      data-hot={share >= 95 ? "" : undefined}
+                    />
+                  </span>
                 </span>
 
                 <span className="graph__foot">
                   <span className="graph__draw num">{formatUsdc(node.available6)}</span>
                   <span className="graph__note">
-                    {node.heldBy ? `held by ${node.heldBy}` : "can still draw"}
+                    {node.heldBy ? `left — held by ${node.heldBy}` : "left to draw"}
                   </span>
                 </span>
+
+                {node.revoked || node.refusals ? (
+                  <span className="graph__flags">
+                    {node.revoked ? (
+                      <Tag tone="critical" size="sm">
+                        revoked
+                      </Tag>
+                    ) : null}
+                    {!node.revoked && node.refusals ? (
+                      <span className="graph__refusals mono">{node.refusals} refused</span>
+                    ) : null}
+                  </span>
+                ) : null}
               </button>
             </Fragment>
           );

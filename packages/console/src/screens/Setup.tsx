@@ -407,6 +407,18 @@ export default function Setup() {
   return (
     <>
       <ScreenHead
+        actions={
+          stage === "done" ? (
+            <Stack direction="row" gap="sm">
+              <Button variant="secondary" size="sm" onClick={() => navigate("/console/tree")}>
+                Open the tree
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/console/tree")}>
+                Revoke a branch
+              </Button>
+            </Stack>
+          ) : undefined
+        }
         title={stage === "done" ? "One mandate, signed." : "Sign one mandate. Fund the vault once."}
         lede="Children are created by their parent, in seconds, while you sleep. The contract refuses a child wider than its parent, so no per-spawn approval is needed, and none would be safe to ask for."
         note={
@@ -420,42 +432,54 @@ export default function Setup() {
         }
       />
 
+      {stage === "done" ? (
+        /* No card around them and no hero beside them. These are the bounds
+           themselves, and a box drawn around a bound adds a second frame to
+           something that is already the subject. A mandate cannot be edited,
+           so there is nothing else on this screen to compare them against. */
+        <>
+          /* Five bounds, one row where there is room. Three columns left one
+             stranded on a second row, which reads as an afterthought rather
+             than as the last of a set. */
+          <Grid columns={5} min={178} gap="md">
+            {signed.map((figure, index) => (
+              <MetricCard
+                key={figure.title}
+                animate={animate}
+                index={index}
+                title={
+                  <>
+                    {figure.title}
+                    <br />
+                    {figure.meaning}
+                  </>
+                }
+                value={figure.value}
+                unit={figure.unit}
+                progress={figure.progress}
+                caption={figure.caption}
+                glaze={figure.glaze}
+              />
+            ))}
+          </Grid>
+
+          <Text variant="micro" tone="dim" as="p" className="setup__after">
+            A mandate cannot be edited. It narrows: a parent spawns a child
+            inside its own bounds through <span className="mono">cordon_spawn</span>,
+            and the owner can cut any branch at any time.
+          </Text>
+        </>
+      ) : (
       <Grid columns={2} min={340} gap="lg" align="start">
         <Card>
           <CardHeader>
             <Text variant="micro" tone="dim" as="span" className="eyebrow">
-              {stage === "done" ? "what was signed" : `question ${at + 1} of ${questions.length}`}
+              question {at + 1} of {questions.length}
             </Text>
           </CardHeader>
           <CardBody>
-            {stage === "done" ? (
-              /* Five figures, not six disabled inputs. `Params` is fixed at
-                 `open`, so a form here would offer an edit nothing can perform
-                 — and a bound that cannot move is a number to read, not a
-                 field to fill. Each carries the same instrument the commitment
-                 card does, pointed at what it measures. */
-              <Grid columns={2} min={190} gap="md">
-                {signed.map((figure, index) => (
-                  <MetricCard
-                    key={figure.title}
-                    animate={animate}
-                    index={index}
-                    title={
-                      <>
-                        {figure.title}
-                        <br />
-                        {figure.meaning}
-                      </>
-                    }
-                    value={figure.value}
-                    unit={figure.unit}
-                    progress={figure.progress}
-                    caption={figure.caption}
-                    glaze={figure.glaze}
-                  />
-                ))}
-              </Grid>
-            ) : (
+            {(
+
               <Stack direction="column" gap="lg">
                 <StepProgress
                   steps={questions.map((_, index) => ({ label: `${index + 1}` }))}
@@ -525,43 +549,6 @@ export default function Setup() {
         </Card>
 
         <Stack direction="column" gap="lg">
-          {stage === "done" ? (
-            <Card>
-              <CardHeader>
-                <Text variant="micro" tone="dim" as="span" className="eyebrow">
-                  what can still change
-                </Text>
-              </CardHeader>
-              <CardBody>
-                <Stack direction="column" gap="md" align="start">
-                  {/* Deliberately not "update mandate". `Params` is fixed at
-                      `open` and the registry has no setter — a button offering
-                      an edit would promise something the contract refuses, which
-                      is the defect this project exists to avoid. These two are
-                      what the contract actually does. */}
-                  <Text variant="body" tone="copy" as="p">
-                    A mandate cannot be edited. What it can do is narrow: a
-                    parent spawns a child inside its own bounds, and the owner
-                    can cut any branch at any time.
-                  </Text>
-                  <Stack direction="row" gap="sm" wrap>
-                    <Button variant="primary" onClick={() => navigate("/console/tree")}>
-                      Open the tree
-                    </Button>
-                    <Button variant="secondary" onClick={() => navigate("/console/tree")}>
-                      Revoke a branch
-                    </Button>
-                  </Stack>
-                  <Text variant="micro" tone="dim" as="p">
-                    Children are spawned by their parent through{" "}
-                    <span className="mono">cordon_spawn</span>, not from here — a
-                    signature per child is the approval no owner could safely give.
-                  </Text>
-                </Stack>
-              </CardBody>
-            </Card>
-          ) : null}
-
           <Text variant="micro" tone="dim" as="h2" id="the-commitment" className="eyebrow visually-hidden">
             What the signature commits
           </Text>
@@ -569,6 +556,7 @@ export default function Setup() {
           <Enforced>{ENFORCED_BY.budget}</Enforced>
         </Stack>
       </Grid>
+      )}
 
       {/* The last moment before something that cannot be undone. */}
       <Modal
