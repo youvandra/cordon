@@ -13,7 +13,7 @@ import {
   Text,
   usePageMeta,
 } from "cordon-ui";
-import { DRILL, GATES, MANDATE, SEARCH, formatUsdc } from "@cordon/fixtures";
+import { DRILL, EVAL, GATES, MANDATE, SEARCH, formatUsdc } from "@cordon/fixtures";
 import { RecordShell } from "../parts/RecordShell";
 import { useEntrance } from "../parts/motion";
 
@@ -106,6 +106,74 @@ export default function PublicDrill() {
             </p>
           </div>
         </Surface>
+
+        {/* G7 is the one gate that can come out against the product, so it is
+            on the public page beside the drill rather than in the docs. The
+            verdict is computed from the criteria, not written by anyone. */}
+        <Section
+          title="g7 · the work still gets done"
+          aside={
+            <Text variant="micro" tone="dim" as="span">
+              {EVAL.runs} runs each · {EVAL.agent} agent · {EVAL.recordedAt}
+            </Text>
+          }
+        >
+          <DataTable
+            rows={EVAL.conditions}
+            rowKey={(condition) => condition.id}
+            columns={[
+              {
+                id: "id",
+                header: "Condition",
+                cell: (condition) => (
+                  <b>{condition.id === "cordon" ? "Cordon" : "A plain shared cap"}</b>
+                ),
+              },
+              {
+                id: "completed",
+                header: "Briefs completed",
+                cell: (condition) => `${condition.completed} of ${condition.runs}`,
+              },
+              {
+                id: "spent",
+                header: "Spent",
+                numeric: true,
+                cell: (condition) => formatUsdc(condition.spent6),
+              },
+              {
+                id: "refusals",
+                header: "Refused",
+                numeric: true,
+                cell: (condition) => condition.refusals,
+              },
+              {
+                /* The column the comparison turns on. Both conditions bought
+                   the same four facts; only one of them had the owner's money
+                   in someone else's balance before the work started. */
+                id: "exposure",
+                header: "Owner's money at risk before any work",
+                numeric: true,
+                cell: (condition) => formatUsdc(condition.exposureAtStart6),
+              },
+              {
+                id: "writes",
+                header: "Transactions per purchase",
+                numeric: true,
+                cell: (condition) => condition.writesPerPurchase,
+              },
+            ]}
+          />
+          <p className="pane__foot">
+            One task — a brief citing {EVAL.sources} paid sources — run{" "}
+            {EVAL.runs} times under each condition against criteria fixed
+            before the first run: a brief counts as done only when every source
+            is cited with the body that seller actually served. Verdict:{" "}
+            <b>{EVAL.verdict === "work-gets-through" ? "the work gets through" : "the fence blocks the work"}</b>
+            . The agent is scripted and deterministic, which is why it is named
+            here rather than implied; latency is not measured, because a local
+            chain's confirmation time is not Arc's.
+          </p>
+        </Section>
 
         <Section
           title="gates"
