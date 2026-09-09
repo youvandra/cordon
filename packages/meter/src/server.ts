@@ -14,6 +14,7 @@
 import { createServer, type ServerResponse } from "node:http";
 import type { Hex } from "viem";
 import { conductOf, subtree, topCounterparty, type Ledger } from "./ledger.ts";
+import type { Reconciliation } from "./reconcile.ts";
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
   const text = JSON.stringify(body, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2);
@@ -30,7 +31,13 @@ const json = (res: ServerResponse, status: number, body: unknown) => {
 
 const HEX32 = /^0x[0-9a-fA-F]{64}$/;
 
-export function createReadApi(current: () => Ledger) {
+export function createReadApi(
+  current: () => Ledger,
+  /* Optional so a test can build the API without a chain to reconcile
+     against. Absent, `/reconcile` says it has not been computed rather than
+     saying everything is fine. */
+  reconciliation: () => Reconciliation | undefined = () => undefined,
+) {
   return createServer((req, res) => {
     const ledger = current();
     const url = new URL(req.url ?? "/", "http://localhost");
@@ -50,6 +57,15 @@ export function createReadApi(current: () => Ledger) {
         nodes: Object.keys(ledger.nodes).length,
         refusals: ledger.refusals.length,
       });
+    }
+
+    /* The check that the vault is the only funding source, which existed and
+       was reachable by nothing. An operator holding more than the vault
+       released to it means money came from outside the tree. */
+    if (parts[0] === "reconcile") {
+      const report = reconciliation();
+      if (!report) return json(res, 503, { ...range, error: "not computed yet" });
+      return json(res, 200, report);
     }
 
     if (parts[0] === "tree" && parts[1]) {
@@ -89,7 +105,14 @@ export function createReadApi(current: () => Ledger) {
 
     return json(res, 404, {
       error: "no such endpoint",
-      endpoints: ["GET /health", "GET /tree/:root", "GET /node/:node", "GET /agent/:agentId", "GET /refusal/:id"],
+      endpoints: [
+        "GET /health",
+        "GET /reconcile",
+        "GET /tree/:root",
+        "GET /node/:node",
+        "GET /agent/:agentId",
+        "GET /refusal/:id",
+      ],
     });
   });
 }

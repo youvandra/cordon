@@ -82,6 +82,20 @@ else
 fi
 
 echo "services"
+if [ -n "${CORDON_METER:-}" ]; then
+  # The one thing chain state can prove about money that has left the vault:
+  # an operator's Gateway balance never exceeds what the vault released to it.
+  RECON="$(curl -s --max-time 15 "$CORDON_METER/reconcile" || true)"
+  case "$RECON" in
+    *'"ok": true'*)  ok "meter reconciles: no operator holds more than the vault released" ;;
+    *'"ok": false'*) bad "reconciliation FAILED — money reached an operator from outside the tree" ;;
+    *'not computed yet'*) pending "meter has not reconciled yet" ;;
+    *) bad "meter did not answer /reconcile" ;;
+  esac
+else
+  pending "no CORDON_METER set, so nothing asked the meter"
+fi
+
 status="$(code "$ATTEST/health")"
 case "$status" in
   200) ok "attest answers /health" ;;

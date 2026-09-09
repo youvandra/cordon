@@ -18,6 +18,7 @@ import { startHarness, type Harness, SELLER_PAYOUT, PRICE, TRANCHE, ERC20 } from
 import { sync } from "../src/sync.ts";
 import { conductOf, subtree } from "../src/ledger.ts";
 import { reconcileGateway } from "../src/reconcile.ts";
+import { createReadApi } from "../src/server.ts";
 
 /** The one selector the vault uses to credit an operator. Declared here rather
  *  than imported so the test funds the Gateway the same way anyone else would. */
@@ -184,4 +185,38 @@ test("money reaching an agent from outside the tree is what reconciliation is fo
   assert.equal(report.ok, false);
   const row = report.operators.find((o) => o.operator === operator.toLowerCase())!;
   assert.equal(row.withinRelease, false, "its balance is larger than everything the vault ever let out to it");
+});
+
+test("the read api answers what the vault let out, and says so when it has not looked", async () => {
+  /* The reconciliation existed, passed its own test, and was called by nothing
+     that runs — so no operator could ever ask the question it answers. These
+     two assertions are about it being reachable, not about its arithmetic,
+     which the test above already covers. */
+  const ledger = await sync(client, { contracts: { registry: h.registry, vault: h.vault }, fromBlock: 0n });
+
+  /* `fetch` keeps its socket alive, so `close()` alone waits for a client that
+     is never coming back and the whole suite hangs on a passing test. */
+  const ask = async (api: ReturnType<typeof createReadApi>, path: string) => {
+    await new Promise<void>((done) => api.listen(0, "127.0.0.1", () => done()));
+    const port = (api.address() as { port: number }).port;
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}${path}`);
+      return { status: response.status, body: (await response.json()) as Record<string, unknown> };
+    } finally {
+      api.closeAllConnections();
+      await new Promise<void>((done) => api.close(() => done()));
+    }
+  };
+
+  const notYet = await ask(createReadApi(() => ledger), "/reconcile");
+  assert.equal(notYet.status, 503, "no reconciliation must read as absent, never as fine");
+
+  const report = await reconcileGateway(client, ledger, { gateway: h.gateway, usdc: h.usdc });
+  const served = await ask(createReadApi(() => ledger, () => report), "/reconcile");
+  assert.equal(served.status, 200);
+  /* Against `report`, not against `true`: the test above this one funds an
+     operator from outside the tree on purpose, so by now the honest answer is
+     false and asserting otherwise would be asserting the order of tests. */
+  assert.equal(served.body.ok, report.ok);
+  assert.equal(served.body.counterpartyMatching, "unavailable", "the half we cannot do stays named");
 });

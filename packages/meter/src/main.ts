@@ -14,11 +14,12 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPublicClient, defineChain, http, type Address, type PublicClient } from "viem";
-import { ARC } from "../../fixtures/src/index.ts";
+import { ARC, GATEWAY } from "../../fixtures/src/index.ts";
 import { deserialize, serialize } from "./snapshot.ts";
 import { sync } from "./sync.ts";
 import { createReadApi } from "./server.ts";
 import type { Ledger } from "./ledger.ts";
+import { reconcileGateway, type Reconciliation } from "./reconcile.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -69,6 +70,11 @@ function contractsFor(chainId: number): {
   registry: Address;
   vault: Address;
   record?: Address;
+  /* Both are null in a deployment recorded before the script exported them,
+     and on Arc they are not ours to deploy anyway — the fixtures are the one
+     place either is written down. */
+  gateway: Address;
+  usdc: Address;
   fromBlock: bigint;
 } {
   const path = resolve(here, `../../contracts/deployments/${chainId}.json`);
@@ -81,6 +87,8 @@ function contractsFor(chainId: number): {
     registry: Address;
     vault: Address;
     record?: Address;
+    gateway?: Address | null;
+    usdc?: Address | null;
     fromBlock?: string;
   };
   /* Reading from zero is not a slower version of reading from the deployment:
@@ -91,6 +99,8 @@ function contractsFor(chainId: number): {
     registry: file.registry,
     vault: file.vault,
     record: file.record,
+    gateway: (file.gateway ?? GATEWAY.wallet) as Address,
+    usdc: (file.usdc ?? ARC.erc20) as Address,
     fromBlock: BigInt(file.fromBlock ?? "0"),
   };
 }
@@ -122,19 +132,43 @@ let ledger: Ledger | undefined = existsSync(args.out)
   ? deserialize(readFileSync(args.out, "utf8"))
   : undefined;
 
+/**
+ * The last reconciliation, recomputed every sync.
+ *
+ * It was written, tested and then called by nothing outside its own test —
+ * a check that proves the vault is the only funding source and that no
+ * operator could run. A guarantee nobody can ask about is not a guarantee.
+ */
+let reconciliation: Reconciliation | undefined;
+
 async function tick(): Promise<void> {
   ledger = await sync(client, { contracts, fromBlock }, ledger);
   writeFileSync(args.out, serialize(ledger));
+  /* Reads the Gateway once per operator. It is a chain read and can fail on
+     its own; a failed reconciliation must not throw away a good ledger, so it
+     keeps the last answer and says when it was taken. */
+  try {
+    reconciliation = await reconcileGateway(client, ledger, {
+      gateway: contracts.gateway,
+      usdc: contracts.usdc,
+    });
+  } catch (error) {
+    console.error(`reconciliation failed, keeping the last one: ${(error as Error).message}`);
+  }
 }
 
 await tick();
 console.log(`meter  chain ${args.chainId} via ${args.rpc}`);
 console.log(`       blocks ${ledger!.fromBlock}–${ledger!.toBlock}`);
 console.log(`       nodes ${Object.keys(ledger!.nodes).length}, refusals ${ledger!.refusals.length}`);
+console.log(
+  `       reconciled ${reconciliation ? (reconciliation.ok ? "ok" : "MISMATCH") : "not yet"}` +
+    `${reconciliation ? `, ${reconciliation.operators.length} operators` : ""}`,
+);
 console.log(`       snapshot ${args.out}`);
 
 if (!args.once) {
-  const server = createReadApi(() => ledger!);
+  const server = createReadApi(() => ledger!, () => reconciliation);
   /* Loopback by default, same as attest. This API is read-only and public by
      intent, but "public" means through the origin that serves the pages, so
      the console needs no CORS and there is one place to look at the logs. */

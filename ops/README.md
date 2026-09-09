@@ -130,3 +130,9 @@ VITE_METER_URL=https://meter.getcordon.xyz npm run build --prefix packages/site
 
 The meter already sends `access-control-allow-origin: *` — a record only its
 owner can fetch is not a record.
+
+`CORDON_METER=http://127.0.0.1:8404 ops/bin/cordon-check.sh` also asks the
+meter to reconcile: an operator's Gateway balance must never exceed what the
+vault released to it. A balance above that means money reached an agent from
+outside the tree, and the claim that the vault is the only funding source is
+false for that node.
