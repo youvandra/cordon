@@ -1,5 +1,16 @@
 import { useState } from "react";
-import { Button, Card, CardBody, CardFooter, CardHeader, Stack, Tag } from "cordon-ui";
+import {
+  Button,
+  Card,
+  CardBody,
+  CardFooter,
+  CardHeader,
+  Modal,
+  Stack,
+  Tag,
+  Text,
+  useToast,
+} from "cordon-ui";
 import { formatUsdc } from "@cordon/fixtures";
 import {
   REFUSALS,
@@ -24,6 +35,24 @@ import { useTitle } from "../parts/Shell";
  */
 function RefusalCard({ refusal }: { refusal: Refusal }) {
   const [released, setReleased] = useState(refusal.released);
+  /* Releasing is the one thing in this console that moves money past a bound
+     somebody already signed. It is a decision, it is permanent, and it is
+     recorded next to the refusal it stepped around — so it is asked for
+     twice. */
+  const [confirming, setConfirming] = useState(false);
+  const { notify } = useToast();
+
+  const release = () => {
+    setConfirming(false);
+    setReleased(true);
+    notify({
+      tone: "caution",
+      title: `Refusal ${refusalOrdinal(refusal)} released`,
+      children:
+        "The bound did not move. The refusal and the release are both on the record, side by side.",
+      duration: 8000,
+    });
+  };
   const short = `${refusal.counterparty.slice(0, 6)}…${refusal.counterparty.slice(-4)}`;
 
   return (
@@ -94,12 +123,37 @@ function RefusalCard({ refusal }: { refusal: Refusal }) {
             <Button size="sm" variant="secondary" disabled={released}>
               Leave it
             </Button>
-            <Button size="sm" variant="danger" disabled={released} onClick={() => setReleased(true)}>
+            <Button size="sm" variant="danger" disabled={released} onClick={() => setConfirming(true)}>
               Sign to release
             </Button>
           </Stack>
         </div>
       </CardFooter>
+
+      <Modal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={`Release ${formatUsdc(refusal.requested6)} past this bound?`}
+        description="This does not raise the bound. The same purchase is refused again a second later, and both the refusal and your release stay on the record."
+        hideClose
+        dismissOnScrim={false}
+        footer={
+          <Stack direction="row" gap="sm">
+            <Button variant="secondary" onClick={() => setConfirming(false)}>
+              Leave it refused
+            </Button>
+            <Button variant="danger" onClick={release}>
+              Sign the release
+            </Button>
+          </Stack>
+        }
+      >
+        <Text variant="body" tone="copy" as="p">
+          Paid to <span className="mono">{short}</span>, from your own key.
+          Nobody else can sign this — not us, not the deployer, and no admin
+          key, because there is none.
+        </Text>
+      </Modal>
     </Card>
   );
 }

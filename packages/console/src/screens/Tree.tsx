@@ -8,12 +8,14 @@ import {
   Grid,
   IconMenu,
   MetricCard,
+  Modal,
   ProgressBar,
   Section,
   Stack,
   Tag,
   Text,
   Tree as TreeView,
+  useToast,
 } from "cordon-ui";
 import type { TreeNode as UiTreeNode } from "cordon-ui";
 import { ENFORCED_BY, MANDATE, STRENGTH, formatUsdc } from "@cordon/fixtures";
@@ -73,8 +75,22 @@ export default function Tree() {
     });
   };
 
-  const revoke = (id: string) => {
-    setRevoked((previous) => new Set([...previous, ...subtreeOf(TREE, id)]));
+  /* Cutting a branch kills every node under it, and the console's own copy
+     says a refusal must survive its authors — so the same rule applies to the
+     owner's hand slipping. Asked for once, then reported. */
+  const [cutting, setCutting] = useState<TreeNode | null>(null);
+  const { notify } = useToast();
+
+  const revoke = (node: TreeNode) => {
+    setCutting(null);
+    const subtree = subtreeOf(TREE, node.id);
+    setRevoked((previous) => new Set([...previous, ...subtree]));
+    notify({
+      tone: "caution",
+      title: `${node.label} is cut`,
+      children: `${subtree.length} ${subtree.length === 1 ? "node" : "nodes"} can draw nothing. The branch stays in the record; conduct under a cut mandate is the point.`,
+      duration: 8000,
+    });
   };
 
   const share = (node: TreeNode) =>
@@ -315,7 +331,7 @@ export default function Tree() {
                         destructive: true,
                         meta: `${subtreeOf(TREE, node.id).length} nodes`,
                         disabled: revoked.has(node.id),
-                        onSelect: () => revoke(node.id),
+                        onSelect: () => setCutting(node),
                       },
                     ]}
                   />
@@ -325,6 +341,31 @@ export default function Tree() {
           ]}
         />
       </Section>
+
+      <Modal
+        open={cutting !== null}
+        onClose={() => setCutting(null)}
+        title={cutting ? `Cut ${cutting.label} and everything under it?` : ""}
+        description="Revocation is permanent. The branch keeps its record — conduct under a cut mandate is exactly what the record is for — but nothing under it can draw again."
+        hideClose
+        dismissOnScrim={false}
+        footer={
+          <Stack direction="row" gap="sm">
+            <Button variant="secondary" onClick={() => setCutting(null)}>
+              Leave it running
+            </Button>
+            <Button variant="danger" onClick={() => cutting && revoke(cutting)}>
+              Cut the branch
+            </Button>
+          </Stack>
+        }
+      >
+        <Text variant="body" tone="copy" as="p">
+          {cutting ? subtreeOf(TREE, cutting.id).length : 0} node
+          {cutting && subtreeOf(TREE, cutting.id).length === 1 ? "" : "s"} stop
+          being able to draw, including any child spawned after this.
+        </Text>
+      </Modal>
     </>
   );
 }

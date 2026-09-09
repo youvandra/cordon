@@ -14,6 +14,7 @@ export type { ClassValue } from "./lib/cx";
 export { useCordonReducedMotion } from "./hooks/useReducedMotion";
 export { useCordonId } from "./hooks/useId";
 export { useFocusTrap } from "./hooks/useFocusTrap";
+export { useFrames } from "./hooks/useFrames";
 
 export * from "./tokens/motion";
 

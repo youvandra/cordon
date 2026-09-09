@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
+  Button,
   Card,
   CardBody,
   CardHeader,
@@ -9,10 +10,12 @@ import {
   Field,
   Grid,
   MetricCard,
+  Modal,
   Select,
   Stack,
   Text,
   TextField,
+  useToast,
 } from "cordon-ui";
 import { ARC, ENFORCED_BY, MANDATE, isAddress } from "@cordon/fixtures";
 import { ScreenHead } from "../parts/Preview";
@@ -63,6 +66,12 @@ export default function Setup() {
      the alternative is copying a 42-character string into the right field and
      that is where people paste the wrong thing. Only ever a default: the field
      stays editable, and a link cannot sign anything. */
+  const { notify } = useToast();
+  /* A modal for this and not a toast, because the two are for opposite things:
+     a toast reports what already happened, and this is the last moment before
+     something that cannot be undone. A mandate's operator is fixed at `open`
+     and the money is real. */
+  const [confirming, setConfirming] = useState(false);
   const [params] = useSearchParams();
   const suggested = params.get("operator") ?? "";
   const [operator, setOperator] = useState(isAddress(suggested) ? suggested : "");
@@ -87,8 +96,19 @@ export default function Setup() {
   const sign = () => {
     if (!live) {
       setSigned(true);
+      notify({
+        tone: "info",
+        title: "Preview only",
+        children: "Nothing was signed and nothing was sent.",
+        duration: 4000,
+      });
       return;
     }
+    setConfirming(true);
+  };
+
+  const send = () => {
+    setConfirming(false);
     /* USDC has six decimals and these fields are dollars, so a typed "1.5" is
        1,500,000 base units — and `BigInt("1.5")` throws, which before this was
        an uncaught exception on a button click. */
@@ -104,6 +124,41 @@ export default function Setup() {
       maxDepth: Number(depth),
     });
   };
+
+  /* The transaction reports itself. Each state raises its toast once, keyed by
+     the state, so a re-render cannot stack three copies of the same sentence —
+     and a failure stays until it is dismissed, because an error that vanishes
+     while you are reading the field it is about is worse than none. */
+  useEffect(() => {
+    if (state.status === "sent") {
+      notify({
+        id: `sent-${state.hash}`,
+        tone: "info",
+        title: "Sent",
+        children: "Waiting for the receipt.",
+        duration: 6000,
+      });
+    }
+    if (state.status === "open") {
+      notify({
+        id: `open-${state.hash}`,
+        tone: "positive",
+        title: "The mandate is open",
+        children: (
+          <>
+            <span className="mono">{state.node.slice(0, 14)}…</span> ·{" "}
+            <a href={`${ARC.explorer}/tx/${state.hash}`} target="_blank" rel="noreferrer">
+              the transaction
+            </a>
+          </>
+        ),
+        duration: 0,
+      });
+    }
+    if (state.status === "failed") {
+      notify({ id: "failed", tone: "critical", title: "Not signed", children: state.why, duration: 0 });
+    }
+  }, [state, notify]);
 
   /* One card, rendered before the signature as a preview and after it as the
      result. Written twice it drifts, and a preview that disagrees with the
@@ -267,28 +322,7 @@ export default function Setup() {
                     : "an operator address is needed before this can be signed"}
                 </Text>
               ) : null}
-              {state.status === "failed" ? (
-                <Text variant="micro" tone="accent" as="p">
-                  {state.why}
-                </Text>
-              ) : null}
-              {state.status === "sent" ? (
-                <Text variant="micro" tone="dim" as="p">
-                  sent, waiting for the receipt ·{" "}
-                  <a href={`${ARC.explorer}/tx/${state.hash}`} target="_blank" rel="noreferrer" className="mono">
-                    {state.hash.slice(0, 10)}…
-                  </a>
-                </Text>
-              ) : null}
-              {state.status === "open" ? (
-                <Text variant="micro" tone="ink" as="p">
-                  open ·{" "}
-                  <span className="mono">{state.node.slice(0, 14)}…</span> ·{" "}
-                  <a href={`${ARC.explorer}/tx/${state.hash}`} target="_blank" rel="noreferrer" className="mono">
-                    the transaction
-                  </a>
-                </Text>
-              ) : null}
+
             </Stack>
           </CardBody>
         </Card>
@@ -388,6 +422,44 @@ export HTTP_PROXY=http://localhost:8403   # anything else`}</pre>
           ) : null}
         </Stack>
       </Grid>
+
+      {/* The last moment before something that cannot be undone. The scrim
+          does not dismiss it and there is no corner close: a decision this
+          screen exists to make should be made, not dodged. */}
+      <Modal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title="Sign this mandate?"
+        description="It cannot be edited afterwards. A mandate's operator is fixed when it is opened, and there is no function to repoint it."
+        hideClose
+        dismissOnScrim={false}
+        footer={
+          <Stack direction="row" gap="sm">
+            <Button variant="secondary" onClick={() => setConfirming(false)}>
+              Not yet
+            </Button>
+            <Button variant="primary" onClick={send}>
+              Sign it
+            </Button>
+          </Stack>
+        }
+      >
+        <Stack direction="column" gap="sm" align="start">
+          <Text variant="body" tone="copy" as="p">
+            <b>{budget || "0"} USDC</b> a window, <b>{lifetime || "0"} USDC</b>{" "}
+            in total for the life of this mandate, at most{" "}
+            <b>{tranche || "0"} USDC</b> in one purchase.
+          </Text>
+          <Text variant="body" tone="copy" as="p">
+            Spent by <span className="mono">{operator}</span>, which is the
+            daemon&rsquo;s key and not yours.
+          </Text>
+          <Text variant="micro" tone="dim" as="p">
+            Your wallet signs; it does not pay. The money comes from the vault
+            you fund next, and every draw is refused or recorded on {ARC.name}.
+          </Text>
+        </Stack>
+      </Modal>
     </>
   );
 }

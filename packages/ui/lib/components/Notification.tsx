@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Icon } from "./Icon";
+import { useFrames } from "../../hooks/useFrames";
 import type { IconName } from "./Icon";
 import { transition } from "../../tokens/motion";
 import { cx } from "../cx";
@@ -94,6 +95,7 @@ export interface ToastProviderProps {
 
 export function ToastProvider({ children, placement = "bottom-right" }: ToastProviderProps) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const frames = useFrames();
 
   const dismiss = useCallback((id: string) => {
     setToasts((list) => list.filter((toast) => toast.id !== id));
@@ -118,15 +120,19 @@ export function ToastProvider({ children, placement = "bottom-right" }: ToastPro
       {typeof document !== "undefined"
         ? createPortal(
             <div className={cx("cordon-toasts", `cordon-toasts--${placement}`)} aria-live="polite">
+              {/* Same reason as Modal's: the timer that dismisses a toast is a
+                  `setTimeout` and runs in a hidden document, but the exit
+                  animation that removes the node needs frames — so without
+                  this a toast dismissed in a background tab stays for good. */}
               <AnimatePresence initial={false}>
                 {toasts.map((toast) => (
                   <motion.div
                     key={toast.id}
-                    layout
-                    initial={{ opacity: 0, y: 14, scale: 0.97 }}
+                    layout={frames}
+                    initial={frames ? { opacity: 0, y: 14, scale: 0.97 } : false}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: 24, scale: 0.97 }}
-                    transition={transition.settle}
+                    exit={frames ? { opacity: 0, x: 24, scale: 0.97 } : { opacity: 0 }}
+                    transition={frames ? transition.settle : { duration: 0 }}
                   >
                     <Notification
                       {...toast}

@@ -7,6 +7,7 @@ import { Icon } from "./Icon";
 import { Surface } from "../primitives/Surface";
 import { overlayVariants, scrimVariants } from "../../tokens/motion";
 import { useFocusTrap } from "../../hooks/useFocusTrap";
+import { useFrames } from "../../hooks/useFrames";
 import { useCordonId } from "../../hooks/useId";
 import { cx } from "../cx";
 
@@ -49,17 +50,23 @@ export function Modal({
   const descId = useCordonId("modal-desc");
   const handleEscape = useCallback(() => onClose(), [onClose]);
   useFocusTrap(panelRef, open, handleEscape);
+  /* A hidden document runs no frames, so framer-motion's exit never completes
+     and the modal stays on screen after it has been closed — a dialog that
+     cannot be dismissed. With no frames coming, presence is plain React and
+     the animation is simply not attempted. */
+  const frames = useFrames();
 
   if (typeof document === "undefined") return null;
 
-  return createPortal(
-    <AnimatePresence>
-      {open ? (
+  const panel = (
         <div className="cordon-modal-layer">
           <motion.div
             className="cordon-scrim"
             variants={scrimVariants}
-            initial="hidden"
+            /* `false` and not "hidden": with no frames the entrance never runs
+               either, and a scrim stuck at opacity 0 is an invisible sheet over
+               a page nobody can click. */
+            initial={frames ? "hidden" : false}
             animate="visible"
             exit="exit"
             onClick={dismissOnScrim ? onClose : undefined}
@@ -73,7 +80,7 @@ export function Modal({
             tabIndex={-1}
             className={cx("cordon-modal", `cordon-modal--${size}`, className)}
             variants={overlayVariants}
-            initial="hidden"
+            initial={frames ? "hidden" : false}
             animate="visible"
             exit="exit"
           >
@@ -105,8 +112,14 @@ export function Modal({
             </Surface>
           </motion.div>
         </div>
-      ) : null}
-    </AnimatePresence>,
+  );
+
+  return createPortal(
+    frames ? (
+      <AnimatePresence>{open ? panel : null}</AnimatePresence>
+    ) : open ? (
+      panel
+    ) : null,
     document.body,
   );
 }

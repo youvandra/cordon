@@ -116,9 +116,11 @@ function MockWallet({ children }: { children: ReactNode }) {
 /** Privy's session, in the shape the rest of the console already reads. */
 function PrivyWallet({ children }: { children: ReactNode }) {
   const { ready, authenticated, user, login, logout } = usePrivy();
-  /* A session that chose to look rather than to sign. Kept here rather than in
-     sessionStorage, because unlike the mock it is not standing in for a key. */
-  const [previewing, setPreviewing] = useState(false);
+  /* A session that chose to look rather than to sign, and it has to survive a
+     reload: without that, opening /console/tree directly puts a reader at the
+     gate, and every refresh after choosing to look puts them back there. Same
+     storage as the mock, for the same reason — it should not outlive the tab. */
+  const [previewing, setPreviewing] = useState(() => read() === MANDATE.owner);
 
   const signedIn = ready && authenticated;
 
@@ -130,9 +132,21 @@ function PrivyWallet({ children }: { children: ReactNode }) {
       address: signedIn ? (user?.wallet?.address ?? null) : previewing ? MANDATE.owner : null,
       real: signedIn,
       available: true,
-      preview: () => setPreviewing(true),
+      preview: () => {
+        try {
+          sessionStorage.setItem(KEY, MANDATE.owner);
+        } catch {
+          /* Ignored: the gate still opens, it just will not survive a reload. */
+        }
+        setPreviewing(true);
+      },
       connect: () => login(),
       disconnect: () => {
+        try {
+          sessionStorage.removeItem(KEY);
+        } catch {
+          /* Ignored, as above. */
+        }
         setPreviewing(false);
         void logout();
       },

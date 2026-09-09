@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { CordonProvider } from "cordon-ui";
+import { CordonProvider, ToastProvider } from "cordon-ui";
 import { WalletProvider } from "./lib/wallet";
 import { useEntranceFailsafe } from "./lib/entrance";
 import { ConsoleShell } from "./parts/Shell";
@@ -42,22 +42,27 @@ export function App() {
 
   return (
     <CordonProvider glaze="violet">
-      <WalletProvider>
-        <ScrollToTop />
-        <Routes>
-          <Route path="/" element={<Navigate to="/console/setup" replace />} />
+      {/* Bottom right, because the actions that raise one are taken in the
+          right-hand column of every screen and a toast that appears across the
+          page from the click is read as unrelated to it. */}
+      <ToastProvider placement="bottom-right">
+        <WalletProvider>
+          <ScrollToTop />
+          <Routes>
+            <Route path="/" element={<Navigate to="/console/setup" replace />} />
 
-          <Route path="/console" element={<ConsoleShell />}>
-            <Route index element={<Navigate to="/console/setup" replace />} />
-            <Route path="setup" element={<Setup />} />
-            <Route path="tree" element={<Tree />} />
-            <Route path="refusals" element={<Refusals />} />
-            <Route path="drill" element={<Drill />} />
-          </Route>
+            <Route path="/console" element={<ConsoleShell />}>
+              <Route index element={<Navigate to="/console/setup" replace />} />
+              <Route path="setup" element={<Setup />} />
+              <Route path="tree" element={<Tree />} />
+              <Route path="refusals" element={<Refusals />} />
+              <Route path="drill" element={<Drill />} />
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </WalletProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </WalletProvider>
+      </ToastProvider>
     </CordonProvider>
   );
 }
