@@ -111,3 +111,22 @@ stale deploy looks fine until you read the JavaScript.
 A pending thing is not a failure. No mandate and no meter are the honest state
 of a project whose gates say so, and the script exits non-zero only when
 something claims to be up and is wrong.
+
+## Pointing the site at the meter
+
+`ConductRecord.RECORD_BASE` is a Solidity constant, so every record Cordon
+writes carries `https://getcordon.xyz/refusal/<id>` with the id the *chain*
+wrote. Those ids are not the demo's, and until the site can ask the meter for
+them they resolve to a not-found.
+
+Build the site with `VITE_METER_URL` set to wherever the meter answers, and
+`/refusal/:id` reads live rows first and falls back to the preview ones, so the
+illustration keeps working beside real records. Unset, the site behaves exactly
+as it did.
+
+```bash
+VITE_METER_URL=https://meter.getcordon.xyz npm run build --prefix packages/site
+```
+
+The meter already sends `access-control-allow-origin: *` — a record only its
+owner can fetch is not a record.

@@ -8,6 +8,8 @@
 interface ImportMetaEnv {
   readonly VITE_CONSOLE_URL?: string;
   readonly VITE_SITE_URL?: string;
+  /** Where the meter answers. Unset means the record pages read fixtures. */
+  readonly VITE_METER_URL?: string;
 }
 
 interface ImportMeta {

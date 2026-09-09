@@ -14,7 +14,7 @@ import {
   Text,
   usePageMeta,
 } from "cordon-ui";
-import { ARC, ENFORCED_BY, STRENGTH, formatUsdc, isAddress, shortAddress, strengthOf } from "@cordon/fixtures";
+import { ARC, ENFORCED_BY, REASON_MEANING, STRENGTH, formatUsdc, isAddress, shortAddress, shortId, strengthOf } from "@cordon/fixtures";
 import {
   addrUrl,
   refusalByPath,
@@ -24,6 +24,7 @@ import {
   type Refusal as RefusalRow,
 } from "@cordon/fixtures/preview";
 import { RecordShell } from "../parts/RecordShell";
+import { useLiveRefusal, type LiveRefusal } from "../parts/meter";
 import { useEntrance } from "../parts/motion";
 
 /**
@@ -172,6 +173,131 @@ function Published({ refusal }: { refusal: RefusalRow }) {
   );
 }
 
+
+/**
+ * The same page, for a refusal the meter has and the fixtures do not.
+ *
+ * It prints what the chain carries and nothing else. There is no headroom
+ * figure here on purpose: the window arithmetic that produces one lives in the
+ * contract, the event does not carry it, and an indexer that recomputes it is
+ * a second implementation that can disagree with the thing it reports on.
+ * One figure fewer is the honest difference between a record and a mock-up.
+ */
+function LiveRefusalPage({ data }: { data: LiveRefusal }) {
+  const animate = useEntrance();
+  const amount6 = BigInt(data.amount6);
+  /* The sentences are written to sit mid-line in the docs table, so they start
+     lowercase. Here one opens a paragraph. */
+  const meaning = REASON_MEANING[data.reason] ?? data.reason;
+  const opens = meaning.charAt(0).toUpperCase() + meaning.slice(1);
+
+  usePageMeta({
+    title: `Refusal ${data.id} · Cordon`,
+    description:
+      `${formatUsdc(amount6)} was asked for and the contract refused it: ` +
+      `${meaning}. The transaction is on ${ARC.name}.`,
+  });
+
+  const figures = [
+    { label: "the node that asked", value: shortId(data.node) },
+    { label: "the bound that stopped it", value: shortId(data.breachedAt) },
+    { label: "asked for", value: formatUsdc(amount6) },
+    { label: "the recipient", value: shortAddress(data.counterparty, 10, 6) },
+  ];
+
+  return (
+    <RecordShell>
+      <Container width="wide" className="stackpage">
+        <header className="public__head">
+          <Text variant="micro" tone="dim" as="p" className="eyebrow">
+            refusal {data.id} · block {data.site.blockNumber} · {ARC.name}
+          </Text>
+          <Headline animate={animate} lines={["A bound held,", "and left a record."]} />
+          <Text variant="lead" tone="copy" as="p" className="public__lede">
+            The node <span className="mono">{shortId(data.node)}</span>{" "}
+            asked for {formatUsdc(amount6)} and the contract refused it. This
+            page is where that refusal resolves, because the id in the record is
+            this one.
+          </Text>
+          <Stack direction="row" gap="md" wrap>
+            <Tag tone="positive" size="sm" dot>
+              read from the chain
+            </Tag>
+            <Text variant="micro" tone="dim" as="span">
+              chain {data.chainId}, blocks {data.fromBlock}–{data.toBlock}
+            </Text>
+          </Stack>
+        </header>
+
+        <Card>
+          <CardBody>
+            <Stack direction="column" gap="sm" align="start">
+              <Text variant="micro" tone="dim" as="p" className="eyebrow">
+                what stopped it
+              </Text>
+              <Text variant="body" tone="copy" as="p">
+                {opens}. The contract evaluated the limit itself; nothing in
+                the path scored the request, and no model was asked.
+              </Text>
+              <span className="mono">{data.reason}</span>
+              <a href={txUrl(data.site.transactionHash)} target="_blank" rel="noreferrer" className="mono">
+                {shortTx(data.site.transactionHash)}
+              </a>
+              <Stack direction="row" gap="md" wrap>
+                <Tag tone={data.released ? "neutral" : "positive"} size="sm" dot>
+                  {data.released ? "signed out later" : "still standing"}
+                </Tag>
+                {/* `null` is not `false`: the meter says nothing about a range
+                    it has not read, and a page that renders that as "never
+                    published" is inventing a fact about the registry. */}
+                <Tag tone={data.attested === null ? "caution" : data.attested ? "neutral" : "caution"} size="sm" dot>
+                  {data.attested === null
+                    ? "publication unknown in this range"
+                    : data.attested
+                      ? "published to the registry"
+                      : "not published"}
+                </Tag>
+              </Stack>
+            </Stack>
+          </CardBody>
+        </Card>
+
+        <Section title="the draw the contract refused">
+          <Grid columns={4} min={220} gap="md">
+            {figures.map((row) => (
+              <Card key={row.label}>
+                <CardBody>
+                  <div className="figure">
+                    <span className="figure__value num">{row.value}</span>
+                    <span className="figure__label">{row.label}</span>
+                  </div>
+                </CardBody>
+              </Card>
+            ))}
+          </Grid>
+        </Section>
+      </Container>
+    </RecordShell>
+  );
+}
+
+
+/** Asked, not answered yet. A not-found that flashes first is a lie told fast. */
+function Loading({ id }: { id: string | undefined }) {
+  return (
+    <RecordShell>
+      <Container width="wide" className="stackpage">
+        <header className="public__head">
+          <Text variant="micro" tone="dim" as="p" className="eyebrow">
+            refusal {id ?? "—"} · {ARC.name}
+          </Text>
+          <Headline lines={["Reading", "the record."]} />
+        </header>
+      </Container>
+    </RecordShell>
+  );
+}
+
 function NotFound({ id }: { id: string | undefined }) {
   usePageMeta({
     title: "No such refusal · Cordon",
@@ -203,10 +329,20 @@ function NotFound({ id }: { id: string | undefined }) {
 
 export default function Refusal() {
   const { id } = useParams();
+  /* The meter first, because the ids the chain writes are the meter's and the
+     fixtures' are a demo. A preview id still resolves, so the illustration
+     keeps working beside real records. */
+  const live = useLiveRefusal(id);
   const refusal = refusalByPath(id);
-  const animate = useEntrance();
 
+  if (live.state === "live") return <LiveRefusalPage data={live.data} />;
+  if (live.state === "loading" && !refusal) return <Loading id={id} />;
   if (!refusal) return <NotFound id={id} />;
+  return <PreviewRefusal refusal={refusal} id={id} />;
+}
+
+function PreviewRefusal({ refusal, id: _id }: { refusal: RefusalRow; id: string | undefined }) {
+  const animate = useEntrance();
 
   const ordinal = refusalOrdinal(refusal);
   const held6 = refusal.requested6 - refusal.headroom6;

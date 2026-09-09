@@ -136,6 +136,17 @@ export function Configuration() {
         key. A configuration dump cannot leak one.
       </Note>
 
+      <H3 id="site-optional">The site</H3>
+      <Table
+        head={["Variable", "Default"]}
+        rows={[
+          [
+            <C key="meter">VITE_METER_URL</C>,
+            "unset. Set it and /refusal/:id resolves the ids the chain writes, off the meter, rather than the demo's",
+          ],
+        ]}
+      />
+
       <H2 id="proxy">Proxy</H2>
       <Table
         head={["Variable", "Meaning"]}
