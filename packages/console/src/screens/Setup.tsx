@@ -14,10 +14,12 @@ import {
   Text,
   TextField,
 } from "cordon-ui";
-import { ENFORCED_BY, MANDATE, isAddress } from "@cordon/fixtures";
+import { ARC, ENFORCED_BY, MANDATE, isAddress } from "@cordon/fixtures";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 import { useEntrance } from "../lib/entrance";
+import { useWallet } from "../lib/wallet";
+import { REGISTRY, useOpenMandate } from "../lib/mandate";
 
 const WINDOWS = [
   { value: "3600", label: "1 hour" },
@@ -39,6 +41,38 @@ export default function Setup() {
   );
   const [lifetime, setLifetime] = useState(String(MANDATE.lifetimeCap6 / 1_000_000n));
   const [signed, setSigned] = useState(false);
+  /* The root's operator, and it is not the owner. The owner signs the mandate
+     and then never touches it again; the operator is the daemon key that
+     submits every draw. Defaulting this to the connected address would open a
+     mandate no daemon can act for, and the mistake would only surface at the
+     first purchase. */
+  const [operator, setOperator] = useState("");
+
+  /* Real only when there is a key behind the gate and a registry to send to.
+     Either missing and this screen stays the drawing it has always been —
+     which it says on itself, rather than looking like it did something. */
+  const { address, real } = useWallet();
+  const { state, open } = useOpenMandate();
+  const live = real && Boolean(REGISTRY) && Boolean(address);
+  /* An address that is not one is the commonest way to open a mandate nobody
+     can use, and the contract rejects the zero address but not a typo. */
+  const ready = live && isAddress(operator);
+
+  const sign = () => {
+    if (!live) {
+      setSigned(true);
+      return;
+    }
+    void open({
+      operator: operator as `0x${string}`,
+      budget6: BigInt(budget || "0") * 1_000_000n,
+      lifetimeCap6: BigInt(lifetime || "0") * 1_000_000n,
+      windowSeconds: BigInt(windowS),
+      trancheCap6: BigInt(tranche || "0") * 1_000_000n,
+      concentrationBps: Number(concentration) * 100,
+      maxDepth: Number(depth),
+    });
+  };
 
   /* One card, rendered before the signature as a preview and after it as the
      result. Written twice it drifts, and a preview that disagrees with the
@@ -76,7 +110,7 @@ export default function Setup() {
       <ScreenHead
         title="Sign one mandate. Fund the vault once."
         lede="Children are created by their parent, in seconds, while you sleep. The contract refuses a child wider than its parent, so no per-spawn approval is needed, and none would be safe to ask for."
-        note="nothing is signed or sent"
+        note={live ? `signs on ${ARC.name}, from your own key` : "nothing is signed or sent"}
       />
 
       <Grid columns={2} min={340} gap="lg" align="start">
@@ -153,6 +187,17 @@ export default function Setup() {
               </Field>
 
               <Field
+                label="Root operator"
+                hint="the daemon key that will submit this tree's draws. Not your wallet — the owner signs, the operator spends"
+              >
+                <TextField
+                  value={operator}
+                  placeholder="0x…"
+                  onChange={(event) => setOperator(event.target.value)}
+                />
+              </Field>
+
+              <Field
                 label="Counterparty concentration bound"
                 hint={`${ENFORCED_BY.concentration} · percent of one window to a single declared payTo`}
               >
@@ -166,11 +211,44 @@ export default function Setup() {
 
               <Cta
                 magnetic
-                hint="EIP-712, from the owner's own key"
-                onClick={() => setSigned(true)}
+                hint={
+                  live
+                    ? "a transaction on Arc, from the owner's own key"
+                    : "preview — nothing is signed or sent"
+                }
+                onClick={sign}
+                disabled={live && !ready}
               >
-                Sign mandate
+                {state.status === "signing" ? "Waiting for your signature…" : "Sign mandate"}
               </Cta>
+
+              {live && !ready ? (
+                <Text variant="micro" tone="dim" as="p">
+                  a root operator address is needed before this can be signed
+                </Text>
+              ) : null}
+              {state.status === "failed" ? (
+                <Text variant="micro" tone="accent" as="p">
+                  {state.why}
+                </Text>
+              ) : null}
+              {state.status === "sent" ? (
+                <Text variant="micro" tone="dim" as="p">
+                  sent, waiting for the receipt ·{" "}
+                  <a href={`${ARC.explorer}/tx/${state.hash}`} target="_blank" rel="noreferrer" className="mono">
+                    {state.hash.slice(0, 10)}…
+                  </a>
+                </Text>
+              ) : null}
+              {state.status === "open" ? (
+                <Text variant="micro" tone="ink" as="p">
+                  open ·{" "}
+                  <span className="mono">{state.node.slice(0, 14)}…</span> ·{" "}
+                  <a href={`${ARC.explorer}/tx/${state.hash}`} target="_blank" rel="noreferrer" className="mono">
+                    the transaction
+                  </a>
+                </Text>
+              ) : null}
             </Stack>
           </CardBody>
         </Card>
