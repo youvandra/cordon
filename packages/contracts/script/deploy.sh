@@ -86,6 +86,11 @@ CORDON_COMMIT="$(git rev-parse HEAD 2>/dev/null || echo unknown)" \
 # that can disagree with the chain it names.
 node scripts/record-addresses.mjs "$CHAIN_ID"
 
+# And the README's own table, which was the last place an address was typed by
+# hand — in the most public file in the repository, where a redeploy makes it
+# quietly wrong.
+node scripts/record-readme.mjs "$CHAIN_ID"
+
 REGISTRY="$(node -e "console.log(require('./deployments/$CHAIN_ID.json').registry)")"
 VAULT="$(node -e "console.log(require('./deployments/$CHAIN_ID.json').vault)")"
 RECORD="$(node -e "console.log(require('./deployments/$CHAIN_ID.json').record)")"
@@ -113,3 +118,8 @@ echo "record    https://testnet.arcscan.app/address/$RECORD"
 echo
 echo "Next: open a mandate from the owner's own wallet, then fund the vault."
 echo "Neither is this script's job — both need a signature only the owner has."
+echo
+echo "One claim this script cannot check: README.md's \"What this does not"
+echo "claim\" still says the deployed contracts bound the budget per window"
+echo "and not per lifetime. That was true of the addresses this run replaced."
+echo "Read it and change it, or the repository is under-claiming in public."

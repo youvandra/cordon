@@ -17,14 +17,17 @@ key.
 Arc testnet, chain **5042002**. All three verified on
 [arcscan](https://testnet.arcscan.app).
 
+<!-- deployed:start -->
 | Contract | Address |
 |---|---|
 | `MandateRegistry` | [`0xa50d9454e71acf152399c872815ae6895cb53229`](https://testnet.arcscan.app/address/0xa50d9454e71acf152399c872815ae6895cb53229) |
 | `TreeVault` | [`0x045b2050aadaff4b80a2325d63648c09f15ab1f3`](https://testnet.arcscan.app/address/0x045b2050aadaff4b80a2325d63648c09f15ab1f3) |
 | `ConductRecord` | [`0x12d15135b5bba8eef0d1098aa65a15af503d09c9`](https://testnet.arcscan.app/address/0x12d15135b5bba8eef0d1098aa65a15af503d09c9) |
+<!-- deployed:end -->
 
 Addresses live in `packages/contracts/deployments/5042002.json` and nowhere
-else. Nothing in this repository hardcodes one.
+else — including the table above, which `deploy.sh` rewrites from that file.
+Nothing in this repository hardcodes one.
 
 ## How it fits together
 
