@@ -64,7 +64,7 @@ export function ConsoleShell() {
   useTitle("Console · Cordon");
   /* The owner surface is not a page anyone should reach from a search result. */
   useNoIndex(true);
-  const { address, connect, disconnect, real } = useWallet();
+  const { address, connect, disconnect, preview, real, available } = useWallet();
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
@@ -95,6 +95,14 @@ export function ConsoleShell() {
               <Button variant="secondary" size="lg" magnetic onClick={connect}>
                 Connect wallet
               </Button>
+              {/* The way in that touches no key, and it stays whether or not a
+                  real wallet is available. A reader who arrived to look at
+                  four screens should not meet a signup form first. */}
+              {available ? (
+                <Button variant="glaze" size="lg" onClick={preview}>
+                  Look around first
+                </Button>
+              ) : null}
               <a href={site("/agent/41827")}>
                 <Button variant="glaze" size="lg">
                   See a public record
@@ -108,7 +116,9 @@ export function ConsoleShell() {
               <Tag tone={real ? "positive" : "caution"} size="sm" dot>
                 {real
                   ? `a real wallet, on ${ARC.name}`
-                  : "preview build, no wallet is touched"}
+                  : available
+                    ? `sign in for a real wallet on ${ARC.name}, or look around first`
+                    : "preview build, no wallet is touched"}
               </Tag>
             </div>
           </Surface>

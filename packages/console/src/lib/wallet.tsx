@@ -40,15 +40,28 @@ interface WalletState {
   address: string | null;
   connect: () => void;
   disconnect: () => void;
+  /**
+   * A way in that touches no key, kept even when Privy is configured.
+   *
+   * The console is the submission's own surface, and putting a login in front
+   * of it means the first thing a reader meets is a signup form for a wallet
+   * they do not want. The preview has always been the way to look at the four
+   * screens; a real wallet is the way to sign. Both, and the badge says which.
+   */
+  preview: () => void;
   /** Whether the address above can actually sign, or is a drawing of one. */
   real: boolean;
+  /** Whether a real wallet is available at all, whatever this session chose. */
+  available: boolean;
 }
 
 const WalletContext = createContext<WalletState>({
   address: null,
   connect: () => {},
   disconnect: () => {},
+  preview: () => {},
   real: false,
+  available: false,
 });
 
 export const useWallet = () => useContext(WalletContext);
@@ -68,18 +81,23 @@ function read(): string | null {
 function MockWallet({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(read);
 
+  const enter = () => {
+    try {
+      sessionStorage.setItem(KEY, MANDATE.owner);
+    } catch {
+      /* Ignored: the gate still opens, it just will not survive a reload. */
+    }
+    setAddress(MANDATE.owner);
+  };
+
   const value = useMemo<WalletState>(
     () => ({
       address,
       real: false,
-      connect: () => {
-        try {
-          sessionStorage.setItem(KEY, MANDATE.owner);
-        } catch {
-          /* Ignored: the gate still opens, it just will not survive a reload. */
-        }
-        setAddress(MANDATE.owner);
-      },
+      available: false,
+      /* With no Privy app id there is one way in, and it is this one. */
+      preview: () => enter(),
+      connect: () => enter(),
       disconnect: () => {
         try {
           sessionStorage.removeItem(KEY);
@@ -98,20 +116,28 @@ function MockWallet({ children }: { children: ReactNode }) {
 /** Privy's session, in the shape the rest of the console already reads. */
 function PrivyWallet({ children }: { children: ReactNode }) {
   const { ready, authenticated, user, login, logout } = usePrivy();
+  /* A session that chose to look rather than to sign. Kept here rather than in
+     sessionStorage, because unlike the mock it is not standing in for a key. */
+  const [previewing, setPreviewing] = useState(false);
+
+  const signedIn = ready && authenticated;
 
   const value = useMemo<WalletState>(
     () => ({
       /* `ready` gates the address rather than the gate itself: showing a
          connected address before Privy has finished reading its own session
          is the same lie as showing a figure before the run that produced it. */
-      address: ready && authenticated ? (user?.wallet?.address ?? null) : null,
-      real: true,
+      address: signedIn ? (user?.wallet?.address ?? null) : previewing ? MANDATE.owner : null,
+      real: signedIn,
+      available: true,
+      preview: () => setPreviewing(true),
       connect: () => login(),
       disconnect: () => {
+        setPreviewing(false);
         void logout();
       },
     }),
-    [ready, authenticated, user, login, logout],
+    [signedIn, previewing, user, login, logout],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
