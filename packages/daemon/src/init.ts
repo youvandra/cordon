@@ -53,7 +53,9 @@ export function initOperators(options: {
      then ran zero times and wrote a file with no keys in it. With `--force`
      that silently replaced a live tree's operators with nothing. */
   if (!Number.isInteger(nodes) || nodes < 1 || nodes > 16) {
-    throw new Error(`--nodes must be a whole number between 1 and 16, got ${JSON.stringify(nodes)}`);
+    /* `String` and not `JSON.stringify`: NaN serialises to `null`, which
+       reads as though nothing was passed rather than as something unparseable. */
+    throw new Error(`--nodes must be a whole number between 1 and 16, got ${String(nodes)}`);
   }
   if (existsSync(path) && !options.force) {
     /* Overwriting is how someone loses the key an open mandate names, and the
