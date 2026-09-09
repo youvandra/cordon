@@ -74,6 +74,8 @@ if [ -z "${CORDON_OWNER_ACCOUNT:-}" ]; then
   exit 0
 fi
 
+# Empty-array expansion under `set -u` is an error in bash 3.2, which is what
+# macOS ships. See the same guard in deploy.sh.
 PASSWORD=()
 if [ -n "${CORDON_OWNER_PASSWORD_FILE:-}" ]; then
   PASSWORD=(--password-file "$CORDON_OWNER_PASSWORD_FILE")
@@ -82,7 +84,7 @@ fi
 cast send "$REGISTRY" "$SIG" "$ARG" \
   --rpc-url "$RPC" \
   --account "$CORDON_OWNER_ACCOUNT" \
-  "${PASSWORD[@]}"
+  ${PASSWORD[@]+"${PASSWORD[@]}"}
 
 echo
 echo "The node id is the first topic of the MandateOpened log above."

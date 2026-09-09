@@ -31,6 +31,11 @@ VERIFIER_URL="${CORDON_VERIFIER_URL:-https://testnet.arcscan.app/api/}"
 # ETH_PASSWORD_FILE is not read by foundry 1.8.1, which prompts anyway and
 # fails with "Device not configured" when there is no terminal, so the flag is
 # passed explicitly rather than exported.
+# macOS ships bash 3.2, where `set -u` treats an EMPTY array's expansion as an
+# unbound variable and kills the script — so every use is written
+# `${PASSWORD[@]+"${PASSWORD[@]}"}`, which expands to nothing when the array is
+# empty and to the flag when it is not. Newer bash does not need this; the
+# machine most people run it on does.
 PASSWORD=()
 if [ -n "${CORDON_PASSWORD_FILE:-}" ]; then
   PASSWORD=(--password-file "$CORDON_PASSWORD_FILE")
@@ -59,7 +64,7 @@ echo "gateway   $CORDON_GATEWAY"
 echo "identity  $CORDON_IDENTITY"
 echo "reputatn  $CORDON_REPUTATION"
 
-SENDER="$(cast wallet address --account "$ACCOUNT" "${PASSWORD[@]}")"
+SENDER="$(cast wallet address --account "$ACCOUNT" ${PASSWORD[@]+"${PASSWORD[@]}"})"
 echo "sender    $SENDER"
 
 BALANCE="$(cast balance "$SENDER" --rpc-url "$RPC")"
@@ -75,7 +80,7 @@ forge script script/Deploy.s.sol:Deploy \
   --rpc-url "$RPC" \
   --account "$ACCOUNT" \
   --sender "$SENDER" \
-  "${PASSWORD[@]}" \
+  ${PASSWORD[@]+"${PASSWORD[@]}"} \
   --broadcast
 
 CORDON_COMMIT="$(git rev-parse HEAD 2>/dev/null || echo unknown)" \
