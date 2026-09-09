@@ -36,6 +36,9 @@ owner signs a mandate ──> MandateRegistry ──> TreeVault (holds the money
                                                            └──> ConductRecord ──> ERC-8004
 ```
 
+Drawn, as the seven steps one purchase takes:
+<https://getcordon.xyz/docs/how-it-works#architecture>
+
 | Package | What it is |
 |---|---|
 | `contracts` | `MandateRegistry` (the tree and its narrowing), `TreeVault` (the money and ancestor debit), `ConductRecord` (the enforcement seat that writes into ERC-8004) |
