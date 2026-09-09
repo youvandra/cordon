@@ -27,7 +27,7 @@ try {
 
   console.log(`operator keys written to ${path} (0600)`);
   console.log("");
-  console.log("the addresses that will do the spending, one per node:");
+  console.log("operator addresses — the ones that do the spending, one per node:");
   for (const operator of operators) {
     console.log(`  ${operator.label.toLowerCase().padEnd(8)} ${operator.address}`);
   }

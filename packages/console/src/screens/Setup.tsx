@@ -217,15 +217,16 @@ export default function Setup() {
                 />
               </Field>
 
-              {/* Not "root operator", which is the contract's word for it, and
-                  not "agent address", which is the one thing it must never say:
-                  the agent holds no key at all, and a field claiming otherwise
-                  contradicts the product on the product's own screen. What it
-                  is, in the plainest true words, is the address that does the
-                  spending. */}
+              {/* The contract's own word, because the env vars, the docs, the
+                  meter and `Params.operator` all use it — a friendlier label
+                  here would be a second name for one thing, which is the defect
+                  this repository keeps paying for. The plain words belong in
+                  the hint. It is never "agent address": the agent holds no key
+                  at all, and a field claiming otherwise contradicts the product
+                  on the product's own screen. */}
               <Field
-                label="The address that spends"
-                hint="made by `cordon init` and held by the daemon — not your wallet. You sign the limit; this spends inside it. The contract calls it the root operator"
+                label="Operator address"
+                hint="the address that does the spending — made by `cordon init` and held by the daemon. Not your wallet, and not the agent's: you sign the limit, this spends inside it"
               >
                 <TextField
                   value={operator}
@@ -263,7 +264,7 @@ export default function Setup() {
                 <Text variant="micro" tone="dim" as="p">
                   {isAddress(operator)
                     ? "a budget, a lifetime cap and a tranche cap all have to be more than zero"
-                    : "the address that spends is needed before this can be signed"}
+                    : "an operator address is needed before this can be signed"}
                 </Text>
               ) : null}
               {state.status === "failed" ? (

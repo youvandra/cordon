@@ -20,9 +20,9 @@ Arc testnet, chain **5042002**. All three verified on
 <!-- deployed:start -->
 | Contract | Address |
 |---|---|
-| `MandateRegistry` | [`0xa50d9454e71acf152399c872815ae6895cb53229`](https://testnet.arcscan.app/address/0xa50d9454e71acf152399c872815ae6895cb53229) |
-| `TreeVault` | [`0x045b2050aadaff4b80a2325d63648c09f15ab1f3`](https://testnet.arcscan.app/address/0x045b2050aadaff4b80a2325d63648c09f15ab1f3) |
-| `ConductRecord` | [`0x12d15135b5bba8eef0d1098aa65a15af503d09c9`](https://testnet.arcscan.app/address/0x12d15135b5bba8eef0d1098aa65a15af503d09c9) |
+| `MandateRegistry` | [`0xf86de085e63b00c9fba300b19807c883deb961e9`](https://testnet.arcscan.app/address/0xf86de085e63b00c9fba300b19807c883deb961e9) |
+| `TreeVault` | [`0x00ab57acd260c594a661b6101bdf7e92267af135`](https://testnet.arcscan.app/address/0x00ab57acd260c594a661b6101bdf7e92267af135) |
+| `ConductRecord` | [`0x2a8361ac23f5ffcfde9f0d7bc7618178770332d0`](https://testnet.arcscan.app/address/0x2a8361ac23f5ffcfde9f0d7bc7618178770332d0) |
 <!-- deployed:end -->
 
 Addresses live in `packages/contracts/deployments/5042002.json` and nowhere

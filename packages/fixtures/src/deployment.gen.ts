@@ -17,9 +17,9 @@ export type Deployment = {
 
 export const DEPLOYMENT: Deployment | null = {
   chainId: 5042002,
-  registry: "0xa50d9454e71acf152399c872815ae6895cb53229",
-  vault: "0x045b2050aadaff4b80a2325d63648c09f15ab1f3",
-  record: "0x12d15135b5bba8eef0d1098aa65a15af503d09c9",
-  commit: "327bb926ebdfca97ed1c4d8d6c92a72701acc5f7",
-  deployedAt: "2026-09-08T18:08:35.566Z",
+  registry: "0xf86de085e63b00c9fba300b19807c883deb961e9",
+  vault: "0x00ab57acd260c594a661b6101bdf7e92267af135",
+  record: "0x2a8361ac23f5ffcfde9f0d7bc7618178770332d0",
+  commit: "ee3955b82fb0b6f7786bbfb5b2f5ebc2b174f8cc",
+  deployedAt: "2026-09-09T17:24:22.882Z",
 };
