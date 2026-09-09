@@ -10,6 +10,10 @@ export type Deployment = {
   vault: string;
   /** ConductRecord, which writes into the ERC-8004 reputation registry. */
   record: string;
+  /** The block the contracts were made in. Reading from zero fails on
+   *  Arc — the RPC answers `pruned history unavailable` — so anything
+   *  that queries logs starts here, including the browser. */
+  fromBlock: string;
   /** The commit the deploy script ran from. */
   commit: string;
   deployedAt: string;
@@ -20,6 +24,7 @@ export const DEPLOYMENT: Deployment | null = {
   registry: "0xf86de085e63b00c9fba300b19807c883deb961e9",
   vault: "0x00ab57acd260c594a661b6101bdf7e92267af135",
   record: "0x2a8361ac23f5ffcfde9f0d7bc7618178770332d0",
+  fromBlock: "61265318",
   commit: "ee3955b82fb0b6f7786bbfb5b2f5ebc2b174f8cc",
   deployedAt: "2026-09-09T17:24:22.882Z",
 };

@@ -14,16 +14,15 @@ import {
   Stack,
   Tag,
   Text,
-  Tree as TreeView,
   useToast,
 } from "cordon-ui";
-import type { TreeNode as UiTreeNode } from "cordon-ui";
 import { ARC, ENFORCED_BY, MANDATE, STRENGTH, formatUsdc } from "@cordon/fixtures";
 import { TREE, flatten, lifetime, pathTo, type TreeNode } from "@cordon/fixtures/preview";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 import { useWallet } from "../lib/wallet";
 import { useChainTree, type ChainNode } from "../lib/tree";
+import { TreeGraph } from "../parts/TreeGraph";
 import { useEntrance } from "../lib/entrance";
 
 /** The path from the root down to `id`, excluding `id` itself. */
@@ -115,6 +114,24 @@ function ChainTree({ nodes }: { nodes: ChainNode[] }) {
       </Grid>
 
       <Section title="delegation tree" aside={<Enforced>{ENFORCED_BY.treeBar}</Enforced>}>
+        <TreeGraph
+          nodes={nodes.map((node) => ({
+            id: node.node,
+            label: `${node.node.slice(0, 8)}…${node.node.slice(-4)}`,
+            parent: node.parent,
+            spent6: node.windowSpent6,
+            budget6: node.budget6,
+            available6: node.available6,
+            heldBy:
+              node.boundBy.toLowerCase() === node.node.toLowerCase()
+                ? null
+                : `${node.boundBy.slice(0, 8)}…`,
+            revoked: node.revoked,
+          }))}
+        />
+      </Section>
+
+      <Section title="every node, as figures">
         <DataTable
           rows={nodes}
           rowKey={(node) => node.node}
@@ -203,6 +220,15 @@ export default function Tree() {
      says a refusal must survive its authors — so the same rule applies to the
      owner's hand slipping. Asked for once, then reported. */
   const [cutting, setCutting] = useState<TreeNode | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  /* The parent of a node, from the tree the fixtures already describe. The
+     graph needs an edge list and the preview tree is nested, so this is the
+     one place the two shapes meet. */
+  const parentOf = (id: string): string | null => {
+    const path = pathTo(id);
+    return path.length > 1 ? path[path.length - 2]!.id : null;
+  };
   const { notify } = useToast();
 
   const revoke = (node: TreeNode) => {
@@ -255,20 +281,6 @@ export default function Tree() {
 
     return { available6: available === null || available < 0n ? 0n : available, boundBy };
   };
-
-  const toUi = (node: TreeNode): UiTreeNode => ({
-    id: node.id,
-    label: node.label,
-    meta: (
-      <span
-        className="mono treemeta"
-        data-hot={share(node) >= 95 ? "" : undefined}
-      >
-        {share(node)}%{node.refused ? ` · ${node.refused} refused` : ""}
-      </span>
-    ),
-    children: node.children.length ? node.children.map(toUi) : undefined,
-  });
 
   const rootSpent = spend.root ?? TREE.spent6;
   const rootShare = Number((rootSpent * 100n) / TREE.budget6);
@@ -332,18 +344,42 @@ export default function Tree() {
           glaze="violet"
         />
 
-        <Section
-          title="delegation tree"
-          aside={<Enforced>{ENFORCED_BY.treeBar}</Enforced>}
-        >
-          <CardBody>
-            <TreeView
-              nodes={[toUi(TREE)]}
-              defaultExpanded={nodes.map((node) => node.id)}
-            />
-          </CardBody>
-        </Section>
+        <Stack direction="column" gap="md" align="start">
+          <Text variant="body" tone="copy" as="p">
+            The bar on each node is its own window. The figure under it is what
+            that node may actually draw, and the two are different numbers
+            whenever something above it is tighter — which is the whole claim
+            this screen exists to make.
+          </Text>
+          <Enforced>{ENFORCED_BY.treeBar}</Enforced>
+        </Stack>
       </Grid>
+
+      {/* Full width, because a tree is wider than a column. Sharing a row with
+          the metric put a 680px drawing inside 330px and scrolled the root out
+          of sight. */}
+      <Section title="delegation tree">
+        <CardBody>
+          <TreeGraph
+            nodes={nodes.map((node) => {
+              const room = headroomOf(node);
+              return {
+                id: node.id,
+                label: node.label,
+                parent: parentOf(node.id),
+                spent6: spend[node.id] ?? node.spent6,
+                budget6: node.budget6,
+                available6: room.available6,
+                heldBy: room.boundBy.id === node.id ? null : room.boundBy.label,
+                revoked: revoked.has(node.id),
+                refusals: node.refused,
+              };
+            })}
+            selected={selected}
+            onSelect={setSelected}
+          />
+        </CardBody>
+      </Section>
 
       <Section
         title={`${nodes.length} nodes · depth ${MANDATE.maxDepth}`}

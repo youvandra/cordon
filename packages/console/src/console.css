@@ -804,3 +804,61 @@ body {
   font-size: var(--cordon-size-micro);
   line-height: 1.55;
 }
+
+/* ---- the mandate tree, drawn ------------------------------------------- */
+.graph { overflow-x: auto; padding: 4px 2px 8px; }
+.graph__canvas { position: relative; margin-inline: auto; }
+.graph__edges { position: absolute; inset: 0; pointer-events: none; }
+.graph__edge {
+  fill: none;
+  stroke: var(--cordon-hairline);
+  stroke-width: 1.5;
+}
+.graph__edge--cut { stroke-dasharray: 4 5; opacity: 0.55; }
+
+.graph__node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--cordon-hairline);
+  border-radius: var(--cordon-radius-3);
+  background: var(--cordon-paper-raised);
+  box-shadow: var(--cordon-shadow-tile);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.16s var(--cordon-ease-settle),
+    box-shadow 0.16s var(--cordon-ease-settle),
+    transform 0.16s var(--cordon-ease-settle);
+}
+.graph__node:hover { box-shadow: var(--cordon-shadow-lift); transform: translateY(-1px); }
+.graph__node[data-selected] { border-color: var(--cordon-accent-line); }
+.graph__node[data-revoked] { opacity: 0.6; }
+
+.graph__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.graph__label {
+  overflow: hidden;
+  color: var(--cordon-ink-strong);
+  font-size: 14px;
+  font-weight: 560;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.graph__refusals { color: var(--cordon-accent); font-size: var(--cordon-size-micro); }
+
+.graph__bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(34, 34, 34, 0.08);
+  overflow: hidden;
+}
+.graph__fill { display: block; height: 100%; background: var(--cordon-ink); }
+.graph__fill[data-hot] { background: var(--cordon-accent); }
+
+.graph__foot { display: flex; align-items: baseline; gap: 6px; }
+.graph__draw { color: var(--cordon-ink-strong); font-size: 14.5px; font-weight: 560; }
+.graph__note { color: var(--cordon-copy-dim); font-size: var(--cordon-size-micro); }

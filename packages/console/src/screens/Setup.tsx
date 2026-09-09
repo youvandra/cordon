@@ -225,6 +225,75 @@ export default function Setup() {
 
   const ready = live && questions.every((question) => question.complete);
 
+  /**
+   * What was signed, as figures.
+   *
+   * Each one is a bound the contract checks, so each gets the instrument: the
+   * ring reads what this bound is worth against the widest one above it, which
+   * is the only comparison that means anything. Depth has no amount, so it
+   * reads as a fraction of itself.
+   */
+  const window = WINDOWS.find((option) => option.value === windowS)?.label ?? "a window";
+  const signed = [
+    {
+      title: "Per window",
+      meaning: `Everything, every ${window}`,
+      value: budget || "0",
+      unit: "USDC",
+      progress: 1,
+      caption: <>the whole tree, between them</>,
+      glaze: "violet" as const,
+    },
+    {
+      title: "For its whole life",
+      meaning: "Never refills",
+      value: lifetime || "0",
+      unit: "USDC",
+      progress: Math.min(1, Number(budget || 0) / Math.max(1, Number(lifetime || 0))),
+      caption: (
+        <>
+          {Math.max(1, Math.floor(Number(lifetime || 0) / Math.max(1, Number(budget || 1))))} windows
+          <br />
+          before it is spent
+        </>
+      ),
+      glaze: "rose" as const,
+    },
+    {
+      title: "One purchase",
+      meaning: "The most a single draw may be",
+      value: tranche || "0",
+      unit: "USDC",
+      progress: Math.min(1, Number(tranche || 0) / Math.max(1, Number(budget || 1))),
+      caption: (
+        <>
+          {Math.floor(Number(budget || 0) / Math.max(1, Number(tranche || 1)))} of them
+          <br />
+          would fill a window
+        </>
+      ),
+      glaze: "ember" as const,
+    },
+    {
+      title: "One seller",
+      meaning: "Share of a window to any one payee",
+      value: concentration || "0",
+      unit: "%",
+      progress: Math.min(1, Number(concentration || 0) / 100),
+      caption: <>declared, not proven</>,
+      glaze: "violet" as const,
+    },
+    {
+      title: "Depth",
+      meaning: "How far it may be delegated",
+      value: depth || "0",
+      unit: "levels",
+      progress: 1,
+      caption: <>each one narrower than the last</>,
+      glaze: "rose" as const,
+    },
+  ];
+
   const sign = () => {
     if (!live) {
       setStage("done");
@@ -360,14 +429,32 @@ export default function Setup() {
           </CardHeader>
           <CardBody>
             {stage === "done" ? (
-              /* Every field at once and none of them editable. `Params` is set
-                 at `open` and the registry has no function that changes one, so
-                 an enabled input here would offer an edit nothing can perform. */
-              <Stack direction="column" gap="lg">
-                {questions.map((question) => (
-                  <div key={question.label}>{question.field}</div>
+              /* Five figures, not six disabled inputs. `Params` is fixed at
+                 `open`, so a form here would offer an edit nothing can perform
+                 — and a bound that cannot move is a number to read, not a
+                 field to fill. Each carries the same instrument the commitment
+                 card does, pointed at what it measures. */
+              <Grid columns={2} min={190} gap="md">
+                {signed.map((figure, index) => (
+                  <MetricCard
+                    key={figure.title}
+                    animate={animate}
+                    index={index}
+                    title={
+                      <>
+                        {figure.title}
+                        <br />
+                        {figure.meaning}
+                      </>
+                    }
+                    value={figure.value}
+                    unit={figure.unit}
+                    progress={figure.progress}
+                    caption={figure.caption}
+                    glaze={figure.glaze}
+                  />
                 ))}
-              </Stack>
+              </Grid>
             ) : (
               <Stack direction="column" gap="lg">
                 <StepProgress

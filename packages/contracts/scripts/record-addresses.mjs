@@ -33,6 +33,10 @@ const header =
   `  vault: string;\n` +
   `  /** ConductRecord, which writes into the ERC-8004 reputation registry. */\n` +
   `  record: string;\n` +
+  `  /** The block the contracts were made in. Reading from zero fails on\n` +
+  `   *  Arc — the RPC answers \`pruned history unavailable\` — so anything\n` +
+  `   *  that queries logs starts here, including the browser. */\n` +
+  `  fromBlock: string;\n` +
   `  /** The commit the deploy script ran from. */\n` +
   `  commit: string;\n` +
   `  deployedAt: string;\n` +
@@ -65,6 +69,7 @@ writeFileSync(
     `  registry: "${d.registry}",\n` +
     `  vault: "${d.vault}",\n` +
     `  record: "${d.record}",\n` +
+    `  fromBlock: "${d.fromBlock ?? "0"}",\n` +
     `  commit: "${d.commit ?? "unknown"}",\n` +
     `  deployedAt: "${d.deployedAt}",\n` +
     `};\n`,

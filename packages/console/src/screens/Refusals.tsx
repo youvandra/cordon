@@ -22,6 +22,10 @@ import {
 import { site } from "../lib/links";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
+import { useWallet } from "../lib/wallet";
+import { useChainTree } from "../lib/tree";
+import { useChainRefusals, type ChainRefusal } from "../lib/refusals";
+import { ARC, REASON_MEANING } from "@cordon/fixtures";
 
 /**
  * One card, one decision.
@@ -158,8 +162,110 @@ function RefusalCard({ refusal }: { refusal: Refusal }) {
   );
 }
 
+
+/**
+ * A refusal the contract actually wrote, and the decision it leaves open.
+ *
+ * Releasing is a transaction from the owner's own key and the console cannot
+ * make it yet, so the button says what it is waiting for rather than pretending
+ * — a control that looks live and does nothing is worse than one that admits
+ * what it is.
+ */
+function ChainRefusalCard({ refusal }: { refusal: ChainRefusal }) {
+  const short = `${refusal.counterparty.slice(0, 6)}…${refusal.counterparty.slice(-4)}`;
+
+  return (
+    <Card className="refusal">
+      <CardHeader>
+        <Text variant="micro" tone="dim" as="span" className="eyebrow">
+          refusal {String(refusal.id)} · block {String(refusal.blockNumber)}
+        </Text>
+        <Tag tone={refusal.released ? "neutral" : "positive"} size="sm" dot>
+          {refusal.released ? "signed out later" : "still standing"}
+        </Tag>
+      </CardHeader>
+
+      <CardBody>
+        <Stack direction="column" gap="sm" align="start">
+          <Text variant="lead" tone="ink" as="p">
+            {formatUsdc(refusal.amount6)} to <span className="mono">{short}</span>
+          </Text>
+          <Text variant="body" tone="copy" as="p">
+            {REASON_MEANING[refusal.reason] ?? refusal.reason}.
+          </Text>
+          <Stack direction="row" gap="md" wrap>
+            <span className="mono refusal__bound">{refusal.reason}</span>
+            <a
+              href={`${ARC.explorer}/tx/${refusal.transactionHash}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mono"
+            >
+              {refusal.transactionHash.slice(0, 10)}…
+            </a>
+            <a href={site(`/refusal/${refusal.id}`)}>what a seller sees</a>
+          </Stack>
+        </Stack>
+      </CardBody>
+
+      <CardFooter>
+        <div className="refusal__actions">
+          <Stack direction="row" gap="sm">
+            <Button size="sm" variant="secondary" disabled>
+              Sign to release
+            </Button>
+            <Text variant="micro" tone="dim" as="span">
+              needs a transaction from your own key — not built here yet
+            </Text>
+          </Stack>
+        </div>
+      </CardFooter>
+    </Card>
+  );
+}
+
 export default function Refusals() {
   useTitle("Refusals · Cordon console");
+
+  const { address, real } = useWallet();
+  const chain = useChainTree(real ? address : null);
+  const nodes = chain.state === "read" ? chain.nodes.map((node) => node.node) : [];
+  const live = useChainRefusals(nodes);
+
+  if (live.state === "read") {
+    const standing = live.refusals.filter((refusal) => !refusal.released).length;
+    return (
+      <>
+        <ScreenHead
+          title={
+            live.refusals.length === 0
+              ? "Nothing has been refused yet."
+              : `${standing} standing, ${live.refusals.length - standing} released.`
+          }
+          lede="Every one of these is a decision the contract made about your own tree, read from the events it emitted. A refusal is not an error and it costs no budget; the money simply did not move."
+          note={`read from ${ARC.name}`}
+        />
+        {live.refusals.length === 0 ? (
+          <Card>
+            <CardBody>
+              <Text variant="body" tone="copy" as="p">
+                Nothing in your tree has asked for more than it was allowed. That
+                is a fact about the range this reads — from the block the
+                contracts were made in — as much as about the agents.
+              </Text>
+            </CardBody>
+          </Card>
+        ) : (
+          <Stack direction="column" gap="lg">
+            {live.refusals.map((refusal) => (
+              <ChainRefusalCard key={String(refusal.id)} refusal={refusal} />
+            ))}
+          </Stack>
+        )}
+      </>
+    );
+  }
+
   const released = REFUSALS.filter((refusal) => refusal.released).length;
   const standing = REFUSALS.length - released;
 
