@@ -217,9 +217,15 @@ export default function Setup() {
                 />
               </Field>
 
+              {/* Not "root operator", which is the contract's word for it, and
+                  not "agent address", which is the one thing it must never say:
+                  the agent holds no key at all, and a field claiming otherwise
+                  contradicts the product on the product's own screen. What it
+                  is, in the plainest true words, is the address that does the
+                  spending. */}
               <Field
-                label="Root operator"
-                hint="the daemon key that will submit this tree's draws. Not your wallet — the owner signs, the operator spends"
+                label="The address that spends"
+                hint="made by `cordon init` and held by the daemon — not your wallet. You sign the limit; this spends inside it. The contract calls it the root operator"
               >
                 <TextField
                   value={operator}
@@ -257,7 +263,7 @@ export default function Setup() {
                 <Text variant="micro" tone="dim" as="p">
                   {isAddress(operator)
                     ? "a budget, a lifetime cap and a tranche cap all have to be more than zero"
-                    : "a root operator address is needed before this can be signed"}
+                    : "the address that spends is needed before this can be signed"}
                 </Text>
               ) : null}
               {state.status === "failed" ? (

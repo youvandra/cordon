@@ -27,7 +27,7 @@ try {
 
   console.log(`operator keys written to ${path} (0600)`);
   console.log("");
-  console.log("the operator addresses, one per node:");
+  console.log("the addresses that will do the spending, one per node:");
   for (const operator of operators) {
     console.log(`  ${operator.label.toLowerCase().padEnd(8)} ${operator.address}`);
   }
@@ -36,12 +36,15 @@ try {
      one is otherwise "copy a 42-character string into the right field", and
      that is a step where people paste the wrong thing. The console reads it
      from the query and fills the field in; nothing is signed by a link. */
-  console.log("open the console with the root operator already filled in:");
+  console.log("open the console with the first one already filled in:");
   console.log("");
   console.log(`  ${CONSOLE_URL}/setup?operator=${operators[0]!.address}`);
   console.log("");
-  console.log(`Each address needs gas on ${ARC.name} — ${ARC.faucet} — and holds`);
-  console.log("no USDC by design: the vault tops it up one purchase at a time.");
+  console.log(`Each needs gas on ${ARC.name} — ${ARC.faucet} — and holds no USDC`);
+  console.log("by design: the vault tops it up one purchase at a time.");
+  console.log("");
+  console.log("These are the daemon's, not your wallet's and not the agent's.");
+  console.log("The agent holds no key at all; that is the point of the product.");
   console.log("");
   console.log("Then, once the owner has opened a mandate for an operator, put its");
   console.log(`node id in CORDON_NODE_<label> in that file and start the daemon:`);
