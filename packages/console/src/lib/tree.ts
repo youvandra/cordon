@@ -29,6 +29,8 @@ export interface ChainNode {
   operator: `0x${string}`;
   budget6: bigint;
   lifetimeCap6: bigint;
+  /** A child's must equal this exactly, so it has to come from the chain. */
+  windowSeconds: bigint;
   trancheCap6: bigint;
   concentrationBps: number;
   maxDepth: number;
@@ -71,6 +73,7 @@ export function useChainTree(owner: string | null): ChainTree {
             operator: `0x${string}`;
             budget6: bigint;
             lifetimeCap6: bigint;
+            windowSeconds: bigint;
             trancheCap6: bigint;
             concentrationBps: number;
             maxDepth: number;
@@ -87,6 +90,7 @@ export function useChainTree(owner: string | null): ChainTree {
           operator: m.operator,
           budget6: m.budget6,
           lifetimeCap6: m.lifetimeCap6,
+          windowSeconds: m.windowSeconds,
           trancheCap6: m.trancheCap6,
           concentrationBps: m.concentrationBps,
           maxDepth: m.maxDepth,

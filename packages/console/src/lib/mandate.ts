@@ -24,6 +24,7 @@ import {
 } from "viem";
 import { useWallets } from "@privy-io/react-auth";
 import { ARC, DEPLOYMENT } from "@cordon/fixtures";
+import { parseAbi } from "viem";
 import { MandateRegistryAbi } from "../../../daemon/src/abi.gen.ts";
 
 export const arc = defineChain({
@@ -264,4 +265,144 @@ export function useExistingMandate(owner: string | null): Existing {
   }, [owner]);
 
   return found;
+}
+
+/* ---- the two things an owner does after signing --------------------------- */
+
+const ERC20 = parseAbi([
+  "function approve(address spender, uint256 value) returns (bool)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function balanceOf(address owner) view returns (uint256)",
+]);
+
+const VAULT = parseAbi([
+  "function fund(bytes32 root, uint128 amount6)",
+  "function treasury6(bytes32 root) view returns (uint128)",
+]);
+
+export type ActionState =
+  | { status: "idle" }
+  | { status: "working"; step: string }
+  | { status: "done"; hash: Hex }
+  | { status: "failed"; why: string };
+
+/** The wallet the screen is showing, and a client that can sign with it. */
+async function signerFor(wallets: ReturnType<typeof useWallets>["wallets"], expected: string) {
+  const wallet = wallets.find((w) => w.address.toLowerCase() === expected.toLowerCase());
+  if (!wallet) throw new Error("the wallet shown here is not one this page can sign with");
+  await wallet.switchChain(ARC.chainId);
+  const provider = await wallet.getEthereumProvider();
+  const account = wallet.address as `0x${string}`;
+  return {
+    account,
+    wallet: createWalletClient({ account, chain: arc, transport: custom(provider) }),
+    reader: createPublicClient({ chain: arc, transport: custom(provider) }),
+  };
+}
+
+function why(error: unknown): string {
+  const message = (error as Error)?.message ?? String(error);
+  return message.slice(0, 200);
+}
+
+/**
+ * Money into the vault, which is the only place a draw can come from.
+ *
+ * Two transactions, because ERC-20 is two: the vault can only pull what it has
+ * been allowed, and an allowance already large enough is not asked for again —
+ * a second approval costs gas and grants nothing new.
+ */
+export function useFundVault(expected: string | null) {
+  const { wallets } = useWallets();
+  const [state, setState] = useState<ActionState>({ status: "idle" });
+
+  const fund = useCallback(
+    async (root: Hex, amount6: bigint) => {
+      if (!DEPLOYED || !expected) {
+        setState({ status: "failed", why: "no deployment, or no wallet" });
+        return;
+      }
+      try {
+        const { account, wallet, reader } = await signerFor(wallets, expected);
+        const usdc = ARC.erc20 as `0x${string}`;
+
+        const held = (await reader.readContract({
+          address: usdc, abi: ERC20, functionName: "balanceOf", args: [account],
+        })) as bigint;
+        if (held < amount6) {
+          setState({
+            status: "failed",
+            why: `this wallet holds ${Number(held) / 1e6} USDC and the vault was asked for ${Number(amount6) / 1e6}`,
+          });
+          return;
+        }
+
+        const allowed = (await reader.readContract({
+          address: usdc, abi: ERC20, functionName: "allowance", args: [account, DEPLOYED.vault],
+        })) as bigint;
+
+        if (allowed < amount6) {
+          setState({ status: "working", step: "allowing the vault to take it" });
+          const approve = await wallet.writeContract({
+            address: usdc, abi: ERC20, functionName: "approve", args: [DEPLOYED.vault, amount6],
+          });
+          await reader.waitForTransactionReceipt({ hash: approve });
+        }
+
+        setState({ status: "working", step: "funding the vault" });
+        const call = {
+          address: DEPLOYED.vault, abi: VAULT, functionName: "fund" as const,
+          args: [root, amount6] as const, account,
+        };
+        await reader.simulateContract(call);
+        const hash = await wallet.writeContract(call);
+        await reader.waitForTransactionReceipt({ hash });
+        setState({ status: "done", hash });
+      } catch (error) {
+        setState({ status: "failed", why: why(error) });
+      }
+    },
+    [wallets, expected],
+  );
+
+  return { state, fund };
+}
+
+/**
+ * A child, narrower than its parent.
+ *
+ * `spawn` accepts the parent's operator or the owner, and this is the owner's
+ * path — the first children of a tree, before any daemon is running. Every
+ * bound is checked against the parent before it is sent, because the contract
+ * will refuse a wider one and finding that out costs a transaction.
+ */
+export function useSpawnChild(expected: string | null) {
+  const { wallets } = useWallets();
+  const [state, setState] = useState<ActionState>({ status: "idle" });
+
+  const spawn = useCallback(
+    async (parent: Hex, params: MandateParams) => {
+      if (!REGISTRY || !expected) {
+        setState({ status: "failed", why: "no deployment, or no wallet" });
+        return;
+      }
+      try {
+        const { account, wallet, reader } = await signerFor(wallets, expected);
+        setState({ status: "working", step: "spawning" });
+        const call = {
+          address: REGISTRY, abi: MandateRegistryAbi, functionName: "spawn" as const,
+          args: [parent, params] as const, account,
+        };
+        await reader.simulateContract(call);
+        const hash = await wallet.writeContract(call);
+        await reader.waitForTransactionReceipt({ hash });
+        setState({ status: "done", hash });
+      } catch (error) {
+        setState({ status: "failed", why: why(error) });
+      }
+    },
+    [wallets, expected],
+  );
+
+  return { state, spawn };
 }

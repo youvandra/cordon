@@ -1,8 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Button,
+  Card,
   CardBody,
+  CardHeader,
+  Field,
+  TextField,
   DataTable,
   Enforced,
   Grid,
@@ -16,12 +20,13 @@ import {
   Text,
   useToast,
 } from "cordon-ui";
-import { ARC, ENFORCED_BY, MANDATE, STRENGTH, formatUsdc } from "@cordon/fixtures";
+import { ARC, ENFORCED_BY, MANDATE, STRENGTH, formatUsdc, isAddress } from "@cordon/fixtures";
 import { TREE, flatten, lifetime, pathTo, type TreeNode } from "@cordon/fixtures/preview";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 import { useWallet } from "../lib/wallet";
 import { useChainTree, type ChainNode } from "../lib/tree";
+import { useFundVault, useSpawnChild } from "../lib/mandate";
 import { TreeGraph } from "../parts/TreeGraph";
 import { useEntrance } from "../lib/entrance";
 
@@ -68,6 +73,11 @@ const DRAW6 = 1_000_000n;
  * to make and a revocation is a transaction, and a button that pretends to do
  * either from a table would be the surface lying about what it can do.
  */
+/** The root this owner is operating: the first one, and the live one. */
+function rootOf(nodes: ChainNode[]): ChainNode | undefined {
+  return nodes.find((node) => node.parent === null && !node.revoked);
+}
+
 function ChainTree({ nodes }: { nodes: ChainNode[] }) {
   const root = nodes.find((node) => node.parent === null);
 
@@ -195,6 +205,156 @@ function ChainTree({ nodes }: { nodes: ChainNode[] }) {
   );
 }
 
+
+/**
+ * The two things an owner does to a tree that already exists: put money behind
+ * it, and give part of it to somebody narrower.
+ *
+ * Both are transactions from the owner's own key, and both are checked before
+ * they are sent — the contract refuses a child wider than its parent and a
+ * draw from an empty vault, and learning either on chain costs gas.
+ */
+function Operate({
+  root,
+  owner,
+  onDone,
+}: {
+  root: ChainNode;
+  owner: string;
+  onDone: () => void;
+}) {
+  const { notify } = useToast();
+  const { state: funding, fund } = useFundVault(owner);
+  const { state: spawning, spawn } = useSpawnChild(owner);
+
+  const [amount, setAmount] = useState(String(root.budget6 / 1_000_000n));
+  const [operator, setOperator] = useState("");
+  const [share, setShare] = useState("50");
+
+  const usdc6 = (dollars: string): bigint => {
+    const value = Number(dollars || "0");
+    if (!Number.isFinite(value) || value < 0) return 0n;
+    return BigInt(Math.round(value * 1_000_000));
+  };
+
+  useEffect(() => {
+    if (funding.status === "done") {
+      notify({ id: funding.hash, tone: "positive", title: "The vault is funded", children: "Draws can be released now.", duration: 6000 });
+      onDone();
+    }
+    if (funding.status === "failed") {
+      notify({ id: "fund-failed", tone: "critical", title: "Not funded", children: funding.why, duration: 0 });
+    }
+  }, [funding, notify, onDone]);
+
+  useEffect(() => {
+    if (spawning.status === "done") {
+      notify({ id: spawning.hash, tone: "positive", title: "A child is open", children: "It is narrower than its parent, and the contract checked that.", duration: 6000 });
+      onDone();
+    }
+    if (spawning.status === "failed") {
+      notify({ id: "spawn-failed", tone: "critical", title: "Not spawned", children: spawning.why, duration: 0 });
+    }
+  }, [spawning, notify, onDone]);
+
+  /* A share of the parent, never an amount: the contract refuses anything
+     wider, and a number typed in dollars is one nobody checked against the
+     bound it has to fit inside. */
+  const childBudget6 = (root.budget6 * BigInt(Math.round(Number(share || "0")))) / 100n;
+
+  return (
+    <Grid columns={2} min={320} gap="lg" align="start">
+      <Card>
+        <CardHeader>
+          <Text variant="micro" tone="dim" as="span" className="eyebrow">
+            fund the vault
+          </Text>
+        </CardHeader>
+        <CardBody>
+          <Stack direction="column" gap="md" align="start">
+            <Text variant="body" tone="copy" as="p">
+              Nothing can be drawn from a vault with nothing in it. This is the
+              only funding source the tree has, and the money stays here until a
+              purchase the contract allows.
+            </Text>
+            <TextField
+              type="number"
+              value={amount}
+              suffix="USDC"
+              onChange={(event) => setAmount(event.target.value)}
+            />
+            <Button
+              variant="primary"
+              disabled={funding.status === "working" || usdc6(amount) <= 0n}
+              onClick={() => void fund(root.node, usdc6(amount))}
+            >
+              {funding.status === "working" ? funding.step : "Fund the vault"}
+            </Button>
+          </Stack>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <Text variant="micro" tone="dim" as="span" className="eyebrow">
+            spawn a child
+          </Text>
+        </CardHeader>
+        <CardBody>
+          <Stack direction="column" gap="md" align="start">
+            <Text variant="body" tone="copy" as="p">
+              A child can only be narrower. Normally its parent spawns it while
+              you sleep; these first ones are yours, because no daemon is
+              running yet.
+            </Text>
+            <Field label="Operator address" hint="another address from `cordon init` — not this one">
+              <TextField
+                value={operator}
+                placeholder="0x…"
+                onChange={(event) => setOperator(event.target.value)}
+              />
+            </Field>
+            <Field label="Share of the parent" hint="its window, lifetime and tranche, as a percentage of the parent's">
+              <TextField
+                type="number"
+                value={share}
+                suffix="%"
+                onChange={(event) => setShare(event.target.value)}
+              />
+            </Field>
+            <Button
+              variant="primary"
+              disabled={
+                spawning.status === "working" ||
+                !isAddress(operator) ||
+                childBudget6 <= 0n ||
+                childBudget6 > root.budget6
+              }
+              onClick={() =>
+                void spawn(root.node, {
+                  operator: operator as `0x${string}`,
+                  budget6: childBudget6,
+                  lifetimeCap6: (root.lifetimeCap6 * BigInt(Math.round(Number(share || "0")))) / 100n,
+                  /* The parent's own, read from the chain. The contract wants
+                     them equal, not merely narrower — a shorter child window
+                     resets faster than the parent it debits — and the fixture's
+                     default is not necessarily what this owner signed. */
+                  windowSeconds: root.windowSeconds,
+                  trancheCap6: root.trancheCap6,
+                  concentrationBps: root.concentrationBps,
+                  maxDepth: root.maxDepth,
+                })
+              }
+            >
+              {spawning.status === "working" ? spawning.step : "Spawn"}
+            </Button>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Grid>
+  );
+}
+
 export default function Tree() {
   useTitle("Tree · Cordon console");
   const animate = useEntrance();
@@ -300,6 +460,9 @@ export default function Tree() {
           note={`read from ${ARC.name}`}
         />
         <ChainTree nodes={chain.nodes} />
+        {rootOf(chain.nodes) && address ? (
+          <Operate root={rootOf(chain.nodes)!} owner={address} onDone={() => window.location.reload()} />
+        ) : null}
       </>
     );
   }
