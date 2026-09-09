@@ -139,13 +139,16 @@ export class Eip3009Collector implements Collector {
       chain: options.chain,
       transport: http(options.rpcUrl),
       /* Arc settles in under a second. viem's default four-second poll would
-         make a tenth-of-a-cent call feel like a timeout. */
+         make a tenth-of-a-cent call feel like a timeout, and its block-number
+         cache is the same interval, so a read can be four seconds stale. */
       pollingInterval: 250,
+      cacheTime: 250,
     }) as PublicClient;
     this.wallet = createWalletClient({
       account: privateKeyToAccount(options.privateKey),
       chain: options.chain,
       transport: http(options.rpcUrl),
+      pollingInterval: 250,
     });
   }
 

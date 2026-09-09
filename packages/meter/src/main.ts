@@ -107,7 +107,16 @@ const chain = defineChain({
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: ARC.nativeDecimals },
   rpcUrls: { default: { http: [args.rpc] } },
 });
-const client = createPublicClient({ chain, transport: http(args.rpc) }) as PublicClient;
+/* viem caches `getBlockNumber` for the polling interval, and its default is
+   4,000ms — written for chains where a block is minutes away. On Arc, where
+   finality is sub-second, that makes the ledger up to four seconds behind a
+   chain that has already settled, for no reason a reader would guess. */
+const client = createPublicClient({
+  chain,
+  transport: http(args.rpc),
+  pollingInterval: 250,
+  cacheTime: 250,
+}) as PublicClient;
 
 let ledger: Ledger | undefined = existsSync(args.out)
   ? deserialize(readFileSync(args.out, "utf8"))

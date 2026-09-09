@@ -31,6 +31,15 @@ export interface Config {
   networks: string[];
   assets: string[];
   port: number;
+  /**
+   * How often to poll for a receipt, in milliseconds.
+   *
+   * viem's default is 4,000, which is written for chains where a block is
+   * minutes away. Arc has sub-second deterministic finality, so that default
+   * spends up to four seconds per purchase waiting for something that already
+   * happened — on a path this project argues should add no latency.
+   */
+  pollMs: number;
   keys: NodeKey[];
 }
 
@@ -61,6 +70,7 @@ export const ENV = {
     CORDON_NETWORKS: "CAIP-2 ids this daemon will settle on",
     CORDON_ASSETS: "assets it will pay in",
     CORDON_PORT: "defaults to 8402",
+    CORDON_POLL_MS: "receipt polling interval; defaults to 250, matched to Arc's finality rather than to viem's 4,000",
   },
 } as const;
 
@@ -107,6 +117,7 @@ export function load(env = process.env): Config {
     networks: (env.CORDON_NETWORKS ?? `eip155:${ARC.chainId}`).split(",").map((s) => s.trim()),
     assets: (env.CORDON_ASSETS ?? ARC.erc20).split(",").map((s) => s.trim()),
     port: Number(env.CORDON_PORT ?? 8402),
+    pollMs: Number(env.CORDON_POLL_MS ?? 250),
     keys,
   };
 }

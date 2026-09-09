@@ -34,7 +34,13 @@ before(async () => {
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
     rpcUrls: { default: { http: [h.rpc] } },
   });
-  client = createPublicClient({ chain, transport: http(h.rpc) }) as PublicClient;
+  /* `cacheTime: 0` because the assertions here are about what is on chain a
+     millisecond after a write, and viem caches the block number for the
+     polling interval — a suite fast enough to finish inside that window reads
+     a stale `latest` and concludes the meter missed a draw. */
+  client = createPublicClient({
+    chain, transport: http(h.rpc), pollingInterval: 50, cacheTime: 0,
+  }) as PublicClient;
 });
 
 after(async () => {

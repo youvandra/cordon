@@ -86,7 +86,11 @@ export class Gate {
     });
 
     this.chain = chain;
-    this.publicClient = createPublicClient({ chain, transport: http(config.rpcUrl) });
+    this.publicClient = createPublicClient({
+      chain,
+      transport: http(config.rpcUrl),
+      pollingInterval: config.pollMs,
+    });
 
     this.recorder = new Recorder(
       { publicClient: this.publicClient, chain, record: config.record, identity: config.identity },
@@ -102,6 +106,7 @@ export class Gate {
           account: privateKeyToAccount(secret as Hex),
           chain,
           transport: http(config.rpcUrl),
+          pollingInterval: config.pollMs,
         }),
       );
     }

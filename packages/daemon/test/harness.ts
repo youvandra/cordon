@@ -85,13 +85,16 @@ export async function startChain(port: number) {
   });
 
   const anvil: ChildProcess = spawn("anvil", ["--port", String(port), "--silent"], { stdio: "ignore" });
-  const publicClient = createPublicClient({ chain, transport: http(rpc) });
+  /* anvil mines instantly, so viem's 4,000ms default spends the whole of a
+     test suite waiting for receipts that already exist. */
+  const pollingInterval = 50;
+  const publicClient = createPublicClient({ chain, transport: http(rpc), pollingInterval });
   for (let i = 0; i < 80; i++) {
     try { await publicClient.getBlockNumber(); break; } catch { await new Promise((r) => setTimeout(r, 200)); }
   }
 
   const owner = privateKeyToAccount(OWNER_KEY);
-  const asOwner = createWalletClient({ account: owner, chain, transport: http(rpc) });
+  const asOwner = createWalletClient({ account: owner, chain, transport: http(rpc), pollingInterval });
 
   /* `file` and `name` differ when one source holds several contracts, which
      is why this takes both rather than assuming they match. */
@@ -116,7 +119,7 @@ export async function startChain(port: number) {
     rpc, chain, publicClient, asOwner, owner,
     usdc, gateway, registry, vault, record, identity, reputation,
     walletFor: (key: Hex) =>
-      createWalletClient({ account: privateKeyToAccount(key), chain, transport: http(rpc) }),
+      createWalletClient({ account: privateKeyToAccount(key), chain, transport: http(rpc), pollingInterval }),
     kill: () => { anvil.kill(); },
   };
 }

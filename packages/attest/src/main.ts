@@ -73,7 +73,15 @@ const chain = defineChain({
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: ARC.nativeDecimals },
   rpcUrls: { default: { http: [rpc] } },
 });
-const client = createPublicClient({ chain, transport: http(rpc) }) as PublicClient;
+/* Same reason as the collector's, which had this and this one did not: viem's
+   four-second default poll and block-number cache are written for chains where
+   a block is minutes away, and Arc settles in under a second. */
+const client = createPublicClient({
+  chain,
+  transport: http(rpc),
+  pollingInterval: 250,
+  cacheTime: 250,
+}) as PublicClient;
 
 const asset = (process.env.CORDON_ATTEST_ASSET ?? ARC.erc20) as Address;
 const domain = await resolveDomain(client, asset, chainId);

@@ -49,6 +49,7 @@ export const MCP_ENV = {
     "CORDON_USDC": "the 6-decimal ERC-20 view; defaults to Arc's",
     "CORDON_NETWORKS": "CAIP-2 ids this daemon will settle on",
     "CORDON_ASSETS": "assets it will pay in",
-    "CORDON_PORT": "defaults to 8402"
+    "CORDON_PORT": "defaults to 8402",
+    "CORDON_POLL_MS": "receipt polling interval; defaults to 250, matched to Arc's finality rather than to viem's 4,000"
   }
 } as const;

@@ -128,6 +128,7 @@ export function Configuration() {
           [<C key="net">CORDON_NETWORKS</C>, "the networks this daemon will settle on"],
           [<C key="as">CORDON_ASSETS</C>, "the assets it will pay in"],
           [<C key="port">CORDON_PORT</C>, "8402"],
+          [<C key="poll">CORDON_POLL_MS</C>, "250, matched to Arc's finality rather than to viem's 4,000"],
         ]}
       />
       <Note tone="warn" title="Keys are named, never inlined">
@@ -179,6 +180,28 @@ export function Configuration() {
       </P>
     </>
   );
+}
+
+/**
+ * One scenario as rows, so both tables are the same shape.
+ *
+ * Read by index rather than by id: the run writes the scenarios in the order
+ * it ran them, and a lookup by name here would be a second copy of that order.
+ */
+function scenarioRows(index: number) {
+  const [cordon, shared] = EVAL.scenarios[index]!.conditions;
+  const both = [cordon!, shared!];
+  return [
+    ["Briefs completed", ...both.map((c) => `${c.completed} of ${c.runs}`)],
+    ["Spent", ...both.map((c) => formatUsdc(c.spent6))],
+    ["Taken by the loop", ...both.map((c) => formatUsdc(c.runaway6))],
+    [
+      "Refused by",
+      ...both.map((c) => (c.refusals === 0 ? "nothing" : `${c.refusals} · ${c.reasons.join(", ")}`)),
+    ],
+    ["Owner's money at risk before any work", ...both.map((c) => formatUsdc(c.exposureAtStart6))],
+    ["Transactions per purchase", ...both.map((c) => String(c.writesPerPurchase))],
+  ];
 }
 
 export function Gates() {
@@ -243,25 +266,20 @@ closest any strategy came: ${formatUsdc(SEARCH.closestToBudget6)} of ${formatUsd
       <P>
         One task — a brief citing {EVAL.sources} paid sources, split across a
         root and its two workers — run {EVAL.runs} times under Cordon and{" "}
-        {EVAL.runs} times under a plain shared cap. The acceptance criteria
-        were fixed before the first run: a brief counts as done only when every
-        source is cited with the body that seller actually served, and a
-        citation nobody paid for is counted separately, because a brief that
-        says the right things without having bought them is the failure worth
-        catching.
+        {EVAL.runs} times under a plain shared cap, twice over. The acceptance
+        criteria were fixed before the first run: a brief counts as done only
+        when every source is cited with the body that seller actually served,
+        and a citation nobody paid for is counted separately, because a brief
+        that says the right things without having bought them is the failure
+        worth catching. Both conditions are given the same authority — the{" "}
+        {formatUsdc(EVAL.window6, 0)} window the owner signed — so what differs
+        is only where that authority lives.
       </P>
+
+      <H3 id="nothing-goes-wrong">Nothing goes wrong</H3>
       <Table
         head={["", "Cordon", "A plain shared cap"]}
-        rows={[
-          ["Briefs completed", ...EVAL.conditions.map((c) => `${c.completed} of ${c.runs}`)],
-          ["Spent", ...EVAL.conditions.map((c) => formatUsdc(c.spent6))],
-          ["Refused", ...EVAL.conditions.map((c) => String(c.refusals))],
-          [
-            "Owner's money at risk before any work",
-            ...EVAL.conditions.map((c) => formatUsdc(c.exposureAtStart6)),
-          ],
-          ["Transactions per purchase", ...EVAL.conditions.map((c) => String(c.writesPerPurchase))],
-        ]}
+        rows={scenarioRows(0)}
       />
       <P>
         The comparison does not turn on the outcome of a purchase. Both
@@ -273,12 +291,34 @@ closest any strategy came: ${formatUsdc(SEARCH.closestToBudget6)} of ${formatUsd
         been evaluated. The fence costs a second transaction each time, and
         that is the whole of what it costs.
       </P>
-      <Note tone="info" title="The agent is scripted, and the run says so">
+
+      <H3 id="a-worker-in-a-loop">A worker in a loop</H3>
+      <P>
+        The same task, with each worker given half the window instead of all of
+        it, and one of them stuck: it does its own section and then keeps
+        buying the dearest thing it knows about. Not an attacker — a loop that
+        does not terminate, which is the failure agents actually have. The
+        question is whether the <i>other</i> worker&rsquo;s section still gets
+        done.
+      </P>
+      <Table
+        head={["", "Cordon", "A plain shared cap"]}
+        rows={scenarioRows(1)}
+      />
+      <P>
+        The shared cap is not a straw man and it did its job: it stopped the
+        spending at the total it was given. It has no way to say{" "}
+        <i>and no single worker may take all of it</i>, so the loop drank the
+        pool and the other worker&rsquo;s section was never bought. Under
+        Cordon the loop was refused by a bound on its own node, and the
+        sibling&rsquo;s half was still there when it asked.
+      </P>
+      <Note tone="info" title="The agents are scripted, and the run says so">
         A model would be more lifelike and would put its own variance between
         the fence and the result — across {EVAL.runs} runs a condition, that
         variance would be the finding. Latency is not measured either: a local
-        chain's confirmation time is not Arc's, and the first run's figures
-        were really the client's polling interval.
+        chain&rsquo;s confirmation time is not Arc&rsquo;s, and the first
+        run&rsquo;s figures were really the client&rsquo;s polling interval.
       </Note>
 
       <H2 id="the-drill">The hostile drill</H2>
