@@ -41,6 +41,8 @@ import {
 } from "@cordon/fixtures/preview";
 import { RecordShell } from "../parts/RecordShell";
 import { useEntrance } from "../parts/motion";
+import { useLiveAgent, type LiveConduct } from "../parts/meter";
+import { shortId, isAddress } from "@cordon/fixtures";
 
 const KIND: Record<
   RecordEntry["kind"],
@@ -62,9 +64,198 @@ const KIND: Record<
  */
 export default function AgentRecord() {
   const { id } = useParams();
+  /* The meter first: the ids in the registry are the chain's, and the demo
+     tree's are an illustration that still resolves beside them. */
+  const live = useLiveAgent(id);
   const nodes = flatten(TREE);
-  const node =
-    nodes.find((candidate) => String(candidate.agentId) === id) ?? nodes[0];
+  const node = nodes.find((candidate) => String(candidate.agentId) === id);
+
+  if (live.state === "live") return <LiveAgentRecord data={live.data} />;
+  if (live.state === "loading" && !node) return <ReadingRecord id={id} />;
+  /* Not `?? nodes[0]`. An unknown id used to render the first agent in the
+     tree as though it were the one asked for, which is the same defect the
+     refusal page names: a record URI that quietly shows a different subject is
+     worse than one that shows nothing. */
+  if (!node) return <NoSuchAgent id={id} />;
+  return <PreviewAgentRecord node={node} />;
+}
+
+function ReadingRecord({ id }: { id: string | undefined }) {
+  return (
+    <RecordShell>
+      <Container width="wide" className="stackpage">
+        <header className="public__head">
+          <Text variant="micro" tone="dim" as="p" className="eyebrow">
+            erc-8004 identity · token {id ?? "—"} · arc {ARC.chainId}
+          </Text>
+          <Headline lines={["Reading", "the record."]} />
+        </header>
+      </Container>
+    </RecordShell>
+  );
+}
+
+function NoSuchAgent({ id }: { id: string | undefined }) {
+  usePageMeta({
+    title: "No such agent · Cordon",
+    description: "This identity is not in the range the meter has indexed.",
+  });
+  return (
+    <RecordShell>
+      <Container width="wide" className="stackpage">
+        <header className="public__head">
+          <Text variant="micro" tone="dim" as="p" className="eyebrow">
+            erc-8004 identity · token {id ?? "—"} · arc {ARC.chainId}
+          </Text>
+          <Headline lines={["No agent", "with that identity."]} />
+          <Text variant="lead" tone="copy" as="p" className="public__lede">
+            Records resolve here by the identity their operator bound. This one
+            is not in the range the meter has indexed, so the honest answer is
+            nothing rather than the nearest agent — a record that shows a
+            different subject is worse than one that shows none.
+          </Text>
+          <Stack direction="row" gap="md" wrap>
+            <Link to="/agent/41827">A conduct record</Link>
+            <Link to="/">The argument</Link>
+          </Stack>
+        </header>
+      </Container>
+    </RecordShell>
+  );
+}
+
+/**
+ * The same page for an agent the meter has, printing what the chain carries.
+ *
+ * Fewer figures than the preview, and deliberately: concentration and depth are
+ * shaped by the demo tree, and the meter reduces events rather than modelling
+ * the contract's window arithmetic. What is here is counted from logs.
+ */
+function LiveAgentRecord({ data }: { data: LiveConduct }) {
+  const animate = useEntrance();
+  const rate = ((data.refusals / Math.max(data.draws, 1)) * 100).toFixed(3);
+
+  usePageMeta({
+    title: `Agent ${data.agentId} · conduct record · Cordon`,
+    description: `What agent ${data.agentId} drew, what the contract refused, and the transaction behind every entry.`,
+  });
+
+  const figures = [
+    { value: String(data.refusals), label: "refused by the contract" },
+    { value: data.draws.toLocaleString(), label: "draws authorised" },
+    { value: String(data.breaches), label: "refusals this node's own bound caused" },
+    { value: formatUsdc(BigInt(data.drawn6)), label: "drawn" },
+    { value: formatUsdc(BigInt(data.refused6)), label: "asked for and refused" },
+    {
+      value: `${Math.round(data.linkage * 100)}%`,
+      label: "refusals naming their transaction",
+    },
+  ];
+
+  return (
+    <RecordShell>
+      <Container width="wide" className="stackpage">
+        <header className="public__head">
+          <Text variant="micro" tone="dim" as="p" className="eyebrow">
+            erc-8004 identity · token {data.agentId} · arc {data.chainId}
+          </Text>
+          <Headline animate={animate} lines={["The RECORD", "read from chain"]} dotWord="RECORD" />
+          <Text variant="lead" tone="copy" as="p" className="public__lede">
+            Not a review. Nobody typed it. Every figure below was counted from
+            events the contract emitted, and every refusal names the
+            transaction it happened in.
+          </Text>
+          <Stack direction="row" gap="md" wrap>
+            <Tag tone="positive" size="sm" dot>
+              read from the chain
+            </Tag>
+            <Text variant="micro" tone="dim" as="span">
+              node <span className="mono">{shortId(data.node)}</span> · blocks{" "}
+              {data.fromBlock}–{data.toBlock}
+            </Text>
+          </Stack>
+        </header>
+
+        <Section title={`breach rate ${rate}%`}>
+          <Grid columns={3} min={220} gap="md">
+            {figures.map((row) => (
+              <Card key={row.label}>
+                <CardBody>
+                  <div className="figure">
+                    <span className="figure__value num">{row.value}</span>
+                    <span className="figure__label">{row.label}</span>
+                  </div>
+                </CardBody>
+              </Card>
+            ))}
+          </Grid>
+        </Section>
+
+        <Section
+          title="the ledger"
+          aside={
+            <Text variant="micro" tone="dim" as="span">
+              {data.lifetime.complete ? "" : "partial range · "}
+              {formatUsdc(BigInt(data.lifetime.spent6))} drawn for the life of this mandate
+            </Text>
+          }
+        >
+          {data.rows.length === 0 ? (
+            <Text variant="body" tone="copy" as="p">
+              Nothing has been refused at this node in the range the meter has
+              read. That is a fact about the range as much as about the agent.
+            </Text>
+          ) : (
+            <DataTable
+              rows={data.rows}
+              rowKey={(row) => row.id}
+              columns={[
+                {
+                  id: "id",
+                  header: "Refusal",
+                  cell: (row) => (
+                    <Link to={`/refusal/${row.id}`} className="mono">
+                      {row.id}
+                    </Link>
+                  ),
+                },
+                { id: "reason", header: "Bound", cell: (row) => row.reason },
+                {
+                  id: "amount",
+                  header: "Asked for",
+                  numeric: true,
+                  cell: (row) => formatUsdc(BigInt(row.amount6)),
+                },
+                {
+                  id: "payee",
+                  header: "Recipient",
+                  cell: (row) => (
+                    <span className="mono">
+                      {isAddress(row.counterparty)
+                        ? `${row.counterparty.slice(0, 10)}…${row.counterparty.slice(-4)}`
+                        : row.counterparty}
+                    </span>
+                  ),
+                },
+                {
+                  id: "tx",
+                  header: "Transaction",
+                  cell: (row) => (
+                    <a href={txUrl(row.site.transactionHash)} target="_blank" rel="noreferrer" className="mono">
+                      {shortTx(row.site.transactionHash)}
+                    </a>
+                  ),
+                },
+              ]}
+            />
+          )}
+        </Section>
+      </Container>
+    </RecordShell>
+  );
+}
+
+function PreviewAgentRecord({ node }: { node: ReturnType<typeof flatten>[number] }) {
   usePageMeta({
     title: `Agent ${node.agentId} · conduct record · Cordon`,
     description: `What ${node.label} asked for, what its mandate allowed, and which draws the contract refused. Every entry names the transaction that produced it.`,

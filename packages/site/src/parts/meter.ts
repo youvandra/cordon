@@ -12,10 +12,6 @@
  * labelled preview. Set, a live row wins and a preview id still resolves, so
  * the demo tree keeps working beside real ones.
  *
- * Only refusals are read here so far. `/agent/:id` still renders fixtures,
- * and a half-wired second reader would be a page that is live on some fields
- * and preview on others with nothing on screen saying which.
- *
  * What this deliberately does not do is compute headroom. The meter reduces
  * events; the window arithmetic that produces headroom lives in the contract,
  * and an indexer that models it is a second implementation that can disagree
@@ -49,6 +45,23 @@ export interface LiveRefusal extends Range {
   site: LiveSite;
   released: boolean | null;
   attested: boolean | null;
+}
+
+/** What `/agent/:id` answers: a node's conduct, by ERC-8004 identity. */
+export interface LiveConduct extends Range {
+  node: string;
+  agentId: string | null;
+  lifetime: { spent6: string; cap6: string; complete: boolean };
+  draws: number;
+  refusals: number;
+  /** Refusals where this node's own bound stopped a descendant's draw. */
+  breaches: number;
+  drawn6: string;
+  refused6: string;
+  attested: number;
+  /** The share of this node's refusals that name their transaction. */
+  linkage: number;
+  rows: LiveRefusal[];
 }
 
 export type Loaded<T> =
@@ -102,4 +115,9 @@ function useMeter<T>(path: string | null): Loaded<T> {
 /** A refusal by the decimal id the chain writes into the record. */
 export function useLiveRefusal(id: string | undefined): Loaded<LiveRefusal> {
   return useMeter<LiveRefusal>(id && /^\d+$/.test(id) ? `/refusal/${id}` : null);
+}
+
+/** A node's conduct by its ERC-8004 identity, which is how records address it. */
+export function useLiveAgent(id: string | undefined): Loaded<LiveConduct> {
+  return useMeter<LiveConduct>(id && /^\d+$/.test(id) ? `/agent/${id}` : null);
 }

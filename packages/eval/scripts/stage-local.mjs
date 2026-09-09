@@ -16,6 +16,7 @@
  * Ctrl-C takes the chain with it.
  */
 import { writeFileSync } from "node:fs";
+import { parseAbi } from "viem";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startWorld } from "../src/world.ts";
@@ -51,6 +52,31 @@ writeFileSync(
     2,
   )}\n`,
 );
+
+/* An identity per worker, bound to its node, so `/agent/:id` has something to
+   resolve. `ConductRecord.bind` checks that the identity's holder is the
+   node's operator, so each one is registered from the operator's own key —
+   which is the check being exercised, not worked around. */
+const IDENTITY = parseAbi(["function register(string agentURI) returns (uint256)"]);
+const RECORD = parseAbi(["function bind(bytes32 node, uint256 agentId)"]);
+
+for (const which of ["left", "right"]) {
+  const worker = world.tree.workers[which];
+  const asOperator = world.walletFor(worker.key);
+  const registered = await asOperator.writeContract({
+    address: world.identity, abi: IDENTITY, functionName: "register",
+    args: [`https://getcordon.xyz/agent/${which}`],
+  });
+  const receipt = await world.publicClient.waitForTransactionReceipt({ hash: registered });
+  const agentId = BigInt(receipt.logs[0].topics[1]);
+
+  const bound = await world.asOwner.writeContract({
+    address: world.record, abi: RECORD, functionName: "bind",
+    args: [worker.node, agentId],
+  });
+  await world.publicClient.waitForTransactionReceipt({ hash: bound });
+  console.log(`bound   ${which.padEnd(10)} agent ${agentId}`);
+}
 
 const sellers = await startSellers({
   window6: world.window6, usdc: world.usdc, network: "eip155:31337",
