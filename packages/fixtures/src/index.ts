@@ -398,6 +398,7 @@ const GATE_DEFINITIONS = [
   { id: "G4", name: "bounded search", ends: "thousands of strategies scored by the contract, none passes a bound" },
   { id: "G5", name: "the refusal survives us", ends: "no admin key, no proxy, reversal fails as the deployer" },
   { id: "G6", name: "the record cannot be forged", ends: "every record names its draw transaction; nobody else can write one" },
+  { id: "G7", name: "the work still gets done", ends: "one task, two conditions, three runs each, and the brief completes under the fence" },
 ] as const;
 
 /**
@@ -438,6 +439,18 @@ export type { SearchRun } from "./search.gen.ts";
 
 /** Did any strategy get past a bound? The answer must be no. */
 export const SEARCH_CLEAN = SEARCH.passedABound === 0;
+
+/**
+ * G7 has been run, and these are its numbers — written by the run itself into
+ * `eval.gen.ts`, never typed.
+ *
+ * Every other gate measures whether Cordon refuses. This one measures whether
+ * an agent under it can still finish a job, and it is the gate allowed to come
+ * out against the product: a `the-fence-blocks-the-work` verdict is a real
+ * result and renders as one.
+ */
+export { EVAL } from "./eval.gen.ts";
+export type { EvalRunRecord, EvalCondition } from "./eval.gen.ts";
 
 /* ------------------------------------------------------------------ */
 /* Demo illustration — the counterfactual from the plan                */
