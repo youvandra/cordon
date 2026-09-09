@@ -1,25 +1,54 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { MANDATE } from "@cordon/fixtures";
+import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
+import { defineChain } from "viem";
+import { ARC, MANDATE } from "@cordon/fixtures";
 
 /**
- * The wallet gate, and it is a mock.
+ * The wallet gate.
  *
  * Creating a mandate and releasing a refusal both need a signature from the
- * owner's own key. Neither our server nor the agent can produce one, and
- * neither can this preview — so the gate is real as an argument and fake as an
- * implementation, and every surface that depends on it says so out loud.
+ * owner's own key. Neither our server nor the agent can produce one, and that
+ * is the argument this gate exists to make.
+ *
+ * With `VITE_PRIVY_APP_ID` set the gate is real: Privy holds the key, the
+ * owner logs in, and the address on screen is one that can sign on Arc.
+ * Without it the gate is the mock it has always been, and every surface that
+ * depends on it says so out loud — a preview that claims a signature nobody
+ * made is worse than one that admits it is a drawing.
+ *
+ * Privy holds the key; Cordon holds the bound. They answer different
+ * questions — who may sign, and what may be signed for — and neither
+ * substitutes for the other. A policy in the service that holds a key is an
+ * off-chain control, which is `declared` in this project's vocabulary, and it
+ * is not what makes a refusal a refusal.
  */
+const APP_ID: string | undefined =
+  (import.meta.env.VITE_PRIVY_APP_ID as string | undefined) || undefined;
+
+/* Arc is nobody's default chain, so it is declared here from the same fixture
+   every other surface reads. */
+const arc = defineChain({
+  id: ARC.chainId,
+  name: ARC.name,
+  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: ARC.nativeDecimals },
+  rpcUrls: { default: { http: [ARC.rpc] } },
+  blockExplorers: { default: { name: "arcscan", url: ARC.explorer } },
+});
+
 interface WalletState {
   address: string | null;
   connect: () => void;
   disconnect: () => void;
+  /** Whether the address above can actually sign, or is a drawing of one. */
+  real: boolean;
 }
 
 const WalletContext = createContext<WalletState>({
   address: null,
   connect: () => {},
   disconnect: () => {},
+  real: false,
 });
 
 export const useWallet = () => useContext(WalletContext);
@@ -36,12 +65,13 @@ function read(): string | null {
   }
 }
 
-export function WalletProvider({ children }: { children: ReactNode }) {
+function MockWallet({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(read);
 
   const value = useMemo<WalletState>(
     () => ({
       address,
+      real: false,
       connect: () => {
         try {
           sessionStorage.setItem(KEY, MANDATE.owner);
@@ -62,7 +92,46 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [address],
   );
 
+  return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
+}
+
+/** Privy's session, in the shape the rest of the console already reads. */
+function PrivyWallet({ children }: { children: ReactNode }) {
+  const { ready, authenticated, user, login, logout } = usePrivy();
+
+  const value = useMemo<WalletState>(
+    () => ({
+      /* `ready` gates the address rather than the gate itself: showing a
+         connected address before Privy has finished reading its own session
+         is the same lie as showing a figure before the run that produced it. */
+      address: ready && authenticated ? (user?.wallet?.address ?? null) : null,
+      real: true,
+      connect: () => login(),
+      disconnect: () => {
+        void logout();
+      },
+    }),
+    [ready, authenticated, user, login, logout],
+  );
+
+  return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
+}
+
+export function WalletProvider({ children }: { children: ReactNode }) {
+  if (!APP_ID) return <MockWallet>{children}</MockWallet>;
+
   return (
-    <WalletContext.Provider value={value}>{children}</WalletContext.Provider>
+    <PrivyProvider
+      appId={APP_ID}
+      config={{
+        /* An owner who logs in with an email has no wallet yet, and the
+           mandate needs one. */
+        embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" } },
+        defaultChain: arc,
+        supportedChains: [arc],
+      }}
+    >
+      <PrivyWallet>{children}</PrivyWallet>
+    </PrivyProvider>
   );
 }

@@ -8,6 +8,8 @@
 interface ImportMetaEnv {
   readonly VITE_CONSOLE_URL?: string;
   readonly VITE_SITE_URL?: string;
+  /** Privy app id. Unset means the wallet gate is the mock it started as. */
+  readonly VITE_PRIVY_APP_ID?: string;
 }
 
 interface ImportMeta {

@@ -64,7 +64,7 @@ export function ConsoleShell() {
   useTitle("Console · Cordon");
   /* The owner surface is not a page anyone should reach from a search result. */
   useNoIndex(true);
-  const { address, connect, disconnect } = useWallet();
+  const { address, connect, disconnect, real } = useWallet();
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
@@ -102,8 +102,13 @@ export function ConsoleShell() {
               </a>
             </div>
             <div className="gate__foot">
-              <Tag tone="caution" size="sm" dot>
-                preview build, no wallet is touched
+              {/* The gate has always been the argument. Whether it is also an
+                  implementation depends on a key being behind it, and saying
+                  so either way is the whole point of the badge. */}
+              <Tag tone={real ? "positive" : "caution"} size="sm" dot>
+                {real
+                  ? `a real wallet, on ${ARC.name}`
+                  : "preview build, no wallet is touched"}
               </Tag>
             </div>
           </Surface>
