@@ -177,8 +177,9 @@ export function DrawsAndBounds() {
       <P>
         Six numbers appear on these surfaces. Exactly one of them is a balance,
         and no two of them may be added together or subtracted from each other
-        to get a third. The names below are the ones every surface uses, and
-        each is read from the chain rather than kept anywhere.
+        to get a third. Each is read from the chain rather than kept
+        anywhere, and the view it comes off is named beside it — a surface
+        that words one of them differently is still reading the same call.
       </P>
       <Table
         head={["figure", "what it is", "read from"]}
