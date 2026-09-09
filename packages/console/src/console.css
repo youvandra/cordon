@@ -717,3 +717,24 @@ body {
 .cell__cp[data-strength="declared"] {
   color: var(--cordon-caution);
 }
+
+/* The explanation folded behind a label, rather than two lines of prose under
+   every field. The button is the size of the text beside it, not a target the
+   eye lands on first. */
+.ask { display: inline-flex; align-items: center; gap: 6px; }
+.ask__more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--cordon-copy-dim);
+  cursor: help;
+  transition: color 0.16s var(--cordon-ease-settle);
+}
+.ask__more:hover, .ask__more:focus-visible { color: var(--cordon-ink); }
+.ask__more svg { width: 14px; height: 14px; }

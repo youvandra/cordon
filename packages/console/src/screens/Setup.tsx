@@ -9,12 +9,15 @@ import {
   Enforced,
   Field,
   Grid,
+  Icon,
   MetricCard,
   Modal,
   Select,
   Stack,
+  StepProgress,
   Text,
   TextField,
+  Tooltip,
   useToast,
 } from "cordon-ui";
 import { ARC, ENFORCED_BY, MANDATE, isAddress } from "@cordon/fixtures";
@@ -43,10 +46,34 @@ const WINDOWS = [
   { value: "604800", label: "7 days" },
 ];
 
+/**
+ * A label with the explanation folded behind it.
+ *
+ * Every field used to carry two lines of prose underneath, which turned a form
+ * of six questions into an essay and pushed the thing being asked off the
+ * screen. The explanation is still one keystroke away and is still read by a
+ * screen reader — it is just no longer in the way of the answer.
+ */
+function Ask({ label, help }: { label: string; help: string }) {
+  return (
+    <span className="ask">
+      {label}
+      <Tooltip content={help}>
+        <button type="button" className="ask__more" aria-label={`What is ${label}?`}>
+          <Icon name="info" />
+        </button>
+      </Tooltip>
+    </span>
+  );
+}
+
+type Stage = "intro" | "asking" | "review" | "done";
+
 export default function Setup() {
   useTitle("Setup · Cordon console");
   const animate = useEntrance();
   const navigate = useNavigate();
+  const { notify } = useToast();
 
   const [budget, setBudget] = useState(String(MANDATE.budget6 / 1_000_000n));
   const [windowS, setWindowS] = useState(String(MANDATE.windowSeconds));
@@ -56,46 +83,147 @@ export default function Setup() {
     String(MANDATE.concentrationBoundPct),
   );
   const [lifetime, setLifetime] = useState(String(MANDATE.lifetimeCap6 / 1_000_000n));
-  const [signed, setSigned] = useState(false);
-  /* The root's operator, and it is not the owner. The owner signs the mandate
-     and then never touches it again; the operator is the daemon key that
-     submits every draw. Defaulting this to the connected address would open a
-     mandate no daemon can act for, and the mistake would only surface at the
-     first purchase. */
-  /* `cordon init` prints a link with the root operator already in it, because
-     the alternative is copying a 42-character string into the right field and
-     that is where people paste the wrong thing. Only ever a default: the field
-     stays editable, and a link cannot sign anything. */
-  const { notify } = useToast();
-  /* A modal for this and not a toast, because the two are for opposite things:
-     a toast reports what already happened, and this is the last moment before
-     something that cannot be undone. A mandate's operator is fixed at `open`
-     and the money is real. */
-  const [confirming, setConfirming] = useState(false);
+
+  /* `cordon init` prints a link with the operator already in it, because the
+     alternative is copying a 42-character string into the right field and that
+     is where people paste the wrong thing. Only ever a default. */
   const [params] = useSearchParams();
   const suggested = params.get("operator") ?? "";
   const [operator, setOperator] = useState(isAddress(suggested) ? suggested : "");
 
-  /* Real only when there is a key behind the gate and a registry to send to.
-     Either missing and this screen stays the drawing it has always been —
-     which it says on itself, rather than looking like it did something. */
+  /**
+   * One question at a time until it is signed, then the whole thing at once and
+   * unchangeable — because that is what a mandate is. A form that stays
+   * editable after signing suggests an edit the contract has no function for.
+   */
+  const [stage, setStage] = useState<Stage>("intro");
+  const [at, setAt] = useState(0);
+  const [confirming, setConfirming] = useState(false);
+
   const { address, real } = useWallet();
   const { state, open } = useOpenMandate(address);
   const live = real && Boolean(REGISTRY) && Boolean(address);
-  /* An address that is not one is the commonest way to open a mandate nobody
-     can use, and the contract rejects the zero address but not a typo. The
-     amounts are checked here too: the contract refuses a zero budget and a
-     zero lifetime cap, and finding that out costs a transaction. */
-  const ready =
-    live &&
-    isAddress(operator) &&
-    usdc6(budget) > 0n &&
-    usdc6(lifetime) > 0n &&
-    usdc6(tranche) > 0n;
+
+  const questions = [
+    {
+      label: "How much may the whole tree spend?",
+      complete: usdc6(budget) > 0n,
+      field: (
+        <Stack direction="row" gap="md" wrap>
+          <Field
+            label={<Ask label="Budget" help="What every agent under this mandate may draw between them, per window. Not a balance — a limit the contract checks on every purchase." />}
+          >
+            <TextField
+              type="number"
+              value={budget}
+              suffix="USDC"
+              disabled={stage === "done"}
+              onChange={(event) => setBudget(event.target.value)}
+            />
+          </Field>
+          <Field
+            label={<Ask label="Window" help="How often the budget refills. It rolls in whole steps, and a child's window must be the same length as its parent's." />}
+          >
+            <Select
+              value={windowS}
+              options={WINDOWS}
+              disabled={stage === "done"}
+              onValueChange={setWindowS}
+            />
+          </Field>
+        </Stack>
+      ),
+    },
+    {
+      label: "And how much in total, ever?",
+      complete: usdc6(lifetime) > 0n,
+      field: (
+        <Field
+          label={<Ask label="Lifetime cap" help="The window refills; this never does. Without it a budget is a rate, and a tree left running for a week authorises seven windows of it." />}
+        >
+          <TextField
+            type="number"
+            value={lifetime}
+            suffix="USDC"
+            disabled={stage === "done"}
+            onChange={(event) => setLifetime(event.target.value)}
+          />
+        </Field>
+      ),
+    },
+    {
+      label: "What is the most one purchase may cost?",
+      complete: usdc6(tranche) > 0n,
+      field: (
+        <Field
+          label={<Ask label="Tranche cap" help="No single draw may exceed this. It is what stops one plausible-looking call from costing two hundred dollars." />}
+        >
+          <TextField
+            type="number"
+            value={tranche}
+            suffix="USDC"
+            disabled={stage === "done"}
+            onChange={(event) => setTranche(event.target.value)}
+          />
+        </Field>
+      ),
+    },
+    {
+      label: "How much may go to any one seller?",
+      complete: Number(concentration) > 0 && Number(concentration) <= 100,
+      field: (
+        <Field
+          label={<Ask label="Concentration" help="A share of one window to a single payee. It catches ten thousand small purchases from the same seller, each comfortably under the tranche cap. The payee is the one the daemon declares, so this bound is declared rather than proven." />}
+        >
+          <TextField
+            type="number"
+            value={concentration}
+            suffix="%"
+            disabled={stage === "done"}
+            onChange={(event) => setConcentration(event.target.value)}
+          />
+        </Field>
+      ),
+    },
+    {
+      label: "How deep may the tree go?",
+      complete: Number(depth) > 0,
+      field: (
+        <Field
+          label={<Ask label="Maximum depth" help="How many times an agent may spawn an agent. Every child is narrower than its parent, so depth costs nothing in authority — it bounds how far a mistake can be delegated." />}
+        >
+          <TextField
+            type="number"
+            value={depth}
+            disabled={stage === "done"}
+            onChange={(event) => setDepth(event.target.value)}
+          />
+        </Field>
+      ),
+    },
+    {
+      label: "Which key does the spending?",
+      complete: isAddress(operator),
+      field: (
+        <Field
+          label={<Ask label="Operator address" help="The address that does the spending — made by `cordon init` and held by the daemon. Not your wallet, and not the agent's: you sign the limit, this spends inside it." />}
+        >
+          <TextField
+            value={operator}
+            placeholder="0x…"
+            disabled={stage === "done"}
+            onChange={(event) => setOperator(event.target.value)}
+          />
+        </Field>
+      ),
+    },
+  ];
+
+  const ready = live && questions.every((question) => question.complete);
 
   const sign = () => {
     if (!live) {
-      setSigned(true);
+      setStage("done");
       notify({
         tone: "info",
         title: "Preview only",
@@ -125,10 +253,9 @@ export default function Setup() {
     });
   };
 
-  /* The transaction reports itself. Each state raises its toast once, keyed by
-     the state, so a re-render cannot stack three copies of the same sentence —
-     and a failure stays until it is dismissed, because an error that vanishes
-     while you are reading the field it is about is worse than none. */
+  /* The transaction reports itself, and the screen stops asking once it is
+     open. Each state raises its toast once, keyed by the state, so a
+     re-render cannot stack three copies of one sentence. */
   useEffect(() => {
     if (state.status === "sent") {
       notify({
@@ -140,6 +267,7 @@ export default function Setup() {
       });
     }
     if (state.status === "open") {
+      setStage("done");
       notify({
         id: `open-${state.hash}`,
         tone: "positive",
@@ -156,13 +284,13 @@ export default function Setup() {
       });
     }
     if (state.status === "failed") {
+      /* Back to the last question rather than stranded on a review of numbers
+         that were refused. */
+      setStage("review");
       notify({ id: "failed", tone: "critical", title: "Not signed", children: state.why, duration: 0 });
     }
   }, [state, notify]);
 
-  /* One card, rendered before the signature as a preview and after it as the
-     result. Written twice it drifts, and a preview that disagrees with the
-     thing it previewed is the worst version of this screen. */
   const commitment = (
     <MetricCard
       animate={animate}
@@ -178,13 +306,9 @@ export default function Setup() {
       progress={Math.min(1, Number(tranche) / Math.max(1, Number(budget)))}
       caption={
         <>
-          per {Number(windowS).toLocaleString()}s
+          {tranche || "0"} USDC at most in one purchase
           <br />
-          across the whole tree
-          <br />
-          {/* The window is a rate. Without the total beside it, a reader
-              signing $20 a day believes they have signed $20. */}
-          ${lifetime || "0"} in total, and it never resets
+          {lifetime || "0"} USDC for the life of this mandate
         </>
       }
       glaze="violet"
@@ -194,238 +318,174 @@ export default function Setup() {
   return (
     <>
       <ScreenHead
-        title="Sign one mandate. Fund the vault once."
+        title={stage === "done" ? "One mandate, signed." : "Sign one mandate. Fund the vault once."}
         lede="Children are created by their parent, in seconds, while you sleep. The contract refuses a child wider than its parent, so no per-spawn approval is needed, and none would be safe to ask for."
-        note={live ? `signs on ${ARC.name}, from your own key` : "nothing is signed or sent"}
+        note={
+          stage === "done"
+            ? "signed — a mandate cannot be edited"
+            : live
+              ? `signs on ${ARC.name}, from your own key`
+              : "nothing is signed or sent"
+        }
       />
 
       <Grid columns={2} min={340} gap="lg" align="start">
-        {/* Controls are wells pressed into paper; the card is the paper. */}
         <Card>
           <CardHeader>
-            <Stack
-              direction="row"
-              justify="between"
-              align="baseline"
-              gap="md"
-              wrap
-            >
-              <Text variant="micro" tone="dim" as="span" className="eyebrow">
-                the mandate
-              </Text>
-            </Stack>
+            <Text variant="micro" tone="dim" as="span" className="eyebrow">
+              {stage === "done" ? "what was signed" : `question ${at + 1} of ${questions.length}`}
+            </Text>
           </CardHeader>
           <CardBody>
-            <Stack direction="column" gap="lg">
-              <Field
-                label="Root budget · per window"
-                hint={`${ENFORCED_BY.budget} · USDC, 6 dp view`}
-              >
-                <TextField
-                  type="number"
-                  value={budget}
-                  prefix="$"
-                  onChange={(event) => setBudget(event.target.value)}
+            {stage === "done" ? (
+              /* Every field at once and none of them editable. `Params` is set
+                 at `open` and the registry has no function that changes one, so
+                 an enabled input here would offer an edit nothing can perform. */
+              <Stack direction="column" gap="lg">
+                {questions.map((question) => (
+                  <div key={question.label}>{question.field}</div>
+                ))}
+              </Stack>
+            ) : (
+              <Stack direction="column" gap="lg">
+                <StepProgress
+                  steps={questions.map((_, index) => ({ label: `${index + 1}` }))}
+                  current={stage === "review" ? questions.length - 1 : at}
                 />
-              </Field>
 
-              <Field
-                label="Lifetime cap · total"
-                hint={`${ENFORCED_BY.lifetime} · the whole mandate, and it never resets`}
-              >
-                <TextField
-                  type="number"
-                  value={lifetime}
-                  prefix="$"
-                  onChange={(event) => setLifetime(event.target.value)}
-                />
-              </Field>
+                {stage === "review" ? (
+                  <Stack direction="column" gap="md" align="start">
+                    <Text variant="lead" tone="ink" as="p">
+                      One signature, and it cannot be edited afterwards.
+                    </Text>
+                    <Text variant="body" tone="copy" as="p">
+                      {budget || "0"} USDC per {WINDOWS.find((w) => w.value === windowS)?.label},{" "}
+                      {lifetime || "0"} USDC in total, at most {tranche || "0"} USDC in one
+                      purchase, no more than {concentration || "0"}% of a window to one seller,
+                      {" "}
+                      {depth || "0"} levels deep.
+                    </Text>
+                    <Text variant="body" tone="copy" as="p">
+                      Spent by <span className="mono">{operator || "—"}</span>.
+                    </Text>
+                  </Stack>
+                ) : (
+                  <Stack direction="column" gap="md" align="start">
+                    <Text variant="lead" tone="ink" as="p">
+                      {questions[at]!.label}
+                    </Text>
+                    {questions[at]!.field}
+                  </Stack>
+                )}
 
-              <Field
-                label="Window"
-                hint="the same at every depth. A shorter child window resets faster than the parent it charges"
-              >
-                <Select
-                  options={WINDOWS}
-                  value={windowS}
-                  onValueChange={setWindowS}
-                />
-              </Field>
+                <Stack direction="row" gap="sm">
+                  {at > 0 || stage === "review" ? (
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (stage === "review") {
+                          setStage("asking");
+                          setAt(questions.length - 1);
+                        } else setAt(at - 1);
+                      }}
+                    >
+                      Back
+                    </Button>
+                  ) : null}
 
-              <Field label="Maximum depth" hint={ENFORCED_BY.depth}>
-                <TextField
-                  type="number"
-                  value={depth}
-                  onChange={(event) => setDepth(event.target.value)}
-                />
-              </Field>
-
-              <Field
-                label="Tranche cap"
-                hint={`${ENFORCED_BY.tranche} · bounded below by settlement cost`}
-              >
-                <TextField
-                  type="number"
-                  value={tranche}
-                  prefix="$"
-                  onChange={(event) => setTranche(event.target.value)}
-                />
-              </Field>
-
-              {/* The contract's own word, because the env vars, the docs, the
-                  meter and `Params.operator` all use it — a friendlier label
-                  here would be a second name for one thing, which is the defect
-                  this repository keeps paying for. The plain words belong in
-                  the hint. It is never "agent address": the agent holds no key
-                  at all, and a field claiming otherwise contradicts the product
-                  on the product's own screen. */}
-              <Field
-                label="Operator address"
-                hint="the address that does the spending — made by `cordon init` and held by the daemon. Not your wallet, and not the agent's: you sign the limit, this spends inside it"
-              >
-                <TextField
-                  value={operator}
-                  placeholder="0x…"
-                  onChange={(event) => setOperator(event.target.value)}
-                />
-              </Field>
-
-              <Field
-                label="Counterparty concentration bound"
-                hint={`${ENFORCED_BY.concentration} · percent of one window to a single declared payTo`}
-              >
-                <TextField
-                  type="number"
-                  value={concentration}
-                  suffix="%"
-                  onChange={(event) => setConcentration(event.target.value)}
-                />
-              </Field>
-
-              <Cta
-                magnetic
-                hint={
-                  live
-                    ? "a transaction on Arc, from the owner's own key"
-                    : "preview — nothing is signed or sent"
-                }
-                onClick={sign}
-                disabled={live && !ready}
-              >
-                {state.status === "signing" ? "Waiting for your signature…" : "Sign mandate"}
-              </Cta>
-
-              {live && !ready ? (
-                <Text variant="micro" tone="dim" as="p">
-                  {isAddress(operator)
-                    ? "a budget, a lifetime cap and a tranche cap all have to be more than zero"
-                    : "an operator address is needed before this can be signed"}
-                </Text>
-              ) : null}
-
-            </Stack>
+                  {stage === "review" ? (
+                    <Cta
+                      magnetic
+                      hint={live ? "a transaction on Arc, from your own key" : "preview — nothing is signed or sent"}
+                      onClick={sign}
+                      disabled={live && !ready}
+                    >
+                      {state.status === "signing" ? "Waiting for your signature…" : "Sign mandate"}
+                    </Cta>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      disabled={!questions[at]!.complete}
+                      onClick={() => {
+                        if (at === questions.length - 1) setStage("review");
+                        else setAt(at + 1);
+                      }}
+                    >
+                      Next
+                    </Button>
+                  )}
+                </Stack>
+              </Stack>
+            )}
           </CardBody>
         </Card>
 
         <Stack direction="column" gap="lg">
-          {/* What leads this column depends on where the reader is in the task.
-              Before signing, the most useful thing is a preview of what the
-              signature commits. After, it is the result — at the top, because
-              that is where the eye already is, and hunting for the outcome of
-              your own click is the commonest way to lose someone. */}
-          {signed ? null : (
-            <>
-<Text variant="micro" tone="dim" as="h2" id="the-commitment" className="eyebrow visually-hidden">
-              What the signature commits
-            </Text>
-            {commitment}
-            </>
-          )}
-
-          {signed ? (
+          {stage === "done" ? (
             <Card>
               <CardHeader>
-                <Stack
-                  direction="row"
-                  justify="between"
-                  align="baseline"
-                  gap="md"
-                  wrap
-                >
-                  <Text
-                    variant="micro"
-                    tone="dim"
-                    as="span"
-                    className="eyebrow"
-                  >
-                    signed · hand this to the agent runtime
-                  </Text>
-                </Stack>
+                <Text variant="micro" tone="dim" as="span" className="eyebrow">
+                  what can still change
+                </Text>
               </CardHeader>
               <CardBody>
-                {/* Pasted, this has to either work or read as a blank. A
-                    truncated sentence where the id goes is neither. */}
-                <pre className="code mono">{`export CORDON_MANDATE=${
-                  isAddress(MANDATE.id) ? `${MANDATE.id.slice(0, 14)}…` : "<the mandate you signed>"
-                }
-export CORDON_CHAIN=arc
-
-npx -y @cordon/mcp                        # MCP
-export HTTP_PROXY=http://localhost:8403   # anything else`}</pre>
-                <Stack direction="row" gap="sm" align="center" wrap>
-                  <Cta
-                    magnetic
-                    hint="the agent receives no key"
-                    onClick={() => navigate("/console/tree")}
-                  >
-                    Go to the tree
-                  </Cta>
+                <Stack direction="column" gap="md" align="start">
+                  {/* Deliberately not "update mandate". `Params` is fixed at
+                      `open` and the registry has no setter — a button offering
+                      an edit would promise something the contract refuses, which
+                      is the defect this project exists to avoid. These two are
+                      what the contract actually does. */}
+                  <Text variant="body" tone="copy" as="p">
+                    A mandate cannot be edited. What it can do is narrow: a
+                    parent spawns a child inside its own bounds, and the owner
+                    can cut any branch at any time.
+                  </Text>
+                  <Stack direction="row" gap="sm" wrap>
+                    <Button variant="primary" onClick={() => navigate("/console/tree")}>
+                      Open the tree
+                    </Button>
+                    <Button variant="secondary" onClick={() => navigate("/console/tree")}>
+                      Revoke a branch
+                    </Button>
+                  </Stack>
+                  <Text variant="micro" tone="dim" as="p">
+                    Children are spawned by their parent through{" "}
+                    <span className="mono">cordon_spawn</span>, not from here — a
+                    signature per child is the approval no owner could safely give.
+                  </Text>
                 </Stack>
               </CardBody>
             </Card>
-          ) : (
-            <Card>
-              <CardBody>
-                <Stack direction="column" gap="md">
-                  <div>
-                    <Text variant="micro" tone="dim" as="p" className="eyebrow">
-                      the vault
-                    </Text>
-                    <Text variant="body" tone="copy" as="p">
-                      The only funding source. Every agent key holds zero
-                      balance and zero allowance beyond its current tranche.
-                    </Text>
-                    <span className="mono kv__break dim">{MANDATE.vault}</span>
-                  </div>
-                  <div>
-                    <Text variant="micro" tone="dim" as="p" className="eyebrow">
-                      no supervisor
-                    </Text>
-                    <Text variant="body" tone="copy" as="p">
-                      No admin key, no proxy. A refusal must survive its
-                      authors.
-                    </Text>
-                  </div>
-                </Stack>
-                <Enforced>the vault is the only funding source</Enforced>
-              </CardBody>
-            </Card>
-          )}
-
-          {signed ? (
-            <>
-<Text variant="micro" tone="dim" as="h2" id="the-commitment-signed" className="eyebrow visually-hidden">
-              What was signed
-            </Text>
-            {commitment}
-            </>
           ) : null}
+
+          <Text variant="micro" tone="dim" as="h2" id="the-commitment" className="eyebrow visually-hidden">
+            What the signature commits
+          </Text>
+          {commitment}
+          <Enforced>{ENFORCED_BY.budget}</Enforced>
         </Stack>
       </Grid>
 
-      {/* The last moment before something that cannot be undone. The scrim
-          does not dismiss it and there is no corner close: a decision this
-          screen exists to make should be made, not dodged. */}
+      {/* Arriving with nothing signed, the first thing a reader meets is the
+          question the screen exists to ask — not six fields at once. */}
+      <Modal
+        open={stage === "intro"}
+        onClose={() => setStage("asking")}
+        title="Set up one mandate"
+        description="Six questions. Then one signature, from your own wallet, and the tree can start spending inside it."
+        footer={
+          <Button variant="primary" onClick={() => setStage("asking")}>
+            Start
+          </Button>
+        }
+      >
+        <Text variant="body" tone="copy" as="p">
+          You are signing a limit, not a payment. The money stays in the vault
+          until an agent asks for a purchase the contract allows.
+        </Text>
+      </Modal>
+
+      {/* The last moment before something that cannot be undone. */}
       <Modal
         open={confirming}
         onClose={() => setConfirming(false)}
