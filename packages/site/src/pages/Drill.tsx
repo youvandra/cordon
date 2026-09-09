@@ -99,9 +99,10 @@ export default function PublicDrill() {
               {SEARCH.draws.toLocaleString()} draws, {SEARCH.refused.toLocaleString()}{" "}
               refused, and {SEARCH.passedABound} past a bound. The closest any
               strategy got a root's window to was{" "}
-              {formatUsdc(SEARCH.closestToBudget6)} of{" "}
-              {formatUsdc(SEARCH.budget6, 0)}, the bound reached and not
-              crossed. Scored by the contract and never by a model of it.
+              {formatUsdc(SEARCH.closestToBudget6)} of the{" "}
+              {formatUsdc(SEARCH.budget6, 0)} root that run was scored against
+              — the bound reached and not crossed. Scored by the contract and
+              never by a model of it.
             </p>
           </div>
         </Surface>

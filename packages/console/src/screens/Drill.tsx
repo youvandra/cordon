@@ -63,9 +63,9 @@ export default function Drill() {
             G4 has run: {SEARCH.strategies.toLocaleString()} strategies,{" "}
             {SEARCH.draws.toLocaleString()} draws, {SEARCH.passedABound} past a
             bound. The closest any of them got a root to was{" "}
-            {formatUsdc(SEARCH.closestToBudget6)} of{" "}
-            {formatUsdc(SEARCH.budget6, 0)}. Scored by the contract, never by a
-            model of it.
+            {formatUsdc(SEARCH.closestToBudget6)} of the{" "}
+            {formatUsdc(SEARCH.budget6, 0)} root that run was scored against.
+            Scored by the contract, never by a model of it.
           </p>
         </div>
       </Surface>
