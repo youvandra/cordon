@@ -34,6 +34,7 @@ Code. Rather than list every file, here is the honest shape of it:
 | `packages/contracts` | Written with AI. The invariants they enforce, and the decision that a refused draw returns rather than reverts, were argued out in conversation before any code |
 | `packages/daemon`, `packages/mcp`, `packages/proxy` | Written with AI |
 | `packages/meter`, `packages/attest` | Written with AI |
+| `packages/eval` | Written with AI. The acceptance criteria and the two conditions were fixed in conversation before the first run, and the decision not to measure latency — the first run's figures were the client's polling interval — was the author's |
 | `packages/site`, `packages/console`, `packages/ui` | Written with AI. The visual design decisions — layout, what to delete, what a figure should say — were the author's, given as review notes and applied |
 | `packages/fixtures`, `packages/brand` | Written with AI |
 | `ops/` | Written with AI; every command that touched the server was run by the author |
