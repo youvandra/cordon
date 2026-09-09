@@ -9,7 +9,7 @@ import {
   Tag,
   Text,
 } from "cordon-ui";
-import { DRILL, GATES, SEARCH, formatUsdc } from "@cordon/fixtures";
+import { DRILL, EVAL, GATES, SEARCH, formatUsdc } from "@cordon/fixtures";
 import { site } from "../lib/links";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
@@ -69,6 +69,64 @@ export default function Drill() {
           </p>
         </div>
       </Surface>
+
+      {/* Figures only, and every one of them read from the run's own record.
+          The argument for what they mean is on the public page and is not
+          restated here: a sentence written twice is the defect this project
+          keeps finding, and a number read from one fixture cannot drift. */}
+      <Card>
+        <CardHeader>
+          <Text variant="micro" tone="dim" as="span" className="eyebrow">
+            g7 · the work still gets done
+          </Text>
+          <Text variant="micro" tone="dim" as="span">
+            {EVAL.runs} runs each · {EVAL.agent} agent
+          </Text>
+        </CardHeader>
+        <DataTable
+          rows={EVAL.conditions}
+          rowKey={(condition) => condition.id}
+          columns={[
+            {
+              id: "id",
+              header: "Condition",
+              cell: (condition) => (
+                <b>{condition.id === "cordon" ? "Cordon" : "A plain shared cap"}</b>
+              ),
+            },
+            {
+              id: "completed",
+              header: "Briefs completed",
+              cell: (condition) => `${condition.completed} of ${condition.runs}`,
+            },
+            {
+              id: "spent",
+              header: "Spent",
+              numeric: true,
+              cell: (condition) => formatUsdc(condition.spent6),
+            },
+            {
+              id: "exposure",
+              header: "At risk before any work",
+              numeric: true,
+              cell: (condition) => formatUsdc(condition.exposureAtStart6),
+            },
+            {
+              id: "writes",
+              header: "Transactions per purchase",
+              numeric: true,
+              cell: (condition) => condition.writesPerPurchase,
+            },
+          ]}
+        />
+        <CardBody>
+          <a href={site("/docs/gates#the-work")}>
+            <Button variant="secondary" size="sm" iconEnd="arrow-right">
+              What the two conditions are
+            </Button>
+          </a>
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader>
