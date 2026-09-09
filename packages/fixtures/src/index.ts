@@ -455,6 +455,35 @@ export { SEARCH } from "./search.gen.ts";
 export type { SearchRun } from "./search.gen.ts";
 
 /**
+ * `TreeVault.Reason`, in the contract's own order.
+ *
+ * The index is the on-chain enum value and a Reason is stored in every refusal,
+ * so an existing entry may never move — appended, never inserted. Everything
+ * that decodes a refusal reads this: the daemon, the console, and anything else
+ * that ever has to turn a number back into the word the contract used.
+ */
+export const REASONS = [
+  "none",
+  "revoked",
+  "tranche-cap",
+  "window-budget",
+  "concentration",
+  "vault-balance",
+  "lifetime-cap",
+] as const;
+
+/**
+ * A reason index this build has no name for.
+ *
+ * The contract may append one before this package is rebuilt, and the fallback
+ * that matters is the one that does not lie: reporting an unknown index as
+ * `none` tells a reader the draw was refused for no reason, which reads as a
+ * bug in Cordon rather than as a bound it hit.
+ */
+export const UNRECOGNISED = "unrecognised-reason";
+export type Reason = (typeof REASONS)[number] | typeof UNRECOGNISED;
+
+/**
  * What each refusal reason means, in one sentence.
  *
  * The contract's own word is the key — `TreeVault.Reason` decoded by

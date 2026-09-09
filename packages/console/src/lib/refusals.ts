@@ -13,8 +13,7 @@
  */
 import { useEffect, useState } from "react";
 import { createPublicClient, http, parseAbiItem, type Address, type Hex } from "viem";
-import { ARC, DEPLOYMENT } from "@cordon/fixtures";
-import { REASONS, UNRECOGNISED } from "../../../daemon/src/gate.ts";
+import { ARC, DEPLOYMENT, REASONS, UNRECOGNISED } from "@cordon/fixtures";
 import { arc } from "./mandate";
 
 const REFUSED = parseAbiItem(

@@ -23,29 +23,14 @@ import { TreeVaultAbi, MandateRegistryAbi } from "./abi.gen.ts";
 import type { Config } from "./config.ts";
 import { Recorder } from "./record.ts";
 
-/** Mirrors TreeVault.Reason. The order is part of the ABI. */
-export const REASONS = [
-  "none",
-  "revoked",
-  "tranche-cap",
-  "window-budget",
-  "concentration",
-  "vault-balance",
-  /* Appended, never inserted. The index is the on-chain enum value, and a
-     Reason is stored in every refusal, so an existing one may not move. */
-  "lifetime-cap",
-] as const;
+/* The words live in `packages/fixtures` with every other figure a surface
+   shows, because the console decodes the same enum from the same events and a
+   second copy of this list is a second thing that can fall behind the
+   contract. Re-exported so nothing that already imports them has to move. */
+import { REASONS, UNRECOGNISED, type Reason } from "../../fixtures/src/index.ts";
 
-/**
- * A refusal reason this build has no name for.
- *
- * The contract may append a reason before this package is rebuilt, and the
- * fallback that matters is the one that does not lie: reporting an unknown
- * index as `none` tells an agent the draw was refused for no reason, which
- * reads as a bug in Cordon rather than as a bound it hit.
- */
-export const UNRECOGNISED = "unrecognised-reason";
-export type Reason = (typeof REASONS)[number] | typeof UNRECOGNISED;
+export { REASONS, UNRECOGNISED };
+export type { Reason };
 
 export interface DrawOutcome {
   released: boolean;
