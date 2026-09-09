@@ -48,7 +48,13 @@ export function initOperators(options: {
   generate?: () => Hex;
 }): InitResult {
   const { path, nodes } = options;
-  if (nodes < 1 || nodes > 16) throw new Error(`--nodes must be between 1 and 16, got ${nodes}`);
+  /* `Number.isInteger` and not `nodes < 1`: `Number("abc")` is NaN, every
+     comparison against NaN is false, and the guard let it through — the loop
+     then ran zero times and wrote a file with no keys in it. With `--force`
+     that silently replaced a live tree's operators with nothing. */
+  if (!Number.isInteger(nodes) || nodes < 1 || nodes > 16) {
+    throw new Error(`--nodes must be a whole number between 1 and 16, got ${JSON.stringify(nodes)}`);
+  }
   if (existsSync(path) && !options.force) {
     /* Overwriting is how someone loses the key an open mandate names, and the
        mandate cannot be repointed — its operator is set at `open`. */

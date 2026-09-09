@@ -51,7 +51,7 @@ export type OpenState =
  */
 export const REGISTRY = DEPLOYMENT?.registry as `0x${string}` | undefined;
 
-export function useOpenMandate() {
+export function useOpenMandate(expected?: string | null) {
   const { wallets } = useWallets();
   const [state, setState] = useState<OpenState>({ status: "idle" });
 
@@ -61,9 +61,26 @@ export function useOpenMandate() {
         setState({ status: "failed", why: "no deployment recorded for this chain yet" });
         return;
       }
-      const wallet = wallets[0];
+      /**
+       * The wallet whose address the screen is showing, not simply the first
+       * one connected.
+       *
+       * `usePrivy().user.wallet` is the user's primary wallet and
+       * `useWallets()[0]` is whichever connected first; with an external wallet
+       * linked they are different addresses. Signing with the second while
+       * displaying the first would record an owner the console never named,
+       * and the mandate's owner cannot be changed afterwards.
+       */
+      const wallet = expected
+        ? wallets.find((w) => w.address.toLowerCase() === expected.toLowerCase())
+        : wallets[0];
       if (!wallet) {
-        setState({ status: "failed", why: "no wallet is connected" });
+        setState({
+          status: "failed",
+          why: expected
+            ? "the wallet shown here is not one this page can sign with"
+            : "no wallet is connected",
+        });
         return;
       }
 
@@ -113,7 +130,7 @@ export function useOpenMandate() {
         });
       }
     },
-    [wallets],
+    [wallets, expected],
   );
 
   return { state, open };

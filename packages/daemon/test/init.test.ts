@@ -72,3 +72,11 @@ test("a node count nobody meant is refused rather than obeyed", () => {
   assert.throws(() => initOperators({ path: out(), nodes: 0 }), /between 1 and 16/);
   assert.throws(() => initOperators({ path: out(), nodes: 99 }), /between 1 and 16/);
 });
+
+test("a node count that is not a number writes nothing at all", () => {
+  /* `Number("abc")` is NaN, and NaN fails every comparison, so a `nodes < 1`
+     guard passed it. The loop then ran zero times and the file was written
+     empty — with --force, over the operators of a live tree. */
+  assert.throws(() => initOperators({ path: out(), nodes: Number("abc") }), /whole number/);
+  assert.throws(() => initOperators({ path: out(), nodes: 2.5 }), /whole number/);
+});

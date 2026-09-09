@@ -21,6 +21,19 @@ import { useEntrance } from "../lib/entrance";
 import { useWallet } from "../lib/wallet";
 import { REGISTRY, useOpenMandate } from "../lib/mandate";
 
+/**
+ * Dollars as typed, in USDC base units.
+ *
+ * The fields are free text and people type decimals into money. Rounding to
+ * the millionth is the token's own precision; anything finer is not a smaller
+ * amount, it is an amount USDC cannot express.
+ */
+function usdc6(dollars: string): bigint {
+  const value = Number(dollars || "0");
+  if (!Number.isFinite(value) || value < 0) return 0n;
+  return BigInt(Math.round(value * 1_000_000));
+}
+
 const WINDOWS = [
   { value: "3600", label: "1 hour" },
   { value: "86400", label: "24 hours" },
@@ -52,24 +65,36 @@ export default function Setup() {
      Either missing and this screen stays the drawing it has always been —
      which it says on itself, rather than looking like it did something. */
   const { address, real } = useWallet();
-  const { state, open } = useOpenMandate();
+  const { state, open } = useOpenMandate(address);
   const live = real && Boolean(REGISTRY) && Boolean(address);
   /* An address that is not one is the commonest way to open a mandate nobody
-     can use, and the contract rejects the zero address but not a typo. */
-  const ready = live && isAddress(operator);
+     can use, and the contract rejects the zero address but not a typo. The
+     amounts are checked here too: the contract refuses a zero budget and a
+     zero lifetime cap, and finding that out costs a transaction. */
+  const ready =
+    live &&
+    isAddress(operator) &&
+    usdc6(budget) > 0n &&
+    usdc6(lifetime) > 0n &&
+    usdc6(tranche) > 0n;
 
   const sign = () => {
     if (!live) {
       setSigned(true);
       return;
     }
+    /* USDC has six decimals and these fields are dollars, so a typed "1.5" is
+       1,500,000 base units — and `BigInt("1.5")` throws, which before this was
+       an uncaught exception on a button click. */
     void open({
       operator: operator as `0x${string}`,
-      budget6: BigInt(budget || "0") * 1_000_000n,
-      lifetimeCap6: BigInt(lifetime || "0") * 1_000_000n,
+      budget6: usdc6(budget),
+      lifetimeCap6: usdc6(lifetime),
       windowSeconds: BigInt(windowS),
-      trancheCap6: BigInt(tranche || "0") * 1_000_000n,
-      concentrationBps: Number(concentration) * 100,
+      trancheCap6: usdc6(tranche),
+      /* Basis points are an integer on chain. `35.55 * 100` is
+         3555.0000000000005 in binary floating point, and viem rejects it. */
+      concentrationBps: Math.round(Number(concentration || "0") * 100),
       maxDepth: Number(depth),
     });
   };
@@ -224,7 +249,9 @@ export default function Setup() {
 
               {live && !ready ? (
                 <Text variant="micro" tone="dim" as="p">
-                  a root operator address is needed before this can be signed
+                  {isAddress(operator)
+                    ? "a budget, a lifetime cap and a tranche cap all have to be more than zero"
+                    : "a root operator address is needed before this can be signed"}
                 </Text>
               ) : null}
               {state.status === "failed" ? (
