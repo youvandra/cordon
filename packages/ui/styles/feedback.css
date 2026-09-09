@@ -7,6 +7,11 @@
 .cordon-tooltip__bubble {
   position: absolute;
   z-index: var(--cordon-z-overlay);
+  /* `max-content` because the bubble is absolutely positioned inside a wrapper
+     the size of its trigger — an icon — so shrink-to-fit resolves against 16px
+     and any sentence becomes a column one or two words wide. `max-width` alone
+     cannot widen it; it only caps what this allows. */
+  width: max-content;
   max-width: 240px;
   padding: 7px 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);

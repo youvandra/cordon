@@ -58,7 +58,7 @@ function Ask({ label, help }: { label: string; help: string }) {
   return (
     <span className="ask">
       {label}
-      <Tooltip content={help}>
+      <Tooltip content={help} placement="bottom">
         <button type="button" className="ask__more" aria-label={`What is ${label}?`}>
           <Icon name="info" />
         </button>
@@ -67,7 +67,7 @@ function Ask({ label, help }: { label: string; help: string }) {
   );
 }
 
-type Stage = "intro" | "asking" | "review" | "done";
+type Stage = "asking" | "review" | "done";
 
 export default function Setup() {
   useTitle("Setup · Cordon console");
@@ -96,7 +96,7 @@ export default function Setup() {
    * unchangeable — because that is what a mandate is. A form that stays
    * editable after signing suggests an edit the contract has no function for.
    */
-  const [stage, setStage] = useState<Stage>("intro");
+  const [stage, setStage] = useState<Stage>("asking");
   const [at, setAt] = useState(0);
   const [confirming, setConfirming] = useState(false);
 
@@ -394,12 +394,7 @@ export default function Setup() {
                   ) : null}
 
                   {stage === "review" ? (
-                    <Cta
-                      magnetic
-                      hint={live ? "a transaction on Arc, from your own key" : "preview — nothing is signed or sent"}
-                      onClick={sign}
-                      disabled={live && !ready}
-                    >
+                    <Cta magnetic onClick={sign} disabled={live && !ready}>
                       {state.status === "signing" ? "Waiting for your signature…" : "Sign mandate"}
                     </Cta>
                   ) : (
@@ -466,25 +461,6 @@ export default function Setup() {
         </Stack>
       </Grid>
 
-      {/* Arriving with nothing signed, the first thing a reader meets is the
-          question the screen exists to ask — not six fields at once. */}
-      <Modal
-        open={stage === "intro"}
-        onClose={() => setStage("asking")}
-        title="Set up one mandate"
-        description="Six questions. Then one signature, from your own wallet, and the tree can start spending inside it."
-        footer={
-          <Button variant="primary" onClick={() => setStage("asking")}>
-            Start
-          </Button>
-        }
-      >
-        <Text variant="body" tone="copy" as="p">
-          You are signing a limit, not a payment. The money stays in the vault
-          until an agent asks for a purchase the contract allows.
-        </Text>
-      </Modal>
-
       {/* The last moment before something that cannot be undone. */}
       <Modal
         open={confirming}
@@ -504,21 +480,36 @@ export default function Setup() {
           </Stack>
         }
       >
-        <Stack direction="column" gap="sm" align="start">
-          <Text variant="body" tone="copy" as="p">
-            <b>{budget || "0"} USDC</b> a window, <b>{lifetime || "0"} USDC</b>{" "}
-            in total for the life of this mandate, at most{" "}
-            <b>{tranche || "0"} USDC</b> in one purchase.
-          </Text>
-          <Text variant="body" tone="copy" as="p">
-            Spent by <span className="mono">{operator}</span>, which is the
-            daemon&rsquo;s key and not yours.
-          </Text>
-          <Text variant="micro" tone="dim" as="p">
-            Your wallet signs; it does not pay. The money comes from the vault
-            you fund next, and every draw is refused or recorded on {ARC.name}.
-          </Text>
-        </Stack>
+        <div className="signoff">
+          <dl className="signoff__terms">
+            {[
+              ["Per window", `${budget || "0"} USDC`, WINDOWS.find((w) => w.value === windowS)?.label],
+              ["For its whole life", `${lifetime || "0"} USDC`, "never refills"],
+              ["One purchase", `${tranche || "0"} USDC`, "at most"],
+              ["One seller", `${concentration || "0"}%`, "of a window"],
+              ["Depth", depth || "0", "levels"],
+            ].map(([term, value, note]) => (
+              <div key={term} className="signoff__row">
+                <dt className="signoff__term">{term}</dt>
+                <dd className="signoff__value num">
+                  {value}
+                  <span className="signoff__note">{note}</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          <p className="signoff__operator">
+            Spent by <span className="mono">{operator}</span>
+            <span className="signoff__note">the daemon&rsquo;s key, not yours</span>
+          </p>
+
+          <p className="signoff__foot">
+            Your wallet signs; it does not pay. The money stays in the vault
+            until an agent asks for a purchase the contract allows, and every
+            draw is refused or recorded on {ARC.name}.
+          </p>
+        </div>
       </Modal>
     </>
   );

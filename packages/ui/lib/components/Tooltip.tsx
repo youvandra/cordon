@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { transition } from "../../tokens/motion";
 import { cx } from "../cx";
+import { useFrames } from "../../hooks/useFrames";
 
 /* Glossary: "Tooltip" (and the pattern behind "Informational components"). */
 
@@ -21,6 +22,10 @@ export interface TooltipProps {
 export function Tooltip({ content, placement = "top", delay = 140, children, className }: TooltipProps) {
   const [open, setOpen] = useState(false);
   const timer = useRef<number | undefined>(undefined);
+  /* The third component whose presence was decided by an animation. A hidden
+     document runs no frames, so the bubble entered at opacity 0 and stayed
+     there, and its exit never completed either. */
+  const frames = useFrames();
   const id = `cordon-tip-${useId().replace(/[:»«]/g, "")}`;
 
   const show = (immediate = false) => {
@@ -50,10 +55,14 @@ export function Tooltip({ content, placement = "top", delay = 140, children, cla
             id={id}
             role="tooltip"
             className={cx("cordon-tooltip__bubble", `cordon-tooltip__bubble--${placement}`)}
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            transition={transition.control}
+            /* Opacity only. Animating `scale` makes motion own `transform`,
+               which silently drops the `translateX(-50%)` the placement
+               classes centre the bubble with — near a right-hand edge that is
+               a tooltip half off the screen. */
+            initial={frames ? { opacity: 0 } : false}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={frames ? transition.control : { duration: 0 }}
           >
             {content}
           </motion.span>
