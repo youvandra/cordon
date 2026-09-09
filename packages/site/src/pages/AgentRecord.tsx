@@ -310,8 +310,10 @@ function PreviewAgentRecord({ node }: { node: ReturnType<typeof flatten>[number]
           />
           <Text variant="lead" tone="copy" as="p" className="public__lede">
             Not a review. Nobody typed it. It is a measurement a contract made:
-            what this agent asked for, what its owner's mandate allowed, and
-            which draws were refused.
+            what this agent asked for, what its owner&rsquo;s mandate allowed,
+            and which draws were refused. The agent belongs to that owner —
+            this is a record of somebody&rsquo;s own fleet, published so that
+            the people it buys from can read it.
           </Text>
           <Preview note="record shape is final; entries are samples" />
         </header>

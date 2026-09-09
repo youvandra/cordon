@@ -153,7 +153,7 @@ export default function Tree() {
     <>
       <ScreenHead
         title="Live exposure across the whole tree"
-        lede="Draw on a grandchild; its grandparent's bar moves."
+        lede="Every node here is one of your own agents, running on your own daemon keys. Draw on a grandchild; its grandparent's bar moves."
         note="sample tree; draws are local"
       />
 

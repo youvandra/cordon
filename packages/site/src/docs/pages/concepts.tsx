@@ -16,6 +16,12 @@ export function MandateTree() {
         is one root the owner signed and any number of children created
         underneath it, each narrower than its parent.
       </Lead>
+      <Note tone="info" title="Every node is one of your own agents">
+        A tree bounds the keys you control, so the nodes in it are your fleet —
+        not the sellers you buy from. An agent somebody else runs cannot be put
+        under your mandate, because there is no key of theirs for it to bound.
+        They appear here only as a counterparty: an address that was paid.
+      </Note>
 
       <H2 id="the-root">The root</H2>
       <P>
