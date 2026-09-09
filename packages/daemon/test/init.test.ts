@@ -27,7 +27,9 @@ test("no private key reaches the terminal", () => {
   const shown = execFileSync("node", [cli, "--nodes", "2", "--out", path], { encoding: "utf8" });
 
   const written = readFileSync(path, "utf8");
-  const keys = [...written.matchAll(/^CORDON_KEY_[A-Z0-9]+=(0x[0-9a-f]{64})$/gm)].map((m) => m[1]!);
+  const keys = [...written.matchAll(/^CORDON_KEY_[A-Z0-9]+=(0x[0-9a-f]{64})$/gm)].map(
+    (m) => m[1]! as Hex,
+  );
   assert.equal(keys.length, 2, "two nodes, two keys");
 
   for (const key of keys) {

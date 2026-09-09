@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Card,
   CardBody,
@@ -59,7 +59,13 @@ export default function Setup() {
      submits every draw. Defaulting this to the connected address would open a
      mandate no daemon can act for, and the mistake would only surface at the
      first purchase. */
-  const [operator, setOperator] = useState("");
+  /* `cordon init` prints a link with the root operator already in it, because
+     the alternative is copying a 42-character string into the right field and
+     that is where people paste the wrong thing. Only ever a default: the field
+     stays editable, and a link cannot sign anything. */
+  const [params] = useSearchParams();
+  const suggested = params.get("operator") ?? "";
+  const [operator, setOperator] = useState(isAddress(suggested) ? suggested : "");
 
   /* Real only when there is a key behind the gate and a registry to send to.
      Either missing and this screen stays the drawing it has always been —
