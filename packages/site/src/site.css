@@ -1071,3 +1071,36 @@ main { flex: 1 1 auto; }
   .docs__side--open { display: block; }
   .doc__defs > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
 }
+
+/* ---- the architecture figure --------------------------------------------
+   One drawing, fixed geometry, no measurement and no animation: it has to be
+   complete in a hidden tab and in a print. The type sizes are in user units
+   of the viewBox, so they scale with the figure rather than fighting it. */
+.arch { margin: 0 0 var(--cordon-space-6); }
+.arch svg { display: block; width: 100%; height: auto; }
+.arch__name {
+  fill: var(--cordon-ink-strong);
+  font-size: 19px;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+}
+.arch__sub { fill: var(--cordon-copy-dim); font-size: 15px; }
+.arch__lane {
+  fill: var(--cordon-copy-dim);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.arch__edge { fill: var(--cordon-copy-dim); font-size: 14px; }
+.arch__step {
+  fill: var(--cordon-accent);
+  font-size: 13px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+.arch__caption {
+  margin: var(--cordon-space-3) 0 0;
+  color: var(--cordon-copy-dim);
+  font-size: 14.5px;
+  line-height: 1.5;
+}

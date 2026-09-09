@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Architecture } from "../../parts/Architecture";
 import { MCP_CONFIG } from "@cordon/fixtures";
 import { C, Code, Defs, H2, Lead, Note, OL, P, Table, UL } from "../parts";
 
@@ -221,6 +222,9 @@ export function HowItWorks() {
         The bound is checked before the money exists. That is what makes a
         refusal a refusal rather than a regret.
       </Note>
+
+      <H2 id="architecture">The shape of it</H2>
+      <Architecture />
 
       <H2 id="who-holds-what">Who holds what</H2>
       <Table
