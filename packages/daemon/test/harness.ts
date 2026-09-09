@@ -66,7 +66,15 @@ export interface Harness {
   stop(): Promise<void>;
 }
 
-export async function startHarness(port = 8546): Promise<Harness> {
+/**
+ * An anvil with Cordon's contracts on it, and nothing above them.
+ *
+ * Extracted so `packages/eval` can build its own tree on the same deployment
+ * rather than keeping a second copy of it. What differs between the two is the
+ * shape of the tree and who spends — which is the subject of both — so the
+ * chain and the contracts are the part that must not fork.
+ */
+export async function startChain(port: number) {
   execFileSync("forge", ["build"], { cwd: contracts, stdio: "pipe" });
 
   const rpc = `http://127.0.0.1:${port}`;
@@ -83,11 +91,7 @@ export async function startHarness(port = 8546): Promise<Harness> {
   }
 
   const owner = privateKeyToAccount(OWNER_KEY);
-  const opRoot = privateKeyToAccount(OP_ROOT_KEY);
-  const opChild = privateKeyToAccount(OP_CHILD_KEY);
   const asOwner = createWalletClient({ account: owner, chain, transport: http(rpc) });
-  const asOpRoot = createWalletClient({ account: opRoot, chain, transport: http(rpc) });
-  const asOpChild = createWalletClient({ account: opChild, chain, transport: http(rpc) });
 
   /* `file` and `name` differ when one source holds several contracts, which
      is why this takes both rather than assuming they match. */
@@ -107,6 +111,29 @@ export async function startHarness(port = 8546): Promise<Harness> {
   const identity = await deploy("MockIdentityRegistry", [], "MockERC8004");
   const reputation = await deploy("MockReputationRegistry", [], "MockERC8004");
   const record = await deploy("ConductRecord", [vault, identity, reputation]);
+
+  return {
+    rpc, chain, publicClient, asOwner, owner,
+    usdc, gateway, registry, vault, record, identity, reputation,
+    walletFor: (key: Hex) =>
+      createWalletClient({ account: privateKeyToAccount(key), chain, transport: http(rpc) }),
+    kill: () => { anvil.kill(); },
+  };
+}
+
+/* Inferred rather than declared: viem binds the chain and the account into the
+   wallet client's type, and an interface that says `WalletClient` throws that
+   away — every write then has to name `chain: null` to get it back. */
+export type Chain = Awaited<ReturnType<typeof startChain>>;
+
+export async function startHarness(port = 8546): Promise<Harness> {
+  const world = await startChain(port);
+  const { rpc, publicClient, asOwner, owner, usdc, gateway, registry, vault, record, identity, reputation } = world;
+
+  const opRoot = privateKeyToAccount(OP_ROOT_KEY);
+  const opChild = privateKeyToAccount(OP_CHILD_KEY);
+  const asOpRoot = world.walletFor(OP_ROOT_KEY);
+  const asOpChild = world.walletFor(OP_CHILD_KEY);
 
   /* A lifetime cap high enough that it cannot be the reason a test fails.
      Every mandate carries one, so a harness has to name one; the subject of
@@ -172,7 +199,7 @@ export async function startHarness(port = 8546): Promise<Harness> {
     usdc, gateway, registry, vault, record, identity, reputation, root, child,
     sellerUrl: cheap.url, greedyUrl: greedy.url,
     async stop() {
-      anvil.kill();
+      world.kill();
       await new Promise<void>((r) => cheap.server.close(() => r()));
       await new Promise<void>((r) => greedy.server.close(() => r()));
     },
