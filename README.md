@@ -89,10 +89,11 @@ mcp 11.
 
 Being explicit about the edge of the guarantee is the point of the project, so:
 
-- **The budget is per window, not per lifetime.** `windowSeconds` is equal at
-  every depth and the window is tumbling; a mandate left running across many
-  windows authorises more than one window's budget. A lifetime cap is not yet
-  implemented.
+- **The deployed contracts bound the budget per window, not per lifetime.**
+  `windowSeconds` is equal at every depth and the window is tumbling, so a
+  mandate left running across many windows authorises more than one window's
+  budget. A lifetime cap is implemented and green in G1; the addresses below
+  predate it, and this line stands until they are replaced.
 - **Counterparty concentration is declared, not enforced.** A seller's address
   lives in an off-chain signed burn intent that no contract can read, so the
   vault bounds a counterparty the daemon *names*. `STRENGTH` in `fixtures`
@@ -100,6 +101,14 @@ Being explicit about the edge of the guarantee is the point of the project, so:
 - **The bound is the contract plus the fact that the agent holds no key.** The
   proxy is not the bound. A request that never reaches the proxy fails; it does
   not escape.
+- **A draw and the payment it funds are two steps, and nothing closes the gap
+  between them.** The contract releases a tranche into the operator's Gateway
+  balance; paying the seller is an off-chain signature after that. If the
+  daemon stops in between, the window has been debited, the money is in the
+  operator's balance and no seller was paid — there is no commitment ledger, no
+  retry and no compensating entry. The meter's `reconcileGateway` bounds the
+  aggregate, that an operator's balance never exceeds what the vault released
+  to it; it does not reconcile one purchase.
 - **G2 and G3 have not been run.** G3 is the hostile drill, and its number gets
   published whichever way it comes out.
 - Figures that no run has produced read `pending`. That is a value, not a
