@@ -96,3 +96,18 @@ cd ~/cordon && git pull && ./ops/bin/cordon-publish.sh
 The script rebuilds both bundles, refuses if the console was built without
 base `/console/`, and never deletes at the web root — `console/` and
 `.well-known/` live there too.
+
+## Checking what is actually live
+
+```bash
+ops/bin/cordon-check.sh
+```
+
+Asks the deployed surfaces from outside, so a stale bundle on the box or a
+service that quietly exited shows up here rather than in a demo. It reads the
+**bundle**, not the page: `index.html` barely changes between builds, so a
+stale deploy looks fine until you read the JavaScript.
+
+A pending thing is not a failure. No mandate and no meter are the honest state
+of a project whose gates say so, and the script exits non-zero only when
+something claims to be up and is wrong.
