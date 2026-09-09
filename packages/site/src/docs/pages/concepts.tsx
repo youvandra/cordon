@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MANDATE, formatUsdc } from "@cordon/fixtures";
+import { MANDATE, REASON_MEANING, formatUsdc } from "@cordon/fixtures";
 import { TREE } from "@cordon/fixtures/preview";
 import { C, Code, H2, H3, Lead, Note, OL, P, Table, UL } from "../parts";
 
@@ -272,16 +272,15 @@ export function Refusals() {
       </UL>
 
       <H2 id="reasons">Reasons</H2>
+      {/* The sentences live in fixtures, beside every other thing this project
+          shows a reader, because the MCP and the public record page print the
+          same ones. */}
       <Table
         head={["Reason", "What happened"]}
-        rows={[
-          ["revoked", "this node or one above it has been cut"],
-          ["tranche-cap", "the purchase is larger than one draw may be"],
-          ["window-budget", "the window is spent, on this node or an ancestor"],
-          ["lifetime-cap", "the total this mandate was signed for is spent, and it does not come back"],
-          ["concentration", "this recipient has taken its share of the window"],
-          ["vault-balance", "the bounds passed and the treasury is empty"],
-        ]}
+        rows={Object.entries(REASON_MEANING).map(([reason, meaning]) => [
+          <C key={reason}>{reason}</C>,
+          meaning,
+        ])}
       />
 
       <H2 id="release">Release</H2>
