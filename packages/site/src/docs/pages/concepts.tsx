@@ -110,7 +110,7 @@ export function DrawsAndBounds() {
         this design exists to remove.
       </Note>
 
-      <H2 id="the-four-bounds">The five bounds</H2>
+      <H2 id="the-five-bounds">The five bounds</H2>
       <H3 id="tranche-cap">Tranche cap</H3>
       <P>
         No single draw may exceed the cap. This is what stops one plausible
@@ -172,6 +172,75 @@ export function DrawsAndBounds() {
         money the lifetime refuses. A tool that reported a node's own remaining
         budget would be reporting a number that does not decide anything.
       </P>
+
+      <H2 id="the-figures">The figures, and why they do not add up</H2>
+      <P>
+        Six numbers appear on these surfaces. Exactly one of them is a balance,
+        and no two of them may be added together or subtracted from each other
+        to get a third. The names below are the ones every surface uses, and
+        each is read from the chain rather than kept anywhere.
+      </P>
+      <Table
+        head={["figure", "what it is", "read from"]}
+        rows={[
+          [
+            "Authorised",
+            "The window budget and the lifetime cap the owner signed. A permission, not money.",
+            <C key="a">mandateOf(node)</C>,
+          ],
+          [
+            "Funded",
+            "USDC the vault actually holds for this root. The only balance here.",
+            <C key="f">treasury6(root)</C>,
+          ],
+          [
+            "Spent this window",
+            "Drawn by this node and everything under it since the window last rolled. Resets.",
+            <C key="w">windowSpent(node)</C>,
+          ],
+          [
+            "Spent since opening",
+            "Drawn by this node and everything under it for the life of the mandate. Never resets.",
+            <C key="l">lifetimeSpent(node)</C>,
+          ],
+          [
+            "Available",
+            "What this node may draw right now, and which node is the reason.",
+            <C key="h">headroom(node)</C>,
+          ],
+          [
+            "Released",
+            "Paid out past a refusal, by the owner's own signature.",
+            <C key="r">Released</C>,
+          ],
+        ]}
+      />
+      <P>Four subtractions a reader will try, and what each one actually gets:</P>
+      <UL>
+        <li>
+          <b>Authorised does not sum down the tree.</b> Children may be
+          authorised for more than their parent between them, because
+          delegation hands out permission and not money. The figure on the
+          landing page draws exactly this.
+        </li>
+        <li>
+          <b>Authorised minus spent is not available.</b> An ancestor is
+          usually the tighter bound, and a node with its own window untouched
+          can be able to draw nothing.
+        </li>
+        <li>
+          <b>Funded is not authorised, in either direction.</b> A vault holding
+          more than the mandate allows changes nothing, and a vault holding
+          less refuses with <C>vault-balance</C> while every bound still has
+          room.
+        </li>
+        <li>
+          <b>Released is not spent.</b> It leaves the funded balance and
+          touches neither the window nor the lifetime, because that money was
+          never inside the authority those bounds describe. Which is the reason
+          it is written into the record beside the refusal it overrode.
+        </li>
+      </UL>
     </>
   );
 }

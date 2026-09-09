@@ -50,7 +50,7 @@ export const DOC_GROUPS: DocGroup[] = [
       {
         slug: "draws-and-bounds",
         title: "Draws and bounds",
-        summary: "The four checks that run on every tranche, and what each one stops.",
+        summary: "The five bounds on every tranche, and the figures they leave behind.",
       },
       {
         slug: "refusals",
