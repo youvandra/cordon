@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ARC, ERC8004, GATES, SEARCH, formatUsdc } from "@cordon/fixtures";
+import { ARC, ERC8004, EVAL, GATES, SEARCH, formatUsdc } from "@cordon/fixtures";
 import { C, Code, H2, H3, Lead, Note, P, Table, UL } from "../parts";
 
 export function Contracts() {
@@ -187,9 +187,9 @@ export function Gates() {
   return (
     <>
       <Lead>
-        Six acceptance criteria, written before the code. They are the product;
-        everything else is surface. A gate is green because a run said so, not
-        because someone edited a file.
+        There are {GATES.length} acceptance criteria, written before the code.
+        They are the product; everything else is surface. A gate is green
+        because a run said so, not because someone edited a file.
       </Lead>
 
       <H2 id="status">Status</H2>
@@ -231,6 +231,54 @@ closest any strategy came: ${formatUsdc(SEARCH.closestToBudget6)} of ${formatUsd
         A contract that refused everything would pass every assertion and be
         useless, so one tactic is a control: it spends freely, far inside every
         limit, and the search fails if it is ever refused.
+      </Note>
+
+      <H2 id="the-work">The work still gets done</H2>
+      <P>
+        Every other gate here measures whether Cordon refuses. G7 measures the
+        opposite, and it is the one allowed to come out against the product: a
+        cap that blocks everything satisfies every safety test while failing to
+        be a product at all.
+      </P>
+      <P>
+        One task — a brief citing {EVAL.sources} paid sources, split across a
+        root and its two workers — run {EVAL.runs} times under Cordon and{" "}
+        {EVAL.runs} times under a plain shared cap. The acceptance criteria
+        were fixed before the first run: a brief counts as done only when every
+        source is cited with the body that seller actually served, and a
+        citation nobody paid for is counted separately, because a brief that
+        says the right things without having bought them is the failure worth
+        catching.
+      </P>
+      <Table
+        head={["", "Cordon", "A plain shared cap"]}
+        rows={[
+          ["Briefs completed", ...EVAL.conditions.map((c) => `${c.completed} of ${c.runs}`)],
+          ["Spent", ...EVAL.conditions.map((c) => formatUsdc(c.spent6))],
+          ["Refused", ...EVAL.conditions.map((c) => String(c.refusals))],
+          [
+            "Owner's money at risk before any work",
+            ...EVAL.conditions.map((c) => formatUsdc(c.exposureAtStart6)),
+          ],
+          ["Transactions per purchase", ...EVAL.conditions.map((c) => String(c.writesPerPurchase))],
+        ]}
+      />
+      <P>
+        The comparison does not turn on the outcome of a purchase. Both
+        conditions bought the same sources for the same money and neither was
+        refused. What separates them is <b>when the money leaves the owner</b>:
+        a shared cap is released up front into one balance and held by a
+        counter inside the process doing the spending, which is what an agent
+        stack ships today. Nothing leaves the vault here until a purchase has
+        been evaluated. The fence costs a second transaction each time, and
+        that is the whole of what it costs.
+      </P>
+      <Note tone="info" title="The agent is scripted, and the run says so">
+        A model would be more lifelike and would put its own variance between
+        the fence and the result — across {EVAL.runs} runs a condition, that
+        variance would be the finding. Latency is not measured either: a local
+        chain's confirmation time is not Arc's, and the first run's figures
+        were really the client's polling interval.
       </Note>
 
       <H2 id="the-drill">The hostile drill</H2>
