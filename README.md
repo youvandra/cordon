@@ -107,11 +107,6 @@ mcp 11.
 
 Being explicit about the edge of the guarantee is the point of the project, so:
 
-- **The deployed contracts bound the budget per window, not per lifetime.**
-  `windowSeconds` is equal at every depth and the window is tumbling, so a
-  mandate left running across many windows authorises more than one window's
-  budget. A lifetime cap is implemented and green in G1; the addresses below
-  predate it, and this line stands until they are replaced.
 - **Counterparty concentration is declared, not enforced.** A seller's address
   lives in an off-chain signed burn intent that no contract can read, so the
   vault bounds a counterparty the daemon *names*. `STRENGTH` in `fixtures`
