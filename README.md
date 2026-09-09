@@ -56,12 +56,24 @@ missing from it reads as pending.
 
 | Gate | Ends when | Status |
 |---|---|---|
-| G1 tree arithmetic | every draw debits every ancestor, exactly | green, 57 tests |
+| G1 tree arithmetic | every draw debits every ancestor, exactly | green, 65 tests |
 | G2 live on Arc | four-agent tree, no agent holds a key, refusal on arcscan | pending |
 | G3 the hostile drill | an unrestricted agent is told to spend, and the number is published | pending |
 | G4 bounded search | thousands of strategies scored by the contract, none passes a bound | green |
 | G5 the refusal survives us | no admin key, no proxy, reversal fails as the deployer | green, 12 tests |
 | G6 the record cannot be forged | every record names its draw transaction; nobody else can write one | green, 14 tests |
+| G7 the work still gets done | one task, two conditions, three runs each, and the brief completes under the fence | green, 9 tests |
+
+G7 is the gate that can come out against the product. One task — a brief
+citing four paid sources, split across a root and its two workers — run three
+times under Cordon and three times under a plain shared cap, scored against
+acceptance criteria fixed before the first run. Both conditions completed 3 of
+3 and spent the same $4.68. What separates them is when the money leaves the
+owner: **$0.00 at risk before any work under Cordon, the whole cap under a
+shared balance**, because a shared cap is released up front and enforced by a
+counter in the process doing the spending. The fence costs a second transaction
+per purchase. The agent is scripted and deterministic, and the run record says
+so rather than implying a model.
 
 G4 swept 1,200 strategies through 45,360 draws: 12,033 refused, **0 past a
 bound**, and the closest any strategy came was $100.000000 of the $100 window
