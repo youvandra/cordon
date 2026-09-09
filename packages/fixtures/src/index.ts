@@ -266,6 +266,23 @@ export function shortAddress(value: string, head = 10, tail = 4): string {
   return isAddress(value) ? `${value.slice(0, head)}…${value.slice(-tail)}` : "pending";
 }
 
+/** Is this a 32-byte id — a node, or a transaction — rather than a sentence? */
+export function isHex32(value: string): boolean {
+  return /^0x[0-9a-fA-F]{64}$/.test(value);
+}
+
+/**
+ * A node id, short enough to sit in a chip.
+ *
+ * `shortAddress` reads `pending` for anything that is not 20 bytes, which is
+ * right for an address and wrong for a node: a real node id rendered as
+ * `pending` says a live record has not been signed yet, which is the opposite
+ * of true. Same rule underneath — an id is shortened, a sentence is not.
+ */
+export function shortId(value: string, head = 10, tail = 6): string {
+  return isHex32(value) ? `${value.slice(0, head)}…${value.slice(-tail)}` : "pending";
+}
+
 /**
  * The deployed contracts, copied from `deployments/<chainId>.json` by
  * `packages/contracts/scripts/record-addresses.mjs`. `null` until a deploy has
@@ -436,6 +453,26 @@ export const DRILL = {
  */
 export { SEARCH } from "./search.gen.ts";
 export type { SearchRun } from "./search.gen.ts";
+
+/**
+ * What each refusal reason means, in one sentence.
+ *
+ * The contract's own word is the key — `TreeVault.Reason` decoded by
+ * `ConductRecord` — and the sentence is the only part anybody writes. It lived
+ * in three places before this: the MCP's explanation table, the docs page, and
+ * nowhere at all for the public record page, which was about to need a fourth.
+ *
+ * A reason with no sentence here renders as the reason itself, which is the
+ * contract's word and is never wrong, only terse.
+ */
+export const REASON_MEANING: Record<string, string> = {
+  revoked: "the mandate for this branch was cut",
+  "tranche-cap": "the purchase is larger than one draw may be",
+  "window-budget": "the window is spent, on this node or an ancestor",
+  "lifetime-cap": "the total this mandate was signed for is spent, and it does not come back",
+  concentration: "this recipient has taken its share of the window",
+  "vault-balance": "the bounds passed and the treasury is empty",
+};
 
 /** Did any strategy get past a bound? The answer must be no. */
 export const SEARCH_CLEAN = SEARCH.passedABound === 0;

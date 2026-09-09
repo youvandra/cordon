@@ -18,16 +18,13 @@ const usdc = (base6: bigint) => {
   return `$${whole}.${frac}`;
 };
 
+import { REASON_MEANING } from "../../fixtures/src/index.ts";
+
 const short = (id: string) => `${id.slice(0, 10)}…${id.slice(-6)}`;
 
-const WHY: Record<string, string> = {
-  "tranche-cap": "the purchase is larger than one tranche",
-  "window-budget": "the window has no room left",
-  "lifetime-cap": "the mandate has spent the total it was signed for, and that total does not reset",
-  concentration: "too much of the window has already gone to this counterparty",
-  revoked: "the mandate for this branch was cut",
-  "vault-balance": "the vault holds less than the purchase costs",
-};
+/* One sentence per reason, and it lives in fixtures with every other figure
+   this project shows a reader. Three copies of it existed before that. */
+const WHY = REASON_MEANING;
 
 export function renderRefusal(outcome: DrawOutcome, offer: Offer, explorer?: string): string {
   const lines = [

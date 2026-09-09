@@ -86,7 +86,7 @@ test("it refuses on cue, in words, with the record", async () => {
   const shown = say(await client.callTool({ name: "cordon_fetch", arguments: { url: h.greedyUrl } }));
 
   assert.match(shown, /^REFUSED/);
-  assert.match(shown, /larger than one tranche/);
+  assert.match(shown, /larger than one draw may be/);
   assert.match(shown, /On the record as +refusal #\d+/);
   assert.match(shown, /Transaction +0x[0-9a-f]{64}/);
   assert.match(shown, /Nothing was paid/);

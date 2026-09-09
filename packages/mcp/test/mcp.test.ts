@@ -113,7 +113,7 @@ test("a refusal reads as a decision, names the ancestor, and points at the recor
   const rendered = renderRefusal(refused, OFFER, "https://testnet.arcscan.app");
 
   assert.match(rendered, /^REFUSED/, "it says so first");
-  assert.match(rendered, /the window has no room left/, "in words, not a code");
+  assert.match(rendered, /the window is spent/, "in words, not a code");
   assert.match(rendered, new RegExp(ROOT.slice(0, 10)), "and names the node that stopped it");
   assert.match(rendered, /refusal #7/);
   assert.match(rendered, /testnet\.arcscan\.app\/tx\/0xcdcd/, "with somewhere to go and check");
