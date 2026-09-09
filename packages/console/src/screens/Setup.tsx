@@ -25,7 +25,7 @@ import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 import { useEntrance } from "../lib/entrance";
 import { useWallet } from "../lib/wallet";
-import { REGISTRY, useOpenMandate } from "../lib/mandate";
+import { REGISTRY, useExistingMandate, useOpenMandate } from "../lib/mandate";
 
 /**
  * Dollars as typed, in USDC base units.
@@ -103,6 +103,10 @@ export default function Setup() {
   const { address, real } = useWallet();
   const { state, open } = useOpenMandate(address);
   const live = real && Boolean(REGISTRY) && Boolean(address);
+  /* What this wallet has already signed. Without it the screen has no memory:
+     sign a mandate, reload, and it asks for one again while the chain holds
+     the answer. */
+  const existing = useExistingMandate(real ? address : null);
 
   const questions = [
     {
@@ -253,6 +257,22 @@ export default function Setup() {
     });
   };
 
+  /* A mandate this wallet already signed puts the screen in its finished
+     state, with the chain's own numbers rather than whatever is in the form —
+     which is the only version of them that is true. */
+  useEffect(() => {
+    if (existing.state !== "found") return;
+    const m = existing.mandate;
+    setBudget(String(m.budget6 / 1_000_000n));
+    setLifetime(String(m.lifetimeCap6 / 1_000_000n));
+    setTranche(String(m.trancheCap6 / 1_000_000n));
+    setWindowS(String(m.windowSeconds));
+    setConcentration(String(m.concentrationBps / 100));
+    setDepth(String(m.maxDepth));
+    setOperator(m.operator);
+    setStage("done");
+  }, [existing]);
+
   /* The transaction reports itself, and the screen stops asking once it is
      open. Each state raises its toast once, keyed by the state, so a
      re-render cannot stack three copies of one sentence. */
@@ -322,7 +342,9 @@ export default function Setup() {
         lede="Children are created by their parent, in seconds, while you sleep. The contract refuses a child wider than its parent, so no per-spawn approval is needed, and none would be safe to ask for."
         note={
           stage === "done"
-            ? "signed — a mandate cannot be edited"
+            ? existing.state === "found"
+              ? `signed · read from ${ARC.name}`
+              : "signed — a mandate cannot be edited"
             : live
               ? `signs on ${ARC.name}, from your own key`
               : "nothing is signed or sent"

@@ -11,8 +11,17 @@
  * here has a specific cause worth naming, because the deployed registry
  * predates `lifetimeCap6` and takes a six-field struct where this sends seven.
  */
-import { useCallback, useState } from "react";
-import { createPublicClient, createWalletClient, custom, defineChain, type Hex } from "viem";
+import { useCallback, useEffect, useState } from "react";
+import {
+  createPublicClient,
+  createWalletClient,
+  custom,
+  defineChain,
+  encodeAbiParameters,
+  http,
+  keccak256,
+  type Hex,
+} from "viem";
 import { useWallets } from "@privy-io/react-auth";
 import { ARC, DEPLOYMENT } from "@cordon/fixtures";
 import { MandateRegistryAbi } from "../../../daemon/src/abi.gen.ts";
@@ -134,4 +143,110 @@ export function useOpenMandate(expected?: string | null) {
   );
 
   return { state, open };
+}
+
+/* ---- finding what is already there --------------------------------------- */
+
+/**
+ * A root's node id, derived the way the registry derives it.
+ *
+ * `open` computes `keccak256(abi.encode(chainid, registry, owner, nonce))` and
+ * increments the owner's nonce, so every mandate an address has ever opened is
+ * reachable from the address alone. That is the whole reason this can be
+ * answered without an indexer: no event log, no meter, no server — the id is a
+ * function of who signed and how many times.
+ */
+export function rootNodeId(owner: `0x${string}`, nonce: number, registry: `0x${string}`): Hex {
+  return keccak256(
+    encodeAbiParameters(
+      [{ type: "uint256" }, { type: "address" }, { type: "address" }, { type: "uint96" }],
+      [BigInt(ARC.chainId), registry, owner, BigInt(nonce)],
+    ),
+  );
+}
+
+export interface OpenMandate {
+  node: Hex;
+  operator: `0x${string}`;
+  budget6: bigint;
+  lifetimeCap6: bigint;
+  windowSeconds: bigint;
+  trancheCap6: bigint;
+  concentrationBps: number;
+  maxDepth: number;
+  revoked: boolean;
+}
+
+export type Existing =
+  | { state: "unknown" }
+  | { state: "looking" }
+  | { state: "none" }
+  | { state: "found"; mandate: OpenMandate };
+
+/** How many of an owner's mandates to look for. Nonces are sequential. */
+const SCAN = 8;
+
+/**
+ * What this address has already signed, read from the chain.
+ *
+ * Without it the console is a form with no memory: sign a mandate, reload, and
+ * it asks for one again — while the chain holds the answer and cannot be
+ * asked, because a mandate's id is not on screen anywhere.
+ */
+export function useExistingMandate(owner: string | null): Existing {
+  const [found, setFound] = useState<Existing>({ state: "unknown" });
+
+  useEffect(() => {
+    if (!owner || !REGISTRY) {
+      setFound({ state: "unknown" });
+      return;
+    }
+    let live = true;
+    setFound({ state: "looking" });
+
+    /* Its own transport rather than the wallet's: this runs before anyone has
+       been asked to sign anything, and a read should not need a wallet. */
+    const client = createPublicClient({ chain: arc, transport: http(ARC.rpc) });
+
+    (async () => {
+      for (let nonce = 0; nonce < SCAN; nonce++) {
+        const node = rootNodeId(owner as `0x${string}`, nonce, REGISTRY);
+        try {
+          const m = (await client.readContract({
+            address: REGISTRY,
+            abi: MandateRegistryAbi,
+            functionName: "mandate",
+            args: [node],
+          })) as {
+            operator: `0x${string}`;
+            budget6: bigint;
+            lifetimeCap6: bigint;
+            windowSeconds: bigint;
+            trancheCap6: bigint;
+            concentrationBps: number;
+            maxDepth: number;
+            revoked: boolean;
+          };
+          /* A revoked root is still a mandate this owner opened, and offering
+             to open another is the right answer — but it is not the one on
+             screen, so keep looking for a live one first. */
+          if (!m.revoked && live) {
+            setFound({ state: "found", mandate: { node, ...m } });
+            return;
+          }
+        } catch {
+          /* `mandate` reverts on an id nobody has opened, which is how the scan
+             ends: nonces are sequential, so the first gap is the end. */
+          break;
+        }
+      }
+      if (live) setFound({ state: "none" });
+    })();
+
+    return () => {
+      live = false;
+    };
+  }, [owner]);
+
+  return found;
 }
