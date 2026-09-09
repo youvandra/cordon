@@ -149,6 +149,23 @@ cd packages/contracts && forge test
 `CORDON_G4_VARIANTS=3` runs the search coarse while iterating; the full sweep is
 most of the suite's runtime.
 
+### The operator keys
+
+The daemon is the only thing that ever needs one, so the daemon makes them.
+
+```bash
+npm run init --prefix packages/daemon -- --nodes 4
+```
+
+It writes `~/.cordon/cordon.env` at `0600` and prints **addresses only** — the
+public half, and the part you paste into the console when you sign a mandate.
+No private key is printed, and there is a test asserting that. A second run
+refuses: a key there may already be the operator of a live mandate, and a
+mandate's operator is set at `open` and cannot be repointed.
+
+Each address needs gas and holds no USDC by design; the vault tops it up one
+purchase at a time.
+
 Deploying needs a Foundry keystore and a funded account; the private key is
 never an argument to the script and never an environment variable:
 

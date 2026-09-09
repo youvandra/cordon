@@ -8,7 +8,8 @@
     "abi": "node scripts/emit-abi.mjs",
     "build": "npm run abi && tsc --noEmit",
     "test": "npm run abi && node --test \"test/*.test.ts\"",
-    "start": "node src/main.ts"
+    "start": "node src/main.ts",
+    "init": "node src/init-cli.ts"
   },
   "dependencies": {
     "viem": "^2.21.55"
@@ -16,5 +17,8 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2"
+  },
+  "bin": {
+    "cordon-init": "src/init-cli.ts"
   }
 }
