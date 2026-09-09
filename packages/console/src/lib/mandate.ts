@@ -60,6 +60,21 @@ export type OpenState =
  */
 export const REGISTRY = DEPLOYMENT?.registry as `0x${string}` | undefined;
 
+/** Both addresses, or nothing. Reading a tree needs the vault as well. */
+export const DEPLOYED = DEPLOYMENT
+  ? {
+      registry: DEPLOYMENT.registry as `0x${string}`,
+      vault: DEPLOYMENT.vault as `0x${string}`,
+    }
+  : undefined;
+
+/** A child's id, derived the way `spawn` derives it. */
+export function childNodeId(parent: Hex, nonce: number): Hex {
+  return keccak256(
+    encodeAbiParameters([{ type: "bytes32" }, { type: "uint96" }], [parent, BigInt(nonce)]),
+  );
+}
+
 export function useOpenMandate(expected?: string | null) {
   const { wallets } = useWallets();
   const [state, setState] = useState<OpenState>({ status: "idle" });

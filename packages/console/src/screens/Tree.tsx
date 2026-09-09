@@ -18,10 +18,12 @@ import {
   useToast,
 } from "cordon-ui";
 import type { TreeNode as UiTreeNode } from "cordon-ui";
-import { ENFORCED_BY, MANDATE, STRENGTH, formatUsdc } from "@cordon/fixtures";
+import { ARC, ENFORCED_BY, MANDATE, STRENGTH, formatUsdc } from "@cordon/fixtures";
 import { TREE, flatten, lifetime, pathTo, type TreeNode } from "@cordon/fixtures/preview";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
+import { useWallet } from "../lib/wallet";
+import { useChainTree, type ChainNode } from "../lib/tree";
 import { useEntrance } from "../lib/entrance";
 
 /** The path from the root down to `id`, excluding `id` itself. */
@@ -53,6 +55,128 @@ function subtreeOf(root: TreeNode, id: string): string[] {
 }
 
 const DRAW6 = 1_000_000n;
+
+
+/**
+ * The tree as the chain holds it — no indexer, no meter, no server.
+ *
+ * `MandateRegistry` derives ids instead of listing them, so every node under an
+ * owner is reachable from that owner's address; the bounds come from the
+ * registry and the spending from the vault's own views. Nothing here is a
+ * reduction of events, so nothing here can disagree with the contract.
+ *
+ * There are no draw or revoke controls on these rows. A draw is the daemon's
+ * to make and a revocation is a transaction, and a button that pretends to do
+ * either from a table would be the surface lying about what it can do.
+ */
+function ChainTree({ nodes }: { nodes: ChainNode[] }) {
+  const root = nodes.find((node) => node.parent === null);
+
+  return (
+    <>
+      <Grid columns={2} min={360} gap="lg" align="start">
+        <MetricCard
+          title={
+            <>
+              Root window
+              <br />
+              Drawn across the whole tree
+            </>
+          }
+          value={formatUsdc(root ? root.windowSpent6 : 0n).replace("$", "")}
+          unit="USDC"
+          progress={
+            root && root.budget6 > 0n
+              ? Math.min(1, Number(root.windowSpent6) / Number(root.budget6))
+              : 0
+          }
+          caption={
+            root ? (
+              <>
+                of {formatUsdc(root.budget6)}
+                <br />
+                {formatUsdc(root.lifetimeSpent6)} of {formatUsdc(root.lifetimeCap6)} in total
+              </>
+            ) : null
+          }
+          glaze="violet"
+        />
+
+        <Section title={`${nodes.length} ${nodes.length === 1 ? "node" : "nodes"} on ${ARC.name}`}>
+          <CardBody>
+            <Text variant="body" tone="copy" as="p">
+              Read from the registry and the vault directly. The ids are derived
+              from your address, so nobody had to be asked how many agents you
+              have — and nothing between you and the contract could have got the
+              answer wrong.
+            </Text>
+          </CardBody>
+        </Section>
+      </Grid>
+
+      <Section title="delegation tree" aside={<Enforced>{ENFORCED_BY.treeBar}</Enforced>}>
+        <DataTable
+          rows={nodes}
+          rowKey={(node) => node.node}
+          columns={[
+            {
+              id: "node",
+              header: "Node",
+              cell: (node) => (
+                <span className="cell__node" style={{ paddingLeft: node.depth * 16 }}>
+                  <span className="mono cell__id">
+                    {node.node.slice(0, 10)}…{node.node.slice(-6)}
+                  </span>
+                  {node.revoked ? (
+                    <Tag tone="critical" size="sm">
+                      revoked
+                    </Tag>
+                  ) : null}
+                </span>
+              ),
+            },
+            {
+              id: "operator",
+              header: "Operator",
+              cell: (node) => (
+                <span className="mono">
+                  {node.operator.slice(0, 8)}…{node.operator.slice(-4)}
+                </span>
+              ),
+            },
+            {
+              id: "spent",
+              header: "Spent this window",
+              numeric: true,
+              cell: (node) => formatUsdc(node.windowSpent6),
+            },
+            {
+              id: "total",
+              header: "Spent in total",
+              numeric: true,
+              cell: (node) => formatUsdc(node.lifetimeSpent6),
+            },
+            {
+              id: "headroom",
+              header: "Can still draw",
+              numeric: true,
+              cell: (node) => (
+                <span className="headroom">
+                  <b className="num">{formatUsdc(node.available6)}</b>
+                  {node.boundBy.toLowerCase() === node.node.toLowerCase() ? null : (
+                    <span className="headroom__bound mono">
+                      held by {node.boundBy.slice(0, 8)}…
+                    </span>
+                  )}
+                </span>
+              ),
+            },
+          ]}
+        />
+      </Section>
+    </>
+  );
+}
 
 export default function Tree() {
   useTitle("Tree · Cordon console");
@@ -149,12 +273,31 @@ export default function Tree() {
   const rootSpent = spend.root ?? TREE.spent6;
   const rootShare = Number((rootSpent * 100n) / TREE.budget6);
 
+  /* A wallet with mandates on chain gets its own tree; everyone else gets the
+     illustration, which says so. Both cannot be shown at once — two trees on
+     one screen is a reader asking which one is theirs. */
+  const { address, real } = useWallet();
+  const chain = useChainTree(real ? address : null);
+
+  if (chain.state === "read") {
+    return (
+      <>
+        <ScreenHead
+          title="Live exposure across the whole tree"
+          lede="Every node here is one of your own agents, running on your own daemon keys. Every figure is read from the contract that enforces it."
+          note={`read from ${ARC.name}`}
+        />
+        <ChainTree nodes={chain.nodes} />
+      </>
+    );
+  }
+
   return (
     <>
       <ScreenHead
         title="Live exposure across the whole tree"
         lede="Every node here is one of your own agents, running on your own daemon keys. Draw on a grandchild; its grandparent's bar moves."
-        note="sample tree; draws are local"
+        note={chain.state === "looking" ? "reading the chain…" : "sample tree; draws are local"}
       />
 
       <Grid columns={2} min={360} gap="lg" align="start">
