@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { startWorld, ERC20, type World } from "../src/world.ts";
 import { startSellers, type Sellers } from "../src/sellers.ts";
 import { cordonBuyer, sharedCapBuyer } from "../src/conditions.ts";
-import { scriptedAgent } from "../src/agent.ts";
+import { faultyAgent, scriptedAgent } from "../src/agent.ts";
 import { accept, taskCost6, SOURCES } from "../src/task.ts";
 
 let world: World;
@@ -85,5 +85,31 @@ test("a purchase larger than a tranche is refused, and the refusal names the bou
     assert.equal(purchase.chainWrites, 0, "a refusal costs no transaction");
   } finally {
     await greedy.stop();
+  }
+});
+
+test("a worker in a loop is stopped at its own bound, and its sibling still finishes", async () => {
+  /* The claim a shared cap cannot make. One worker does its job and then keeps
+     buying; the question is whether the other worker's section survives it. */
+  const narrow = await startWorld(8551, 5_000);
+  const shop = await startSellers({
+    window6: narrow.window6, usdc: narrow.usdc, network: "eip155:31337",
+  });
+  try {
+    const result = await faultyAgent.run(shop, cordonBuyer(narrow));
+
+    assert.equal(accept(result.brief, shop.served()).complete, true, "the sibling's section was not delivered");
+    assert.ok(result.runaway6 > 0n, "the loop bought nothing, so nothing was under test");
+    assert.equal(result.refusals.length, 1, "the loop should be stopped exactly once");
+    /* Which bound stops it is the contract's to decide and is recorded rather
+       than asserted by name — except that it must not be the shared cap, which
+       does not exist on this side. */
+    assert.notEqual(result.refusals[0]!.reason, "shared-cap");
+
+    /* And it may not have taken more than the window its own node was given. */
+    assert.ok(result.runaway6 < narrow.window6 / 2n);
+  } finally {
+    await shop.stop();
+    await narrow.stop();
   }
 });

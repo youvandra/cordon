@@ -108,70 +108,96 @@ export default function PublicDrill() {
         </Surface>
 
         {/* G7 is the one gate that can come out against the product, so it is
-            on the public page beside the drill rather than in the docs. The
-            verdict is computed from the criteria, not written by anyone. */}
+            on the public page beside the drill rather than in the docs. Both
+            scenarios are printed whichever way they went; the verdict is
+            computed from the criteria, not written by anyone. */}
         <Section
           title="g7 · the work still gets done"
           aside={
             <Text variant="micro" tone="dim" as="span">
-              {EVAL.runs} runs each · {EVAL.agent} agent · {EVAL.recordedAt}
+              {EVAL.runs} runs each · {EVAL.recordedAt}
             </Text>
           }
         >
-          <DataTable
-            rows={EVAL.conditions}
-            rowKey={(condition) => condition.id}
-            columns={[
-              {
-                id: "id",
-                header: "Condition",
-                cell: (condition) => (
-                  <b>{condition.id === "cordon" ? "Cordon" : "A plain shared cap"}</b>
-                ),
-              },
-              {
-                id: "completed",
-                header: "Briefs completed",
-                cell: (condition) => `${condition.completed} of ${condition.runs}`,
-              },
-              {
-                id: "spent",
-                header: "Spent",
-                numeric: true,
-                cell: (condition) => formatUsdc(condition.spent6),
-              },
-              {
-                id: "refusals",
-                header: "Refused",
-                numeric: true,
-                cell: (condition) => condition.refusals,
-              },
-              {
-                /* The column the comparison turns on. Both conditions bought
-                   the same four facts; only one of them had the owner's money
-                   in someone else's balance before the work started. */
-                id: "exposure",
-                header: "Owner's money at risk before any work",
-                numeric: true,
-                cell: (condition) => formatUsdc(condition.exposureAtStart6),
-              },
-              {
-                id: "writes",
-                header: "Transactions per purchase",
-                numeric: true,
-                cell: (condition) => condition.writesPerPurchase,
-              },
-            ]}
-          />
+          {EVAL.scenarios.map((scenario) => (
+            <div key={scenario.id} className="evalscenario">
+              <Text variant="micro" tone="dim" as="p" className="eyebrow">
+                {scenario.id.replace(/-/g, " ")} · {scenario.agent} ·{" "}
+                {scenario.workerShareBps / 100}% of the window each
+              </Text>
+              <DataTable
+                rows={scenario.conditions}
+                rowKey={(condition) => condition.id}
+                columns={[
+                  {
+                    id: "id",
+                    header: "Condition",
+                    cell: (condition) => (
+                      <b>{condition.id === "cordon" ? "Cordon" : "A plain shared cap"}</b>
+                    ),
+                  },
+                  {
+                    id: "completed",
+                    header: "Briefs completed",
+                    cell: (condition) => `${condition.completed} of ${condition.runs}`,
+                  },
+                  {
+                    id: "spent",
+                    header: "Spent",
+                    numeric: true,
+                    cell: (condition) => formatUsdc(condition.spent6),
+                  },
+                  {
+                    /* Only meaningful in the second scenario, and printed in
+                       both so the columns do not move between them. */
+                    id: "runaway",
+                    header: "Taken by the loop",
+                    numeric: true,
+                    cell: (condition) => formatUsdc(condition.runaway6),
+                  },
+                  {
+                    id: "refused",
+                    header: "Refused by",
+                    cell: (condition) =>
+                      condition.refusals === 0
+                        ? "nothing"
+                        : `${condition.refusals} · ${condition.reasons.join(", ")}`,
+                  },
+                  {
+                    /* The column the first scenario turns on. Both conditions
+                       bought the same sources; only one had the owner's money
+                       somewhere else before the work started. */
+                    id: "exposure",
+                    header: "At risk before any work",
+                    numeric: true,
+                    cell: (condition) => formatUsdc(condition.exposureAtStart6),
+                  },
+                  {
+                    id: "writes",
+                    header: "Transactions per purchase",
+                    numeric: true,
+                    cell: (condition) => condition.writesPerPurchase,
+                  },
+                ]}
+              />
+            </div>
+          ))}
           <p className="pane__foot">
-            One task — a brief citing {EVAL.sources} paid sources — run{" "}
-            {EVAL.runs} times under each condition against criteria fixed
-            before the first run: a brief counts as done only when every source
-            is cited with the body that seller actually served. Verdict:{" "}
-            <b>{EVAL.verdict === "work-gets-through" ? "the work gets through" : "the fence blocks the work"}</b>
-            . The agent is scripted and deterministic, which is why it is named
-            here rather than implied; latency is not measured, because a local
-            chain's confirmation time is not Arc's.
+            One task — a brief citing {EVAL.sources} paid sources, split across a
+            root and its two workers — run {EVAL.runs} times under each
+            condition, against criteria fixed before the first run: a brief
+            counts as done only when every source is cited with the body that
+            seller actually served. Both conditions are given the same
+            authority, the {formatUsdc(EVAL.window6, 0)} window the owner
+            signed. Verdict:{" "}
+            <b>
+              {EVAL.verdict === "work-gets-through"
+                ? "the work gets through"
+                : "the fence blocks the work"}
+            </b>
+            . The agents are scripted and deterministic, which is why they are
+            named here rather than implied; latency is not measured, because a
+            local chain&rsquo;s confirmation time is not Arc&rsquo;s.
           </p>
         </Section>
 

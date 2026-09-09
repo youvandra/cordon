@@ -79,6 +79,8 @@ export function cordonBuyer(world: World): Buyer {
       CORDON_REGISTRY: world.registry,
       CORDON_USDC: world.usdc,
       CORDON_NETWORKS: "eip155:31337",
+      /* anvil mines instantly; the default spends four seconds per draw. */
+      CORDON_POLL_MS: "50",
       CORDON_ASSETS: world.usdc,
       [`CORDON_NODE_${label}`]: worker.node,
       [`CORDON_KEY_${label}`]: worker.key,

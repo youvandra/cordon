@@ -10,21 +10,33 @@ export type EvalCondition = {
   /** Sources cited with a body no seller served. Must be zero. */
   unsupported: number;
   spent6: bigint;
+  /** Of `spent6`, what a worker's runaway loop took. */
+  runaway6: bigint;
   refusals: number;
+  /** Which bounds did the refusing. */
+  reasons: string[];
   /** USDC out of the owner's hands before any work was done. */
   exposureAtStart6: bigint;
   chainWrites: number;
+  /** Per purchase that happened. A refusal costs no transaction. */
   writesPerPurchase: number;
 };
 
-export type EvalRunRecord = {
-  /** Which agent produced the briefs. Never implied. */
+export type EvalScenario = {
+  id: string;
+  /** What the workers did. Never implied. */
   agent: string;
+  /** How much of the root window each worker was given, in basis points. */
+  workerShareBps: number;
+  conditions: EvalCondition[];
+};
+
+export type EvalRunRecord = {
   runs: number;
   sources: number;
   window6: bigint;
   taskCost6: bigint;
-  conditions: EvalCondition[];
+  scenarios: EvalScenario[];
   verdict: "work-gets-through" | "the-fence-blocks-the-work";
   tests: number;
   passed: number;
@@ -32,37 +44,80 @@ export type EvalRunRecord = {
 };
 
 export const EVAL: EvalRunRecord = {
-  agent: "scripted",
   runs: 3,
   sources: 4,
   window6: 20000000n,
   taskCost6: 1560000n,
-  conditions: [
+  scenarios: [
   {
-    id: "cordon",
-    runs: 3,
-    completed: 3,
-    unsupported: 0,
-    spent6: 4680000n,
-    refusals: 0,
-    exposureAtStart6: 0n,
-    chainWrites: 24,
-    writesPerPurchase: 2,
+    id: "the-work",
+    agent: "scripted",
+    workerShareBps: 10000,
+    conditions: [
+      {
+        id: "cordon",
+        runs: 3,
+        completed: 3,
+        unsupported: 0,
+        spent6: 4680000n,
+        runaway6: 0n,
+        refusals: 0,
+        reasons: [],
+        exposureAtStart6: 0n,
+        chainWrites: 24,
+        writesPerPurchase: 2,
+      },
+      {
+        id: "shared-cap",
+        runs: 3,
+        completed: 3,
+        unsupported: 0,
+        spent6: 4680000n,
+        runaway6: 0n,
+        refusals: 0,
+        reasons: [],
+        exposureAtStart6: 20000000n,
+        chainWrites: 12,
+        writesPerPurchase: 1,
+      },
+    ],
   },
   {
-    id: "shared-cap",
-    runs: 3,
-    completed: 3,
-    unsupported: 0,
-    spent6: 4680000n,
-    refusals: 0,
-    exposureAtStart6: 4680000n,
-    chainWrites: 12,
-    writesPerPurchase: 1,
+    id: "a-worker-in-a-loop",
+    agent: "scripted, one worker in a loop",
+    workerShareBps: 5000,
+    conditions: [
+      {
+        id: "cordon",
+        runs: 3,
+        completed: 3,
+        unsupported: 0,
+        spent6: 13860000n,
+        runaway6: 9180000n,
+        refusals: 3,
+        reasons: ["concentration"],
+        exposureAtStart6: 0n,
+        chainWrites: 60,
+        writesPerPurchase: 2,
+      },
+      {
+        id: "shared-cap",
+        runs: 3,
+        completed: 0,
+        unsupported: 0,
+        spent6: 59760000n,
+        runaway6: 56610000n,
+        refusals: 6,
+        reasons: ["shared-cap"],
+        exposureAtStart6: 20000000n,
+        chainWrites: 120,
+        writesPerPurchase: 1,
+      },
+    ],
   },
   ],
   verdict: "work-gets-through",
-  tests: 9,
-  passed: 9,
+  tests: 10,
+  passed: 10,
   recordedAt: "2026-09-09",
 };

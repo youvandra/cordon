@@ -52,16 +52,26 @@ const json = (v) => JSON.stringify(v);
 const bigint = (v) => `${v.toString()}n`;
 
 const condition = (c) =>
+  `      {\n` +
+  `        id: ${json(c.id)},\n` +
+  `        runs: ${c.runs},\n` +
+  `        completed: ${c.completed},\n` +
+  `        unsupported: ${c.unsupported},\n` +
+  `        spent6: ${bigint(c.spent6)},\n` +
+  `        runaway6: ${bigint(c.runaway6)},\n` +
+  `        refusals: ${c.refusals},\n` +
+  `        reasons: ${json(c.reasons)},\n` +
+  `        exposureAtStart6: ${bigint(c.exposureAtStart6)},\n` +
+  `        chainWrites: ${c.chainWrites},\n` +
+  `        writesPerPurchase: ${c.writesPerPurchase},\n` +
+  `      },`;
+
+const scenario = (s) =>
   `  {\n` +
-  `    id: ${json(c.id)},\n` +
-  `    runs: ${c.runs},\n` +
-  `    completed: ${c.completed},\n` +
-  `    unsupported: ${c.unsupported},\n` +
-  `    spent6: ${bigint(c.spent6)},\n` +
-  `    refusals: ${c.refusals},\n` +
-  `    exposureAtStart6: ${bigint(c.exposureAtStart6)},\n` +
-  `    chainWrites: ${c.chainWrites},\n` +
-  `    writesPerPurchase: ${c.writesPerPurchase},\n` +
+  `    id: ${json(s.id)},\n` +
+  `    agent: ${json(s.agent)},\n` +
+  `    workerShareBps: ${s.workerShareBps},\n` +
+  `    conditions: [\n${s.conditions.map(condition).join("\n")}\n    ],\n` +
   `  },`;
 
 writeFileSync(
@@ -74,30 +84,36 @@ writeFileSync(
     `  /** Briefs that met the acceptance criteria, out of \`runs\`. */\n  completed: number;\n` +
     `  /** Sources cited with a body no seller served. Must be zero. */\n  unsupported: number;\n` +
     `  spent6: bigint;\n` +
+    `  /** Of \`spent6\`, what a worker's runaway loop took. */\n  runaway6: bigint;\n` +
     `  refusals: number;\n` +
+    `  /** Which bounds did the refusing. */\n  reasons: string[];\n` +
     `  /** USDC out of the owner's hands before any work was done. */\n  exposureAtStart6: bigint;\n` +
     `  chainWrites: number;\n` +
-    `  writesPerPurchase: number;\n` +
+    `  /** Per purchase that happened. A refusal costs no transaction. */\n  writesPerPurchase: number;\n` +
+    `};\n\n` +
+    `export type EvalScenario = {\n` +
+    `  id: string;\n` +
+    `  /** What the workers did. Never implied. */\n  agent: string;\n` +
+    `  /** How much of the root window each worker was given, in basis points. */\n  workerShareBps: number;\n` +
+    `  conditions: EvalCondition[];\n` +
     `};\n\n` +
     `export type EvalRunRecord = {\n` +
-    `  /** Which agent produced the briefs. Never implied. */\n  agent: string;\n` +
     `  runs: number;\n` +
     `  sources: number;\n` +
     `  window6: bigint;\n` +
     `  taskCost6: bigint;\n` +
-    `  conditions: EvalCondition[];\n` +
+    `  scenarios: EvalScenario[];\n` +
     `  verdict: "work-gets-through" | "the-fence-blocks-the-work";\n` +
     `  tests: number;\n` +
     `  passed: number;\n` +
     `  recordedAt: string;\n` +
     `};\n\n` +
     `export const EVAL: EvalRunRecord = {\n` +
-    `  agent: ${json(result.agent)},\n` +
     `  runs: ${result.runs},\n` +
     `  sources: ${result.sources},\n` +
     `  window6: ${bigint(result.window6)},\n` +
     `  taskCost6: ${bigint(result.taskCost6)},\n` +
-    `  conditions: [\n${result.conditions.map(condition).join("\n")}\n  ],\n` +
+    `  scenarios: [\n${result.scenarios.map(scenario).join("\n")}\n  ],\n` +
     `  verdict: ${json(result.verdict)},\n` +
     `  tests: ${total},\n` +
     `  passed: ${passed},\n` +

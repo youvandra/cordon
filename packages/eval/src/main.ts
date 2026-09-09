@@ -11,21 +11,27 @@ const usd = (v: bigint) => `$${(Number(v) / 1e6).toFixed(2)}`;
 
 const result = await runEval({ runs: Number(process.env.CORDON_EVAL_RUNS ?? 3) });
 
-console.log(`agent: ${result.agent}, ${result.runs} runs, ${result.sources} paid sources`);
-console.log(`task costs ${usd(result.taskCost6)} against a ${usd(result.window6)} window\n`);
+console.log(`${result.runs} runs each, ${result.sources} paid sources`);
+console.log(`the task costs ${usd(result.taskCost6)} against a ${usd(result.window6)} window\n`);
 
-for (const c of result.conditions) {
-  console.log(
-    [
-      c.id.padEnd(11),
-      `${c.completed}/${c.runs} complete`,
-      `${c.refusals} refused`,
-      `spent ${usd(c.spent6)}`,
-      `exposed at start ${usd(c.exposureAtStart6)}`,
-      `${c.chainWrites} writes, ${c.writesPerPurchase} per purchase`,
-    ].join(" · "),
-  );
+for (const scenario of result.scenarios) {
+  console.log(`${scenario.id} — ${scenario.agent}, ${scenario.workerShareBps / 100}% of the window each`);
+  for (const c of scenario.conditions) {
+    console.log(
+      "  " +
+        [
+          c.id.padEnd(11),
+          `${c.completed}/${c.runs} complete`,
+          `${c.refusals} refused${c.reasons.length ? ` (${c.reasons.join(", ")})` : ""}`,
+          `spent ${usd(c.spent6)}`,
+          c.runaway6 > 0n ? `runaway ${usd(c.runaway6)}` : "runaway $0.00",
+          `exposed at start ${usd(c.exposureAtStart6)}`,
+          `${c.writesPerPurchase} writes per purchase`,
+        ].join(" · "),
+    );
+  }
+  console.log("");
 }
 
-console.log(`\nverdict: ${result.verdict}`);
+console.log(`verdict: ${result.verdict}`);
 process.exit(result.verdict === "work-gets-through" ? 0 : 1);

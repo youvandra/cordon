@@ -80,45 +80,55 @@ export default function Drill() {
             g7 · the work still gets done
           </Text>
           <Text variant="micro" tone="dim" as="span">
-            {EVAL.runs} runs each · {EVAL.agent} agent
+            {EVAL.runs} runs each · {EVAL.verdict.replace(/-/g, " ")}
           </Text>
         </CardHeader>
-        <DataTable
-          rows={EVAL.conditions}
-          rowKey={(condition) => condition.id}
-          columns={[
-            {
-              id: "id",
-              header: "Condition",
-              cell: (condition) => (
-                <b>{condition.id === "cordon" ? "Cordon" : "A plain shared cap"}</b>
-              ),
-            },
-            {
-              id: "completed",
-              header: "Briefs completed",
-              cell: (condition) => `${condition.completed} of ${condition.runs}`,
-            },
-            {
-              id: "spent",
-              header: "Spent",
-              numeric: true,
-              cell: (condition) => formatUsdc(condition.spent6),
-            },
-            {
-              id: "exposure",
-              header: "At risk before any work",
-              numeric: true,
-              cell: (condition) => formatUsdc(condition.exposureAtStart6),
-            },
-            {
-              id: "writes",
-              header: "Transactions per purchase",
-              numeric: true,
-              cell: (condition) => condition.writesPerPurchase,
-            },
-          ]}
-        />
+        {EVAL.scenarios.map((scenario) => (
+          <div key={scenario.id}>
+            <CardBody>
+              <Text variant="micro" tone="dim" as="p" className="eyebrow">
+                {scenario.id.replace(/-/g, " ")} · {scenario.workerShareBps / 100}% of the
+                window each
+              </Text>
+            </CardBody>
+            <DataTable
+              rows={scenario.conditions}
+              rowKey={(condition) => condition.id}
+              columns={[
+                {
+                  id: "id",
+                  header: "Condition",
+                  cell: (condition) => (
+                    <b>{condition.id === "cordon" ? "Cordon" : "A plain shared cap"}</b>
+                  ),
+                },
+                {
+                  id: "completed",
+                  header: "Briefs completed",
+                  cell: (condition) => `${condition.completed} of ${condition.runs}`,
+                },
+                {
+                  id: "spent",
+                  header: "Spent",
+                  numeric: true,
+                  cell: (condition) => formatUsdc(condition.spent6),
+                },
+                {
+                  id: "runaway",
+                  header: "Taken by the loop",
+                  numeric: true,
+                  cell: (condition) => formatUsdc(condition.runaway6),
+                },
+                {
+                  id: "exposure",
+                  header: "At risk before any work",
+                  numeric: true,
+                  cell: (condition) => formatUsdc(condition.exposureAtStart6),
+                },
+              ]}
+            />
+          </div>
+        ))}
         <CardBody>
           <a href={site("/docs/gates#the-work")}>
             <Button variant="secondary" size="sm" iconEnd="arrow-right">

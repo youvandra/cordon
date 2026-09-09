@@ -1104,3 +1104,8 @@ main { flex: 1 1 auto; }
   font-size: 14.5px;
   line-height: 1.5;
 }
+
+/* Two scenarios in one section, and the second needs air above it or the two
+   tables read as one with a stray heading in the middle. */
+.evalscenario + .evalscenario { margin-top: var(--cordon-space-6); }
+.evalscenario > .eyebrow { margin: 0 0 var(--cordon-space-2); }
