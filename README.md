@@ -86,7 +86,9 @@ there. **The shared cap delivered 0 of 3**: it stopped the spending at the
 total it was given, having no way to say *and no single worker may take all of
 it*, so the loop took $56.61 across the three runs and the other worker's
 sources were never bought. The agents are scripted and deterministic, and the
-run record says so rather than implying a model.
+run record says so rather than implying a model. G7 deploys the same contracts
+to a local node and runs there: it is evidence about the contracts, not about
+Arc. G2 is the gate that is about Arc, and it has not been run.
 
 G4 swept 1,200 strategies through 45,360 draws: 12,033 refused, **0 past a
 bound**, and the closest any strategy came was $100.000000 of the $100 window

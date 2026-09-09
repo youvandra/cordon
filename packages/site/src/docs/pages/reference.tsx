@@ -313,6 +313,12 @@ closest any strategy came: ${formatUsdc(SEARCH.closestToBudget6)} of ${formatUsd
         Cordon the loop was refused by a bound on its own node, and the
         sibling&rsquo;s half was still there when it asked.
       </P>
+      <Note tone="warn" title="This one runs on a local chain">
+        G7 deploys the same contracts to a local node and runs there, because
+        it needs a tree, four sellers and six full runs of a task. It is
+        evidence about the contracts, not about Arc — G2 is the gate that is
+        about Arc, and it is still pending.
+      </Note>
       <Note tone="info" title="The agents are scripted, and the run says so">
         A model would be more lifelike and would put its own variance between
         the fence and the result — across {EVAL.runs} runs a condition, that
