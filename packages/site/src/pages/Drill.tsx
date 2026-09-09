@@ -119,6 +119,9 @@ export default function PublicDrill() {
             </Text>
           }
         >
+          {/* Fixed widths, because two tables that size their own columns put
+              the same figure in two places and the eye reads them as different
+              measurements. */}
           {EVAL.scenarios.map((scenario) => (
             <div key={scenario.id} className="evalscenario">
               <Text variant="micro" tone="dim" as="p" className="eyebrow">
@@ -139,12 +142,14 @@ export default function PublicDrill() {
                   {
                     id: "completed",
                     header: "Briefs completed",
+                    width: 130,
                     cell: (condition) => `${condition.completed} of ${condition.runs}`,
                   },
                   {
                     id: "spent",
                     header: "Spent",
                     numeric: true,
+                    width: 100,
                     cell: (condition) => formatUsdc(condition.spent6),
                   },
                   {
@@ -153,11 +158,13 @@ export default function PublicDrill() {
                     id: "runaway",
                     header: "Taken by the loop",
                     numeric: true,
+                    width: 140,
                     cell: (condition) => formatUsdc(condition.runaway6),
                   },
                   {
                     id: "refused",
                     header: "Refused by",
+                    width: 170,
                     cell: (condition) =>
                       condition.refusals === 0
                         ? "nothing"
@@ -170,12 +177,14 @@ export default function PublicDrill() {
                     id: "exposure",
                     header: "At risk before any work",
                     numeric: true,
+                    width: 190,
                     cell: (condition) => formatUsdc(condition.exposureAtStart6),
                   },
                   {
                     id: "writes",
                     header: "Transactions per purchase",
                     numeric: true,
+                    width: 190,
                     cell: (condition) => condition.writesPerPurchase,
                   },
                 ]}
