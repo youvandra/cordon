@@ -32,11 +32,13 @@ export interface OperatorRow {
   operator: Address;
   /** Nodes this key operates. One daemon may hold several. */
   nodes: number;
+  /** Of those, how many are still live. A cut node can draw nothing. */
+  liveNodes: number;
   /** Everything the vault released to this operator, all-time, from events. */
   released6: bigint;
   /** What Circle says it can still spend, read from the Gateway contract. */
   available6: bigint;
-  /** False means money reached this operator from outside the tree. */
+  /** False means this operator holds money the vault did not release to it. */
   withinRelease: boolean;
 }
 
@@ -44,7 +46,18 @@ export interface Reconciliation {
   chainId: number;
   toBlock: bigint;
   operators: OperatorRow[];
-  /** True when every operator is inside what the vault released to it. */
+  /**
+   * True when every operator of a **live** node is inside what the vault
+   * released to it.
+   *
+   * The distinction was found by the hostile drill: an agent may name any
+   * address as its child's operator, and naming one that already holds a
+   * Gateway balance imports a stranger's money into this tree's arithmetic.
+   * The answer is to cut that node — which the owner or any ancestor operator
+   * can do in one transaction — and a cut node can draw nothing afterwards.
+   * Its row stays visible below, because a reconciliation that drops what it
+   * cannot explain is a reconciliation that always passes.
+   */
   ok: boolean;
   /**
    * Seller-side matching, which needs an API this project has not been able to
@@ -62,12 +75,13 @@ export async function reconcileGateway(
   /* Draws are attributed to nodes, and `TreeVault.draw` credits the drawing
      node's own operator. Summing by operator is therefore the same money,
      grouped the way the Gateway holds it. */
-  const released = new Map<Address, { released6: bigint; nodes: number }>();
+  const released = new Map<Address, { released6: bigint; nodes: number; liveNodes: number }>();
   for (const row of Object.values(ledger.nodes)) {
     const key = row.operator.toLowerCase() as Address;
-    const entry = released.get(key) ?? { released6: 0n, nodes: 0 };
+    const entry = released.get(key) ?? { released6: 0n, nodes: 0, liveNodes: 0 };
     entry.released6 += row.drawn6;
     entry.nodes += 1;
+    if (!row.revoked) entry.liveNodes += 1;
     released.set(key, entry);
   }
 
@@ -83,6 +97,7 @@ export async function reconcileGateway(
     operators.push({
       operator,
       nodes: entry.nodes,
+      liveNodes: entry.liveNodes,
       released6: entry.released6,
       available6,
       withinRelease: available6 <= entry.released6,
@@ -95,7 +110,7 @@ export async function reconcileGateway(
     chainId: ledger.chainId,
     toBlock: ledger.toBlock,
     operators,
-    ok: operators.every((o) => o.withinRelease),
+    ok: operators.every((operator) => operator.liveNodes === 0 || operator.withinRelease),
     counterpartyMatching: "unavailable",
   };
 }

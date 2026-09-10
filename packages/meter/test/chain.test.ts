@@ -220,3 +220,39 @@ test("the read api answers what the vault let out, and says so when it has not l
   assert.equal(served.body.ok, report.ok);
   assert.equal(served.body.counterpartyMatching, "unavailable", "the half we cannot do stays named");
 });
+
+test("a cut branch's operator is still reported, and no longer fails the reconciliation", async () => {
+  /* The hostile drill found this: an agent may name any address as its child's
+     operator, and naming one that already holds a Gateway balance imports a
+     stranger's money into this tree's arithmetic. The previous test is that
+     state. Cutting the node is the answer available to the owner and to every
+     ancestor operator — and a cut node can draw nothing, so what its operator
+     holds is no longer a claim about this vault. The row stays visible,
+     because a reconciliation that drops what it cannot explain always passes. */
+  const before = await reconcileGateway(
+    client,
+    await sync(client, { contracts: { registry: h.registry, vault: h.vault }, fromBlock: 0n }),
+    { gateway: h.gateway, usdc: h.usdc },
+  );
+  assert.equal(before.ok, false, "the operator funded from outside is still live here");
+
+  const hash = await h.asOwner.writeContract({
+    address: h.registry,
+    abi: parseAbi(["function revoke(bytes32 node)"]),
+    functionName: "revoke",
+    args: [h.child],
+    chain: null,
+    account: h.asOwner.account!,
+  });
+  await h.publicClient.waitForTransactionReceipt({ hash });
+
+  const ledger = await sync(client, { contracts: { registry: h.registry, vault: h.vault }, fromBlock: 0n });
+  const after = await reconcileGateway(client, ledger, { gateway: h.gateway, usdc: h.usdc });
+
+  const operator = h.asOpChild.account!.address.toLowerCase();
+  const row = after.operators.find((candidate) => candidate.operator === operator)!;
+  assert.ok(row, "the operator is still listed after its node was cut");
+  assert.equal(row.liveNodes, 0, "it operates nothing live");
+  assert.equal(row.withinRelease, false, "and what it holds is still more than was released");
+  assert.equal(after.ok, true, "but the tree no longer claims anything about it");
+});
