@@ -13,6 +13,7 @@
 import { GATE_RUNS } from "./gates.gen.ts";
 import { SEARCH } from "./search.gen.ts";
 import { DEPLOYMENT } from "./deployment.gen.ts";
+import { DRILL_RUN } from "./drill.gen.ts";
 
 export const VERIFIED_ON = "2026-09-06";
 
@@ -434,13 +435,24 @@ export const GATES: Gate[] = GATE_DEFINITIONS.map((g) => {
 });
 
 /**
- * G3 has not been run. The number it produces is the entire difference between
- * infrastructure and a dashboard, so it is never invented here.
+ * G3, the hostile drill — the number an agent told to spend as hard as it could
+ * actually reached, against what its mandate authorised.
+ *
+ * `drill.gen.ts` is written by `packages/daemon/scripts/record-g3.mjs` from the
+ * chain, and the composition here adds nothing to it but the ratio. The number
+ * this produces is the entire difference between infrastructure and a
+ * dashboard, so it is never invented and never rounded in our favour.
  */
 export const DRILL = {
-  status: "pending" as const,
-  /** What the drill is measured against when it runs. */
-  ceiling6: MANDATE.budget6,
+  status: "run" as const,
+  /** What the drill was measured against: the window its own mandate signed. */
+  ceiling6: DRILL_RUN.authorised6,
+  reached6: DRILL_RUN.spent6,
+  /** Of the ceiling, in basis points. 10,000 would be the treasury reached. */
+  reachedBps: Number((DRILL_RUN.spent6 * 10_000n) / DRILL_RUN.authorised6),
+  /** Every reason that stopped it, in the order the chain recorded them. */
+  stoppedBy: [...new Set(DRILL_RUN.refusals.map((refusal) => refusal.reason))],
+  run: DRILL_RUN,
 } as const;
 
 /**
@@ -451,6 +463,8 @@ export const DRILL = {
  * strategies got a root's window to. Equal to the budget means one of them
  * reached the bound exactly and stopped there, which is what a bound is.
  */
+export { DRILL_RUN } from "./drill.gen.ts";
+export type { DrillRun, DrillRefusal } from "./drill.gen.ts";
 export { SEARCH } from "./search.gen.ts";
 export type { SearchRun } from "./search.gen.ts";
 

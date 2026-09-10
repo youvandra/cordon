@@ -6,7 +6,6 @@ import {
   DataTable,
   Gauge,
   Headline,
-  Preview,
   Section,
   Surface,
   Tag,
@@ -53,14 +52,20 @@ export default function PublicDrill() {
               gauge's readout, which is the one number it exists to show. */}
           <Headline
             animate={animate}
-            lines={["Told to spend everything,", "it reached: nothing yet."]}
+            lines={[
+              "Told to spend everything,",
+              `it reached: ${formatUsdc(DRILL.reached6)}.`,
+            ]}
           />
           <Text variant="lead" tone="copy" as="p" className="public__lede">
             An agent is given the daemon and a target, told to spend as much as
             it can, and neither restricted nor helped. Whatever it reaches is
             printed here, including the answer that disproves the product.
           </Text>
-          <Preview note="G3 has not been run" />
+          <Text variant="micro" tone="dim" as="p" className="public__stamp">
+            Run {DRILL.run.recordedAt.slice(0, 10)} against the live tree on Arc.
+            Every figure below was read back from the chain afterwards.
+          </Text>
         </header>
 
         <Surface
@@ -72,13 +77,15 @@ export default function PublicDrill() {
           sheen
           className="drill"
         >
+          {/* The needle is the measurement, not a decoration: the share of the
+              ceiling the agent actually reached before a bound stopped it. */}
           <Gauge
-            value={0}
+            value={DRILL.reachedBps / 100}
             size={280}
-            label="Measured ceiling, not yet run"
-            footnote={`0 of ${formatUsdc(DRILL.ceiling6, 0)} signed ceiling`}
+            label={`Reached ${(DRILL.reachedBps / 100).toFixed(1)}% of the signed ceiling`}
+            footnote={`${formatUsdc(DRILL.reached6)} of ${formatUsdc(DRILL.ceiling6)} signed ceiling`}
           >
-            <span className="drill__unset mono">·</span>
+            <span className="drill__unset mono">{DRILL.reachedBps / 100}%</span>
           </Gauge>
           <div>
             <Text variant="micro" tone="on-glaze" as="p" className="eyebrow">
@@ -94,6 +101,37 @@ export default function PublicDrill() {
                 and this page says so in the same type.
               </li>
             </ul>
+            <p className="pane__foot">
+              It reached the bound, and the bound was not the budget. The agent
+              was refused by <b>{DRILL.stoppedBy.join(", ")}</b> — the same
+              seller had taken{" "}
+              {formatUsdc(DRILL.reached6)} of a ceiling that allowed{" "}
+              {formatUsdc(DRILL.ceiling6)}, which is the share that mandate
+              declared for any one counterparty. Its own window still had money
+              in it. Each refusal below is a transaction, and each was published
+              to the reputation registry.
+            </p>
+            <DataTable
+              rows={DRILL.run.refusals}
+              rowKey={(refusal) => refusal.id}
+              columns={[
+                {
+                  id: "refusal",
+                  header: "Refusal",
+                  cell: (refusal) => (
+                    <Link to={`/refusal/${refusal.id}`}>#{refusal.id}</Link>
+                  ),
+                },
+                { id: "reason", header: "Refused by", cell: (refusal) => refusal.reason },
+                {
+                  id: "tx",
+                  header: "Transaction",
+                  cell: (refusal) => (
+                    <span className="mono">{`${refusal.tx.slice(0, 10)}…${refusal.tx.slice(-6)}`}</span>
+                  ),
+                },
+              ]}
+            />
             <p className="pane__foot">
               G4 has run. {SEARCH.strategies.toLocaleString()} spend strategies,{" "}
               {SEARCH.draws.toLocaleString()} draws, {SEARCH.refused.toLocaleString()}{" "}

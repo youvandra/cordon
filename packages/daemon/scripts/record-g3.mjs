@@ -153,7 +153,7 @@ writeFileSync(
     `export interface DrillRefusal {\n  id: string;\n  reason: string;\n  node: string;\n  breachedAt: string;\n  tx: string;\n}\n\n` +
     `export interface DrillRun {\n  recordedAt: string;\n  node: string;\n  authorised6: bigint;\n  lifetimeCap6: bigint;\n` +
     `  trancheCap6: bigint;\n  spent6: bigint;\n  requests: number;\n  nodesInSubtree: number;\n  refusals: DrillRefusal[];\n}\n\n` +
-    `export const DRILL: DrillRun = {\n` +
+    `export const DRILL_RUN: DrillRun = {\n` +
     `  recordedAt: ${JSON.stringify(report.recordedAt)},\n` +
     `  node: ${JSON.stringify(report.node)},\n` +
     `  authorised6: ${report.authorised6}n,\n` +
