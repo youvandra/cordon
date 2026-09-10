@@ -42,7 +42,13 @@ refuse() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) refusing: $*" >&2; exit 1; }
 
 cd "$REPO"
 
-log "building site"
+# The record pages resolve the ids the chain writes off the meter, and the
+# meter is served from this same origin at /api. Unset, the site falls back to
+# the preview tree and says so — which is the honest default for a laptop and
+# the wrong one for the host whose name is written into every record.
+export VITE_METER_URL="${CORDON_METER_URL:-/api}"
+
+log "building site with meter at $VITE_METER_URL"
 npm run build --prefix packages/site
 log "building console"
 npm run build --prefix packages/console
