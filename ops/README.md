@@ -126,6 +126,23 @@ The script rebuilds both bundles, refuses if the console was built without
 base `/console/`, and never deletes at the web root — `console/` and
 `.well-known/` live there too.
 
+## The two gates that are recorded from the chain
+
+G1, G4, G5, G6 and G7 are suites. G2 and G3 are claims about a live tree, so
+they are recorded by asking Arc and the meter what a real run left behind.
+Neither reads a key: node ids, mandates, draws and refusals are public, which
+is what makes them re-runnable by anyone checking us.
+
+```bash
+CORDON_ROOT=0x…  node packages/daemon/scripts/record-g2.mjs
+CORDON_ROOT=0x… CORDON_DRILL=0x…  node packages/daemon/scripts/record-g3.mjs
+```
+
+Both write their row into `packages/fixtures/src/gates.gen.ts`, and G3 also
+writes the number it measured into `packages/fixtures/src/drill.gen.ts` — the
+drill publishes its figure whichever way it came out, so that file is
+generated and never edited.
+
 ## Checking what is actually live
 
 ```bash
