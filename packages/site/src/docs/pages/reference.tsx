@@ -236,6 +236,7 @@ function scenarioRows(index: number) {
 
 export function Gates() {
   const green = GATES.filter((gate) => gate.status === "green").length;
+  const pending = GATES.filter((gate) => gate.status !== "green");
 
   return (
     <>
@@ -256,9 +257,12 @@ export function Gates() {
         ])}
       />
       <P>
-        {green} of {GATES.length} are green. The two that are not need a live
-        deployment: a four agent tree buying from real sellers, and the hostile
-        drill.
+        {green} of {GATES.length} are green.{" "}
+        {pending.length === 0
+          ? "Every gate has been run."
+          : `What is not green has not been run: ${pending.map((gate) => gate.id).join(", ")}.`}{" "}
+        G2 is the one that is not a test suite — it is recorded from Arc itself,
+        by asking the chain and the meter what a real run left behind.
       </P>
 
       <H2 id="the-search">The bounded search</H2>
