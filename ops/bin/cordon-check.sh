@@ -17,9 +17,21 @@ set -uo pipefail
 
 SITE="${CORDON_SITE:-https://getcordon.xyz}"
 ATTEST="${CORDON_ATTEST:-https://attest.getcordon.xyz}"
-RPC="${CORDON_RPC:-https://rpc.testnet.arc.io}"
 CHAIN_ID="${CORDON_CHAIN_ID:-5042002}"
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+
+# Ask the chain the same way the box does. Circle's endpoint rate limits an
+# address that has run a backfill and then answers nothing at all, so a check
+# using it reported three deployed, verified contracts as having no code —
+# a checker that cannot ask must never answer on the chain's behalf.
+if [ -z "${CORDON_RPC:-}" ] && [ -f "$HOME/cordon/.env.meter" ]; then
+  # shellcheck disable=SC1090
+  . "$HOME/cordon/.env.meter"
+fi
+RPC="${CORDON_RPC:-https://rpc.testnet.arc.io}"
+
+# The meter is served beside the site, so there is a default worth having.
+METER="${CORDON_METER:-$SITE/api}"
 
 fail=0
 ok()      { printf '  ok       %s\n' "$1"; }
@@ -59,7 +71,13 @@ fi
 
 echo "chain"
 CHAIN="$(cast chain-id --rpc-url "$RPC" 2>/dev/null || echo "")"
-[ "$CHAIN" = "$CHAIN_ID" ] && ok "rpc reports $CHAIN" || bad "rpc reported '${CHAIN:-nothing}', wanted $CHAIN_ID"
+if [ "$CHAIN" = "$CHAIN_ID" ]; then
+  ok "rpc reports $CHAIN"
+elif [ -z "$CHAIN" ]; then
+  pending "$RPC did not answer; nothing below it is a statement about the chain"
+else
+  bad "rpc reported '$CHAIN', wanted $CHAIN_ID"
+fi
 
 DEPLOYMENT="$REPO/packages/contracts/deployments/$CHAIN_ID.json"
 if [ ! -f "$DEPLOYMENT" ]; then
@@ -67,7 +85,12 @@ if [ ! -f "$DEPLOYMENT" ]; then
 else
   for name in registry vault record; do
     addr="$(node -e "console.log(require('$DEPLOYMENT').$name)")"
-    size="$(cast code "$addr" --rpc-url "$RPC" 2>/dev/null | wc -c | tr -d ' ')"
+    if ! out="$(cast code "$addr" --rpc-url "$RPC" 2>&1)"; then
+      # An endpoint that refused to answer is not a contract that is missing.
+      pending "$name at $addr: the rpc would not answer (${out##*: })"
+      continue
+    fi
+    size="$(printf '%s' "$out" | wc -c | tr -d ' ')"
     [ "${size:-0}" -gt 2 ] \
       && ok "$name has code at $addr" \
       || bad "$name at $addr has no code on chain $CHAIN_ID"
@@ -82,10 +105,10 @@ else
 fi
 
 echo "services"
-if [ -n "${CORDON_METER:-}" ]; then
+if [ -n "$METER" ]; then
   # The one thing chain state can prove about money that has left the vault:
   # an operator's Gateway balance never exceeds what the vault released to it.
-  RECON="$(curl -s --max-time 15 "$CORDON_METER/reconcile" || true)"
+  RECON="$(curl -s --max-time 15 "$METER/reconcile" || true)"
   case "$RECON" in
     *'"ok": true'*)  ok "meter reconciles: no operator holds more than the vault released" ;;
     *'"ok": false'*) bad "reconciliation FAILED — money reached an operator from outside the tree" ;;
@@ -93,7 +116,7 @@ if [ -n "${CORDON_METER:-}" ]; then
     *) bad "meter did not answer /reconcile" ;;
   esac
 else
-  pending "no CORDON_METER set, so nothing asked the meter"
+  pending "no meter to ask"
 fi
 
 status="$(code "$ATTEST/health")"
