@@ -103,6 +103,45 @@ test("a rate limit is waited out, because it is not a fact about the chain", asy
   assert.equal(calls, 2, "the second attempt is the one that answers");
 });
 
+test("a span the endpoint will not answer is narrowed, not waited out", async () => {
+  /* Arc refuses a wide `eth_getLogs` with the code it uses for a rate limit,
+     so a reader that waits on it waits forever for an answer the endpoint has
+     already decided. The span it accepts is discovered, never assumed. */
+  const WIDEST = 250n;
+  const spans: bigint[] = [];
+  const client = {
+    getLogs: async ({ fromBlock, toBlock }: { fromBlock: bigint; toBlock: bigint }) => {
+      const span = toBlock - fromBlock + 1n;
+      spans.push(span);
+      if (span > WIDEST) {
+        const error = new Error("Request exceeds defined limit.") as Error & { code: number };
+        error.code = -32005;
+        throw error;
+      }
+      return [];
+    },
+  } as unknown as PublicClient;
+
+  const started = Date.now();
+  const events = await readEvents(client, CONTRACTS, {
+    fromBlock: 1n,
+    toBlock: 1_000n,
+    chunk: 1_000n,
+    paceMs: 0,
+  });
+
+  assert.deepEqual(events, []);
+  assert.ok(
+    spans.every((span) => span <= 1_000n),
+    "no attempt asks for more than it was told to",
+  );
+  assert.ok(
+    spans.at(-1)! <= WIDEST,
+    `the read settled on a span the endpoint answers, not ${spans.at(-1)}`,
+  );
+  assert.ok(Date.now() - started < 2_000, "narrowing is immediate; only a real limit waits");
+});
+
 test("an error that is not a rate limit is not retried", async () => {
   let calls = 0;
   const client = {

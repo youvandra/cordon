@@ -17,7 +17,24 @@ import {
   ConductRecordAbi,
 } from "../../daemon/src/abi.gen.ts";
 import { REASONS, type Event, type Reason } from "./ledger.ts";
-import { retryOnRateLimit } from "../../fixtures/src/rpc.ts";
+import { isRateLimit, retryOnRateLimit } from "../../fixtures/src/rpc.ts";
+
+/**
+ * "This range is too wide" wearing a rate limit's clothes.
+ *
+ * Arc answers an over-wide `eth_getLogs` with the same code it uses for a
+ * genuine limit, so the two are told apart by what the endpoint says beside
+ * it and, failing that, by treating a limit as a range problem — waiting out
+ * something that will refuse the same range forever is the worse mistake.
+ */
+function isRangeTooWide(error: unknown): boolean {
+  const message = String((error as Error)?.message ?? "");
+  return (
+    /exceeds defined limit|range too large|too many results|query returned more than|block range/i.test(
+      message,
+    ) || isRateLimit(error)
+  );
+}
 
 export interface Contracts {
   registry: Address;
@@ -44,25 +61,45 @@ export async function readEvents(
   contracts: Contracts,
   options: ReadOptions,
 ): Promise<Event[]> {
-  const chunk = options.chunk ?? 2_000n;
   const paceMs = options.paceMs ?? 150;
+  const floor = 100n;
+  /* Arc's public endpoint caps the span of one `eth_getLogs` and answers a
+     wider one with `-32005 rate limit exceeded` — a message about the wrong
+     thing, since waiting changes nothing and a narrower range succeeds
+     immediately. So the span shrinks on that error rather than the read
+     failing, and the endpoint's real limit is discovered instead of being
+     written down here where it would be wrong for the next chain. */
+  let span = options.chunk ?? 1_000n;
   const out: Event[] = [];
 
+  const addresses: Address[] = [contracts.registry, contracts.vault];
+  if (contracts.record) addresses.push(contracts.record);
+
   let first = true;
-  for (let start = options.fromBlock; start <= options.toBlock; start += chunk) {
+  let start = options.fromBlock;
+  while (start <= options.toBlock) {
     if (!first && paceMs > 0) await new Promise((done) => setTimeout(done, paceMs));
     first = false;
-    const end = start + chunk - 1n > options.toBlock ? options.toBlock : start + chunk - 1n;
 
-    const addresses: Address[] = [contracts.registry, contracts.vault];
-    if (contracts.record) addresses.push(contracts.record);
+    const end = start + span - 1n > options.toBlock ? options.toBlock : start + span - 1n;
 
-    /* A rate limit here is Arc's public endpoint under a backfill, and it is
-       the one error worth waiting out rather than ending the read on. */
-    const logs = await retryOnRateLimit(
-      () => client.getLogs({ address: addresses, fromBlock: start, toBlock: end }),
-      { attempts: options.attempts },
-    );
+    let logs;
+    try {
+      logs = await client.getLogs({ address: addresses, fromBlock: start, toBlock: end });
+    } catch (error) {
+      /* Narrowing comes first and costs no wait: an endpoint that refuses this
+         span refuses it just as firmly in a minute. Only once the span is as
+         narrow as it goes is a limit worth waiting out. */
+      if (span > floor && isRangeTooWide(error)) {
+        span = span / 2n > floor ? span / 2n : floor;
+        continue;
+      }
+      if (!isRateLimit(error)) throw error;
+      logs = await retryOnRateLimit(
+        () => client.getLogs({ address: addresses, fromBlock: start, toBlock: end }),
+        { attempts: options.attempts },
+      );
+    }
 
     /* Decode against each ABI separately. A log that belongs to another
        contract simply does not match, and `strict` keeps a partial decode from
@@ -73,6 +110,8 @@ export async function readEvents(
         if (event) out.push(event);
       }
     }
+
+    start = end + 1n;
   }
 
   out.sort((a, b) =>
