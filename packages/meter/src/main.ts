@@ -176,12 +176,22 @@ if (!args.once) {
     console.log(`       read api on ${args.bind}:${args.port}`),
   );
 
-  setInterval(() => {
-    tick().catch((error: unknown) => {
-      /* A failed read leaves the last good ledger in place. The alternative —
-         serving a partial one — is a page that quietly disagrees with the
-         chain, which is the failure this package exists to make impossible. */
-      console.error(`sync failed, keeping the last good ledger: ${(error as Error).message}`);
-    });
-  }, args.intervalMs);
+  /* One tick at a time, scheduled after the last one finished rather than on
+     a fixed interval. A tick that waits out a rate limit outlives the
+     interval, and `setInterval` then starts a second read of the same range
+     against the same ledger object — twice the load on the endpoint that just
+     asked for less of it, and two writers of one snapshot. */
+  const loop = (): void => {
+    tick()
+      .catch((error: unknown) => {
+        /* A failed read leaves the last good ledger in place. The alternative —
+           serving a partial one — is a page that quietly disagrees with the
+           chain, which is the failure this package exists to make impossible. */
+        console.error(`sync failed, keeping the last good ledger: ${(error as Error).message}`);
+      })
+      .finally(() => {
+        setTimeout(loop, args.intervalMs).unref?.();
+      });
+  };
+  setTimeout(loop, args.intervalMs);
 }
