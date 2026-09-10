@@ -33,6 +33,9 @@ export interface ReadOptions {
   chunk?: bigint;
   /** How many times one chunk may be retried after a rate limit. */
   attempts?: number;
+  /** A pause between chunks. A backfill that asks as fast as it can is what
+   *  produces the limit it then has to wait out. */
+  paceMs?: number;
 }
 
 /** Decoded, in chain order: block, then log index. */
@@ -42,9 +45,13 @@ export async function readEvents(
   options: ReadOptions,
 ): Promise<Event[]> {
   const chunk = options.chunk ?? 2_000n;
+  const paceMs = options.paceMs ?? 150;
   const out: Event[] = [];
 
+  let first = true;
   for (let start = options.fromBlock; start <= options.toBlock; start += chunk) {
+    if (!first && paceMs > 0) await new Promise((done) => setTimeout(done, paceMs));
+    first = false;
     const end = start + chunk - 1n > options.toBlock ? options.toBlock : start + chunk - 1n;
 
     const addresses: Address[] = [contracts.registry, contracts.vault];

@@ -28,24 +28,31 @@ const wait = (ms: number): Promise<void> => new Promise((done) => setTimeout(don
 export interface RetryOptions {
   /** Total attempts, including the first. */
   attempts?: number;
-  /** The first wait. Each one after it doubles. */
+  /** The first wait. Each one after it doubles, up to `maxMs`. */
   baseMs?: number;
+  /** The longest single wait. Doubling without a ceiling overshoots the
+   *  window the limit is measured over and then keeps growing past it. */
+  maxMs?: number;
 }
 
 export async function retryOnRateLimit<T>(
   call: () => Promise<T>,
   options: RetryOptions = {},
 ): Promise<T> {
-  const attempts = options.attempts ?? 6;
-  const baseMs = options.baseMs ?? 500;
+  const attempts = options.attempts ?? 8;
+  const baseMs = options.baseMs ?? 1_000;
+  const maxMs = options.maxMs ?? 15_000;
   for (let attempt = 1; ; attempt++) {
     try {
       return await call();
     } catch (error) {
       if (attempt >= attempts || !isRateLimit(error)) throw error;
-      /* 500ms, then 1s, 2s, 4s… A limit is measured over a window, so the wait
-         has to grow past the window rather than hammer the edge of it. */
-      await wait(baseMs * 2 ** (attempt - 1));
+      /* 1s, 2s, 4s, 8s, then 15s a time. A limit is measured over a window, so
+         the wait has to grow past the window rather than hammer the edge of
+         it — and a public endpoint under a backfill needs about a minute of
+         patience in total, not a second. */
+      const delay = Math.min(baseMs * 2 ** (attempt - 1), maxMs);
+      await wait(delay);
     }
   }
 }
