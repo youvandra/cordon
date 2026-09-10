@@ -70,7 +70,28 @@ else
 fi
 
 echo "chain"
-CHAIN="$(cast chain-id --rpc-url "$RPC" 2>/dev/null || echo "")"
+
+# Asked over plain JSON-RPC rather than through `cast`. This script is meant to
+# run anywhere, and the box that serves the site has no Foundry on it — the
+# version that shelled out to `cast` reported three deployed, verified
+# contracts as having no code, which is what a missing tool looks like when
+# its absence is read as an answer.
+rpc() {
+  curl -s --max-time 15 -X POST "$RPC" \
+    -H 'content-type: application/json' \
+    -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$1\",\"params\":$2}"
+}
+rpc_result() {
+  printf '%s' "$1" | sed -n 's/.*"result":"\([^"]*\)".*/\1/p'
+}
+
+CHAIN_HEX="$(rpc eth_chainId '[]')"
+CHAIN_HEX="$(rpc_result "$CHAIN_HEX")"
+if [ -n "$CHAIN_HEX" ]; then
+  CHAIN="$((CHAIN_HEX))"
+else
+  CHAIN=""
+fi
 if [ "$CHAIN" = "$CHAIN_ID" ]; then
   ok "rpc reports $CHAIN"
 elif [ -z "$CHAIN" ]; then
@@ -85,15 +106,16 @@ if [ ! -f "$DEPLOYMENT" ]; then
 else
   for name in registry vault record; do
     addr="$(node -e "console.log(require('$DEPLOYMENT').$name)")"
-    if ! out="$(cast code "$addr" --rpc-url "$RPC" 2>&1)"; then
+    body="$(rpc eth_getCode "[\"$addr\",\"latest\"]")"
+    codehex="$(rpc_result "$body")"
+    if [ -z "$codehex" ]; then
       # An endpoint that refused to answer is not a contract that is missing.
-      pending "$name at $addr: the rpc would not answer (${out##*: })"
-      continue
+      pending "$name at $addr: the rpc would not answer"
+    elif [ "${#codehex}" -gt 2 ]; then
+      ok "$name has code at $addr"
+    else
+      bad "$name at $addr has no code on chain $CHAIN_ID"
     fi
-    size="$(printf '%s' "$out" | wc -c | tr -d ' ')"
-    [ "${size:-0}" -gt 2 ] \
-      && ok "$name has code at $addr" \
-      || bad "$name at $addr has no code on chain $CHAIN_ID"
   done
 
   # The README is generated from this file, so a mismatch means someone edited
