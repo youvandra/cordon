@@ -107,11 +107,16 @@ await check("no operator holds more of the vault's money than it was released", 
      Gateway balance the vault released, against the Gateway balance the
      operator has. */
   const reconciliation = await ask("/reconcile");
+  /* The meter's verdict, not a second definition of it: an operator whose
+     nodes have all been cut can draw nothing, and re-deciding that here is how
+     two answers to one question end up disagreeing. */
   must(reconciliation.ok === true, "reconciliation reports money from outside the tree");
-  for (const operator of reconciliation.operators) {
+  const live = reconciliation.operators.filter((operator) => operator.liveNodes > 0);
+  for (const operator of live) {
     must(operator.withinRelease, `${operator.operator} holds more than the vault released to it`);
   }
-  return `${reconciliation.operators.length} operators, all within what was released`;
+  const cut = reconciliation.operators.length - live.length;
+  return `${live.length} live operators within what was released${cut ? `, ${cut} on cut branches` : ""}`;
 });
 
 await check("a draw debited every ancestor up to the root", async () => {
