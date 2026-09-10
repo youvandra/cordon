@@ -30,6 +30,39 @@ export interface ReadOptions {
   toBlock: bigint;
   /** Blocks per `eth_getLogs`. Arc is fast and cheap; a public RPC is not. */
   chunk?: bigint;
+  /** How many times one chunk may be retried after a rate limit. */
+  attempts?: number;
+}
+
+/**
+ * A rate limit is a "come back later", not a fact about the chain.
+ *
+ * Arc's public RPC answers `-32005 rate limit exceeded` under a backfill, and
+ * viem does not retry a JSON-RPC error — so one of these used to end the whole
+ * read, and with it the process. Waiting is the correct response to it and the
+ * only one: every other error still throws immediately, because a meter that
+ * retries a decode bug is a meter that hides it.
+ */
+function isRateLimit(error: unknown): boolean {
+  const code = (error as { code?: unknown; cause?: { code?: unknown } })?.code;
+  const causeCode = (error as { cause?: { code?: unknown } })?.cause?.code;
+  if (code === -32005 || causeCode === -32005 || code === 429) return true;
+  return /rate limit|too many requests/i.test(String((error as Error)?.message ?? ""));
+}
+
+const wait = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms));
+
+async function withRateLimitRetry<T>(attempts: number, call: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await call();
+    } catch (error) {
+      if (attempt >= attempts || !isRateLimit(error)) throw error;
+      /* 500ms, then 1s, 2s, 4s… A public limit is per window, so the wait has
+         to grow past the window rather than hammer the edge of it. */
+      await wait(500 * 2 ** (attempt - 1));
+    }
+  }
 }
 
 /** Decoded, in chain order: block, then log index. */
@@ -47,7 +80,9 @@ export async function readEvents(
     const addresses: Address[] = [contracts.registry, contracts.vault];
     if (contracts.record) addresses.push(contracts.record);
 
-    const logs = await client.getLogs({ address: addresses, fromBlock: start, toBlock: end });
+    const logs = await withRateLimitRetry(options.attempts ?? 6, () =>
+      client.getLogs({ address: addresses, fromBlock: start, toBlock: end }),
+    );
 
     /* Decode against each ABI separately. A log that belongs to another
        contract simply does not match, and `strict` keeps a partial decode from

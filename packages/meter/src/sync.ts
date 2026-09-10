@@ -22,6 +22,16 @@ export interface SyncOptions {
    * later have to retract.
    */
   confirmations?: bigint;
+  /**
+   * The most blocks one call will advance by.
+   *
+   * A backfill of a hundred thousand blocks is many requests to a public RPC,
+   * and the caller only writes its snapshot when the call returns — so an
+   * uncapped catch-up is a run that rate limits, throws away everything it
+   * read, and starts again from the same place on the next tick. Capping it
+   * makes the catch-up land in the snapshot in pieces, each one resumable.
+   */
+  maxBlocks?: bigint;
 }
 
 export async function sync(
@@ -41,16 +51,23 @@ export async function sync(
     );
   }
 
-  /* An empty ledger has never read anything, so it starts at `fromBlock`; one
-     that has starts at the block after its last. `toBlock` on an empty ledger
-     is `fromBlock`, which is a block that has not been read yet. */
-  const isEmpty = base.refusals.length === 0 && Object.keys(base.nodes).length === 0;
-  const start = isEmpty ? options.fromBlock : base.toBlock + 1n;
+  /* A ledger covers `fromBlock` through `toBlock` and the next read starts at
+     the block after it — for an unread ledger that is `fromBlock` itself,
+     which is what `emptyLedger` writes. Inferring "unread" from having no
+     rows, as this once did, is wrong on the case that matters: a tree whose
+     chain has been quiet re-read every block it had already seen, forever. */
+  const start = base.toBlock + 1n;
   if (start > toBlock) return base;
+
+  /* Never advance further than one call is allowed to. What is not read now is
+     read by the next tick, from the block this one stopped at. */
+  const maxBlocks = options.maxBlocks ?? 20_000n;
+  const limit = start + maxBlocks - 1n;
+  const end = limit < toBlock ? limit : toBlock;
 
   const events = await readEvents(client, options.contracts, {
     fromBlock: start,
-    toBlock,
+    toBlock: end,
     chunk: options.chunk,
   });
 
@@ -58,6 +75,6 @@ export async function sync(
   /* The range read is what the ledger covers, whether or not anything was
      emitted in it. Leaving `toBlock` at the last event would re-read quiet
      ranges forever. */
-  next.toBlock = toBlock;
+  next.toBlock = end;
   return next;
 }

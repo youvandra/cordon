@@ -125,7 +125,11 @@ export function emptyLedger(chainId: number, fromBlock = 0n): Ledger {
   return {
     chainId,
     fromBlock,
-    toBlock: fromBlock,
+    /* A ledger that has read nothing covers nothing, and the block before the
+       first is the only honest way to say so. Writing `fromBlock` here made an
+       unread ledger indistinguishable from one that had read a quiet range,
+       which is what made a resumed sync start over from the deploy block. */
+    toBlock: fromBlock - 1n,
     nodes: {},
     refusals: [],
     funded6: {},
