@@ -87,6 +87,35 @@ the token.
 both is the mistake that has already cost two outages here. Nothing Cordon
 runs goes into pm2.
 
+### The endpoint the box reads, and why it is not Circle's
+
+`https://rpc.testnet.arc.io` limits `eth_getLogs` twice over: it refuses a
+range wider than about fifteen hundred blocks, and it cuts an address off
+entirely after a few hundred of them — **and it calls both `rate limit
+exceeded`**, so a range it will never answer looks like something worth
+waiting for. One backfill of this deployment exhausts the quota for that IP
+and every later request fails, including the narrow ones.
+
+Blockdaemon's endpoint answers fifty-thousand-block ranges from the same box
+with no key. It is the same chain and the same contracts; only the door is
+different, and the meter's own snapshot is rebuildable from either.
+
+```bash
+umask 077
+cat > ~/cordon/.env.meter <<'EOF'
+CORDON_RPC=https://rpc.blockdaemon.testnet.arc.io
+CORDON_METER_CHUNK=10000
+CORDON_METER_MAX_BLOCKS=100000
+CORDON_METER_PACE_MS=100
+EOF
+```
+
+`.env.attest` carries the same `CORDON_RPC`. Both files are 0600 and neither
+is committed. The alternates are listed at
+<https://docs.arc.io/arc/references/rpc-endpoints>; dRPC caps free ranges at
+ten thousand blocks, and QuickNode's keyless host was already rate limiting
+this address when it was tried.
+
 ## Redeploy
 
 ```bash
