@@ -18,7 +18,7 @@ import { ARC, GATEWAY } from "../../fixtures/src/index.ts";
 import { deserialize, serialize } from "./snapshot.ts";
 import { sync } from "./sync.ts";
 import { createReadApi } from "./server.ts";
-import type { Ledger } from "./ledger.ts";
+import { emptyLedger, type Ledger } from "./ledger.ts";
 import { reconcileGateway, type Reconciliation } from "./reconcile.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -128,9 +128,13 @@ const client = createPublicClient({
   cacheTime: 250,
 }) as PublicClient;
 
-let ledger: Ledger | undefined = existsSync(args.out)
+/* A ledger exists from the first moment, even before anything has been read:
+   an unread one covers no blocks and says so, and every answer the API gives
+   carries the range it was built over. Waiting for a first sync before
+   listening made a rate limit at start-up look like a service that is down. */
+let ledger: Ledger = existsSync(args.out)
   ? deserialize(readFileSync(args.out, "utf8"))
-  : undefined;
+  : emptyLedger(args.chainId, fromBlock);
 
 /**
  * The last reconciliation, recomputed every sync.
@@ -157,10 +161,10 @@ async function tick(): Promise<void> {
   }
 }
 
-await tick();
+if (args.once) await tick();
 console.log(`meter  chain ${args.chainId} via ${args.rpc}`);
-console.log(`       blocks ${ledger!.fromBlock}–${ledger!.toBlock}`);
-console.log(`       nodes ${Object.keys(ledger!.nodes).length}, refusals ${ledger!.refusals.length}`);
+console.log(`       blocks ${ledger.fromBlock}–${ledger.toBlock}`);
+console.log(`       nodes ${Object.keys(ledger.nodes).length}, refusals ${ledger.refusals.length}`);
 console.log(
   `       reconciled ${reconciliation ? (reconciliation.ok ? "ok" : "MISMATCH") : "not yet"}` +
     `${reconciliation ? `, ${reconciliation.operators.length} operators` : ""}`,
@@ -168,7 +172,7 @@ console.log(
 console.log(`       snapshot ${args.out}`);
 
 if (!args.once) {
-  const server = createReadApi(() => ledger!, () => reconciliation);
+  const server = createReadApi(() => ledger, () => reconciliation);
   /* Loopback by default, same as attest. This API is read-only and public by
      intent, but "public" means through the origin that serves the pages, so
      the console needs no CORS and there is one place to look at the logs. */
@@ -193,5 +197,7 @@ if (!args.once) {
         setTimeout(loop, args.intervalMs).unref?.();
       });
   };
-  setTimeout(loop, args.intervalMs);
+  /* Read first, then keep reading. The API is already listening by then, so a
+     slow catch-up is a range that grows rather than a port that refuses. */
+  loop();
 }
