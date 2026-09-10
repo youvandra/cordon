@@ -32,6 +32,13 @@ interface Args {
   bind: string;
   once: boolean;
   intervalMs: number;
+  /* A public endpoint's appetite is not ours to guess. All three are here so a
+     box that is being rate limited can be told to ask for less without a
+     rebuild — the values below are what Arc's public RPC accepts when nothing
+     else is pointed at it. */
+  maxBlocks: bigint;
+  chunk: bigint;
+  paceMs: number;
 }
 
 function parse(argv: string[]): Args {
@@ -62,7 +69,10 @@ function parse(argv: string[]): Args {
     port: Number(args.port ?? process.env.CORDON_METER_PORT ?? 8404),
     bind: args.bind ?? process.env.CORDON_BIND ?? "127.0.0.1",
     once: flags.has("once"),
-    intervalMs: Number(args.interval ?? 5_000),
+    intervalMs: Number(args.interval ?? process.env.CORDON_METER_INTERVAL_MS ?? 5_000),
+    maxBlocks: BigInt(args["max-blocks"] ?? process.env.CORDON_METER_MAX_BLOCKS ?? 20_000),
+    chunk: BigInt(args.chunk ?? process.env.CORDON_METER_CHUNK ?? 1_000),
+    paceMs: Number(args.pace ?? process.env.CORDON_METER_PACE_MS ?? 150),
   };
 }
 
@@ -146,7 +156,17 @@ let ledger: Ledger = existsSync(args.out)
 let reconciliation: Reconciliation | undefined;
 
 async function tick(): Promise<void> {
-  ledger = await sync(client, { contracts, fromBlock }, ledger);
+  ledger = await sync(
+    client,
+    {
+      contracts,
+      fromBlock,
+      maxBlocks: args.maxBlocks,
+      chunk: args.chunk,
+      paceMs: args.paceMs,
+    },
+    ledger,
+  );
   writeFileSync(args.out, serialize(ledger));
   /* Reads the Gateway once per operator. It is a chain read and can fail on
      its own; a failed reconciliation must not throw away a good ledger, so it

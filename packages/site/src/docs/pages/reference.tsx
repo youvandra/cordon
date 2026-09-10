@@ -167,8 +167,27 @@ export function Configuration() {
           [<C key="mo">--out</C>, "where the snapshot goes"],
           [<C key="mp">--port</C>, "8404"],
           [<C key="m1">--once</C>, "index and exit, rather than serving"],
+          [
+            <C key="mb">--max-blocks</C>,
+            "how far one pass may advance. 20,000. Smaller is gentler on a public endpoint",
+          ],
+          [
+            <C key="mk">--chunk</C>,
+            "blocks per request. 1,000, and narrowed automatically when an endpoint refuses the span",
+          ],
+          [<C key="mpa">--pace</C>, "milliseconds between requests. 150"],
+          [<C key="mi">--interval</C>, "milliseconds between passes. 5,000"],
         ]}
       />
+      <P>
+        The last four are also read from the environment, as{" "}
+        <C>CORDON_METER_MAX_BLOCKS</C>, <C>CORDON_METER_CHUNK</C>,{" "}
+        <C>CORDON_METER_PACE_MS</C> and <C>CORDON_METER_INTERVAL_MS</C>, so a
+        host being rate limited can be told to ask for less without a rebuild.
+        Arc's public RPC refuses a range wider than about fifteen hundred blocks
+        and calls it a rate limit; the meter narrows its span until the endpoint
+        answers rather than trusting a number written here.
+      </P>
 
       <H2 id="attest">Attest</H2>
       <Table

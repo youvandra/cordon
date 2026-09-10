@@ -32,6 +32,8 @@ export interface SyncOptions {
    * makes the catch-up land in the snapshot in pieces, each one resumable.
    */
   maxBlocks?: bigint;
+  /** Passed through to the reader: a pause between one chunk and the next. */
+  paceMs?: number;
 }
 
 export async function sync(
@@ -69,6 +71,7 @@ export async function sync(
     fromBlock: start,
     toBlock: end,
     chunk: options.chunk,
+    paceMs: options.paceMs,
   });
 
   const next = reduce(base, events);
