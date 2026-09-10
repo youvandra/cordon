@@ -28,6 +28,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { Payment, TokenDomain } from "./payment.ts";
+import { retryOnRateLimit } from "../../fixtures/src/rpc.ts";
 
 export const EIP3009_ABI = parseAbi([
   "function DOMAIN_SEPARATOR() view returns (bytes32)",
@@ -78,8 +79,19 @@ export async function resolveDomain(
   token: Address,
   chainId: number,
 ): Promise<TokenDomain> {
+  /* The public RPC rate limits under load from anything else pointed at it,
+     and this check runs before the process will serve — so a limit here reads
+     as "this token has no DOMAIN_SEPARATOR" and stops the endpoint starting at
+     all. Waiting is the answer to a limit; every other failure still lands. */
   const read = <T>(functionName: string) =>
-    client.readContract({ address: token, abi: EIP3009_ABI, functionName: functionName as never }) as Promise<T>;
+    retryOnRateLimit(
+      () =>
+        client.readContract({
+          address: token,
+          abi: EIP3009_ABI,
+          functionName: functionName as never,
+        }) as Promise<T>,
+    );
 
   let separator: Hex;
   try {
