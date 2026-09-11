@@ -12,6 +12,7 @@ import type { Address, Hex } from "viem";
 import { parseChallenge, selectOffer, type Acceptable, type Offer } from "./challenge.ts";
 import type { Gate, DrawOutcome } from "./gate.ts";
 import type { Settler } from "./settle.ts";
+import { assertPublicUrl, EgressError } from "./egress.ts";
 
 export interface FetchRequest {
   node: Hex;
@@ -107,24 +108,79 @@ export async function cordonFetch(
   };
 }
 
-/** The default transport. Separated so tests drive a seller, not the network. */
-export const httpTransport: Transport = async (url, init) => {
-  const response = await fetch(url, {
-    method: init.method,
-    headers: init.headers,
-    body: init.body,
-    signal: AbortSignal.timeout(30_000),
-  });
-  const text = await response.text();
-  let body: unknown = text;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    /* not JSON, and that is fine — only a 402 challenge has to be */
+/** How many hops a seller may send this daemon on before it stops. */
+const MAX_REDIRECTS = 3;
+
+/**
+ * The default transport. Separated so tests drive a seller, not the network.
+ *
+ * Redirects are followed here rather than by `fetch`, for two reasons and both
+ * of them are about what a seller can do with a 302.
+ *
+ * The first is the fence: `fetch` follows a redirect to wherever it points,
+ * including back into this machine, so a URL an agent was refused for is a URL
+ * a seller can hand it. Every hop goes through `assertPublicUrl`.
+ *
+ * The second is the signature. The paid retry carries `PAYMENT-SIGNATURE`, an
+ * EIP-3009 authorisation the seller submits itself — a bearer instrument.
+ * `fetch` strips `Authorization` across an origin and leaves custom headers
+ * alone, so a seller answering 302 could have had that forwarded to a host the
+ * daemon never priced against. The authorisation names its payee, so the money
+ * still cannot go anywhere else; what a third party gets is the chance to
+ * submit it first, which is not a thing to hand out by accident.
+ */
+export function createHttpTransport(options: { assert?: typeof assertPublicUrl } = {}): Transport {
+  const guard = options.assert ?? assertPublicUrl;
+  return httpTransportWith(guard);
+}
+
+/** The one the daemon and the MCP server use. */
+export const httpTransport: Transport = (url, init) => httpTransportWith(assertPublicUrl)(url, init);
+
+const httpTransportWith = (assert: typeof assertPublicUrl): Transport => async (url, init) => {
+  let target = await assert(url);
+  const origin = target.origin;
+  const carriesPayment = Object.keys(init.headers).some(
+    (name) => name.toLowerCase() === "payment-signature" || name.toLowerCase() === "x-payment",
+  );
+
+  for (let hop = 0; ; hop++) {
+    const response = await fetch(target, {
+      method: init.method,
+      headers: init.headers,
+      body: init.body,
+      /* Followed below instead, so each hop is checked. */
+      redirect: "manual",
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    const location = response.headers.get("location");
+    if (response.status < 300 || response.status >= 400 || !location) {
+      const text = await response.text();
+      let body: unknown = text;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        /* not JSON, and that is fine — only a 402 challenge has to be */
+      }
+      return {
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+        body,
+      };
+    }
+
+    if (hop >= MAX_REDIRECTS) {
+      throw new EgressError(`${url} redirected more than ${MAX_REDIRECTS} times`);
+    }
+
+    const next = await assert(new URL(location, target).toString());
+    if (carriesPayment && next.origin !== origin) {
+      throw new EgressError(
+        `${target.origin} redirected a paid request to ${next.origin}. The authorisation in it is ` +
+          `signed and bearer, and it was priced against the first of those two.`,
+      );
+    }
+    target = next;
   }
-  return {
-    status: response.status,
-    headers: Object.fromEntries(response.headers.entries()),
-    body,
-  };
 };
