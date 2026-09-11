@@ -34,7 +34,18 @@ export interface OperatorRow {
   nodes: number;
   /** Of those, how many are still live. A cut node can draw nothing. */
   liveNodes: number;
-  /** Everything the vault released to this operator, all-time, from events. */
+  /** Draws the contract released, all-time, from events. */
+  drawn6: bigint;
+  /**
+   * Money an owner signed out to this operator after a refusal.
+   *
+   * `TreeVault.release` calls `depositFor` exactly as `draw` does, so this is
+   * the vault funding an operator too, and leaving it out of the total below
+   * is what made the first release an owner ever signed read as money from
+   * outside the tree.
+   */
+  bySignature6: bigint;
+  /** Everything the vault released to this operator, both ways. */
   released6: bigint;
   /** What Circle says it can still spend, read from the Gateway contract. */
   available6: bigint;
@@ -65,6 +76,18 @@ export interface Reconciliation {
    * be tidied away later.
    */
   counterpartyMatching: "unavailable";
+  /**
+   * Whether every figure above could be attributed.
+   *
+   * `partial` means the ledger holds a `Released` whose refusal is outside the
+   * range it was built over, so the amount the vault released to somebody is
+   * known to be understated by `unattributedReleases6`. The check is
+   * one-sided — a balance above what was released is the failure — so an
+   * understated release is exactly the direction that produces a false
+   * accusation, and a report that did not say so would make one.
+   */
+  attribution: "complete" | "partial";
+  unattributedReleases6: bigint;
 }
 
 export async function reconcileGateway(
@@ -75,36 +98,58 @@ export async function reconcileGateway(
   /* Draws are attributed to nodes, and `TreeVault.draw` credits the drawing
      node's own operator. Summing by operator is therefore the same money,
      grouped the way the Gateway holds it. */
-  const released = new Map<Address, { released6: bigint; nodes: number; liveNodes: number }>();
+  const released = new Map<
+    Address,
+    { drawn6: bigint; bySignature6: bigint; nodes: number; liveNodes: number }
+  >();
   for (const row of Object.values(ledger.nodes)) {
     const key = row.operator.toLowerCase() as Address;
-    const entry = released.get(key) ?? { released6: 0n, nodes: 0, liveNodes: 0 };
-    entry.released6 += row.drawn6;
+    const entry = released.get(key) ?? { drawn6: 0n, bySignature6: 0n, nodes: 0, liveNodes: 0 };
+    entry.drawn6 += row.drawn6;
+    /* Both are the vault calling `depositFor` on this operator's balance. A
+       total that counted only the first read a signed release as a stranger's
+       money and reported MISMATCH against Cordon's own exit. */
+    entry.bySignature6 += row.releasedTo6 ?? 0n;
     entry.nodes += 1;
     if (!row.revoked) entry.liveNodes += 1;
     released.set(key, entry);
   }
 
-  const operators: OperatorRow[] = [];
-  for (const [operator, entry] of released) {
-    const available6 = (await client.readContract({
-      address: contracts.gateway,
-      abi: GATEWAY,
-      functionName: "availableBalance",
-      args: [contracts.usdc, operator],
-    })) as bigint;
+  const keys = [...released.keys()];
+  /* One read per operator, gathered rather than awaited in turn. The client the
+     meter builds packs them into Multicall3, so a tree with a dozen operators
+     is one request every tick and not a dozen — against a public endpoint that
+     rate limits, on a loop that runs every five seconds. */
+  const balances = (await Promise.all(
+    keys.map((operator) =>
+      client.readContract({
+        address: contracts.gateway,
+        abi: GATEWAY,
+        functionName: "availableBalance",
+        args: [contracts.usdc, operator],
+      }),
+    ),
+  )) as bigint[];
 
-    operators.push({
+  const operators: OperatorRow[] = keys.map((operator, i) => {
+    const entry = released.get(operator)!;
+    const released6 = entry.drawn6 + entry.bySignature6;
+    const available6 = balances[i]!;
+    return {
       operator,
       nodes: entry.nodes,
       liveNodes: entry.liveNodes,
-      released6: entry.released6,
+      drawn6: entry.drawn6,
+      bySignature6: entry.bySignature6,
+      released6,
       available6,
-      withinRelease: available6 <= entry.released6,
-    });
-  }
+      withinRelease: available6 <= released6,
+    };
+  });
 
   operators.sort((a, b) => (b.released6 > a.released6 ? 1 : b.released6 < a.released6 ? -1 : 0));
+
+  const unattributedReleases6 = ledger.releasedUnattributed6 ?? 0n;
 
   return {
     chainId: ledger.chainId,
@@ -112,5 +157,7 @@ export async function reconcileGateway(
     operators,
     ok: operators.every((operator) => operator.liveNodes === 0 || operator.withinRelease),
     counterpartyMatching: "unavailable",
+    attribution: unattributedReleases6 === 0n ? "complete" : "partial",
+    unattributedReleases6,
   };
 }

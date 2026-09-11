@@ -20,7 +20,24 @@ export function serialize(ledger: Ledger): string {
 }
 
 export function deserialize(text: string): Ledger {
-  return JSON.parse(text, (_key, value) =>
+  const ledger = JSON.parse(text, (_key, value) =>
     typeof value === "string" && BIGINT.test(value) ? BigInt(value.slice(0, -1)) : value,
   ) as Ledger;
+  return normalise(ledger);
+}
+
+/**
+ * Fill in what a snapshot written by an older build has no field for.
+ *
+ * A running box carries its snapshot across a deploy, so a field added here is
+ * `undefined` on every row already on disk — and `undefined` in an arithmetic
+ * chain is a `TypeError` in a loop whose whole job is to keep running, or
+ * worse a figure that silently reads as nothing. Zero is the honest value: the
+ * range was read by a build that did not count this, and re-reading it from
+ * the deploy block is how a reader gets the real number back.
+ */
+function normalise(ledger: Ledger): Ledger {
+  ledger.releasedUnattributed6 ??= 0n;
+  for (const row of Object.values(ledger.nodes)) row.releasedTo6 ??= 0n;
+  return ledger;
 }

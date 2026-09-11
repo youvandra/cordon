@@ -127,6 +127,9 @@ const chain = defineChain({
   name: `chain-${args.chainId}`,
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: ARC.nativeDecimals },
   rpcUrls: { default: { http: [args.rpc] } },
+  /* Declared so reconciliation's one read per operator becomes one request for
+     all of them. It runs every tick against an endpoint that rate limits. */
+  contracts: { multicall3: { address: ARC.multicall3 as `0x${string}` } },
 });
 /* viem caches `getBlockNumber` for the polling interval, and its default is
    4,000ms — written for chains where a block is minutes away. On Arc, where
@@ -137,6 +140,7 @@ const client = createPublicClient({
   transport: http(args.rpc),
   pollingInterval: 250,
   cacheTime: 250,
+  batch: { multicall: true },
 }) as PublicClient;
 
 /* A ledger exists from the first moment, even before anything has been read:

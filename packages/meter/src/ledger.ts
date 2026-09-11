@@ -81,6 +81,20 @@ export interface NodeRow {
   breaches: number;
   drawn6: bigint;
   refused6: bigint;
+  /**
+   * Money the vault put into this node's operator's Gateway balance by
+   * `release` rather than by `draw` — a human signing an exception to a
+   * refusal, from their own key.
+   *
+   * Kept per node and not only as a tree-wide total because reconciliation
+   * asks a question per operator: has this key ever held more than the vault
+   * released to it? `release` calls `depositFor` exactly as `draw` does, so a
+   * release the check does not know about reads as money from outside the
+   * tree — Cordon accusing its own exit path. `Released` carries no node, so
+   * the join is through the refusal, which is the only place the node is
+   * written down.
+   */
+  releasedTo6: bigint;
   /** Ancestor debit landing here, including this node's own draws. */
   debited6: bigint;
   /** Declared spend per counterparty, all-time. Not the enforced window. */
@@ -119,6 +133,17 @@ export interface Ledger {
   /** Money a human signed out after a refusal. Counted apart from draws,
    *  because an override is not a purchase inside the bound. */
   released6: bigint;
+  /**
+   * Of that, what could not be attributed to a node.
+   *
+   * `Released` names a refusal id and not a node, so a release whose refusal
+   * happened before this ledger's range has nothing to join to. Reported
+   * rather than dropped: reconciliation compares an operator's balance against
+   * what the vault released to it, so a release it cannot see makes that
+   * figure too low, and a reconciliation that does not say it is working from
+   * a partial picture is one that will eventually accuse somebody wrongly.
+   */
+  releasedUnattributed6: bigint;
 }
 
 export function emptyLedger(chainId: number, fromBlock = 0n): Ledger {
@@ -135,6 +160,7 @@ export function emptyLedger(chainId: number, fromBlock = 0n): Ledger {
     funded6: {},
     withdrawn6: {},
     released6: 0n,
+    releasedUnattributed6: 0n,
   };
 }
 
@@ -252,8 +278,20 @@ function apply(ledger: Ledger, event: Event): void {
 
     case "Released": {
       const refusal = ledger.refusals.find((r) => r.id === event.refusalId);
-      if (refusal) refusal.released = { by: event.by, site: site(event) };
       ledger.released6 += event.amount6;
+
+      /* `release` tops up the same Gateway balance `draw` does, so the money
+         has to land on the node whose operator received it or reconciliation
+         will read it as money from outside the tree. The event names only the
+         refusal, so the refusal is the join. */
+      if (!refusal) {
+        ledger.releasedUnattributed6 += event.amount6;
+        return;
+      }
+      refusal.released = { by: event.by, site: site(event) };
+      const row = node(ledger, refusal.node);
+      if (row) row.releasedTo6 += event.amount6;
+      else ledger.releasedUnattributed6 += event.amount6;
       return;
     }
 
@@ -294,6 +332,7 @@ function blank(
     refusals: 0,
     breaches: 0,
     drawn6: 0n,
+    releasedTo6: 0n,
     refused6: 0n,
     debited6: 0n,
     counterparties: {},
