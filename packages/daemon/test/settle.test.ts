@@ -31,11 +31,11 @@ const arc = defineChain({
 const wallet = createWalletClient({ account, chain: arc, transport: http() });
 
 /** Circle, answering from a fixture instead of from Virginia. */
-function fakeApi(recorder: { body?: string } = {}): GatewayApi {
+function fakeApi(recorder: { body?: string } = {}, balance = "0.020000"): GatewayApi {
   const fetchImpl = (async (url: string, init?: { body?: string }) => {
     if (String(url).endsWith("/v1/balances")) {
       /* Circle's own view of the tranche, which the settler waits for. */
-      return new Response(JSON.stringify({ balances: [{ balance: "0.020000" }] }), { status: 200 });
+      return new Response(JSON.stringify({ balances: [{ balance }] }), { status: 200 });
     }
     if (String(url).endsWith("/v1/info")) {
       return new Response(
@@ -71,6 +71,10 @@ const settler = (api: GatewayApi) =>
        is signatures and arithmetic, which is what these tests are about. */
     mint: async () => MINT_TX,
   });
+
+/** Base units the way Circle reports them: whole USDC, six places. */
+const circleDecimal = (base6: bigint) =>
+  `${base6 / 1_000_000n}.${(base6 % 1_000_000n).toString().padStart(6, "0")}`;
 
 const offer = (value: bigint) => ({
   to: SELLER, value, asset: USDC, network: `eip155:${arc.id}`,
@@ -169,5 +173,62 @@ test("a seller that names no EIP-712 domain is refused before anything is burned
     recorder.body,
     undefined,
     "a tranche released for a payment that cannot be signed is a tranche gone and nothing bought",
+  );
+});
+
+/**
+ * The tranche the vault deposits is the whole balance a purchase gets.
+ *
+ * `TreeVault.draw` puts the seller's price into the operator's Gateway balance
+ * and nothing beside it, so an operator on its first purchase holds exactly
+ * the price. The intent built from that price debits exactly the price —
+ * `value - fee` landing, `maxFee` of the fee on top — which is the arithmetic
+ * Circle stated when it refused a $0.0100 burn against a $0.0100 balance for
+ * `required 0.0135` and accepted a $0.0065 one.
+ *
+ * The settler waited for the price *plus* the fee, a balance no draw produces.
+ * Every purchase that ever got past it was made by an operator carrying a
+ * float from an earlier run; a fresh one waited out the window and threw,
+ * after the draw had already debited every ancestor. The fixture below is the
+ * balance a first purchase actually has, and it used to be a minute of waiting
+ * and a `SettlementError`.
+ */
+test("a tranche is enough to settle the purchase it was drawn for", async () => {
+  const recorder: { body?: string } = {};
+  const exactly = circleDecimal(ATTEST.price6);
+  assert.equal(exactly, "0.010000", "the fixture is the price, in Circle's own six places");
+
+  const settlement = await settler(fakeApi(recorder, exactly)).settle(NODE, offer(ATTEST.price6));
+  assert.equal(settlement.txHash, MINT_TX, "it settled rather than waiting for money it will not get");
+
+  const sent = JSON.parse(recorder.body!)[0] as { burnIntent: { maxFee: string; spec: { value: string } } };
+  assert.equal(
+    BigInt(sent.burnIntent.spec.value) + BigInt(sent.burnIntent.maxFee),
+    ATTEST.price6,
+    "and what it sent debits the tranche exactly, which is why the tranche covers it",
+  );
+});
+
+/**
+ * Circle answers in whole USDC as a decimal string; this project counts in base
+ * units. That conversion went through a float — `Number(seen) * 1e6`, rounded —
+ * and rounding money up is the one failure this project cannot have.
+ *
+ * `0.0099995` is nine thousand nine hundred and ninety-nine base units and a
+ * half. Truncated to the six places a base unit has, it is 9,999: one short of
+ * a one-cent purchase. Doubled through a float and rounded, it is 10,000, and
+ * the settler goes on to sign an intent Circle refuses for a balance that is
+ * not there — after the draw has debited every ancestor.
+ */
+test("a balance half a base unit short is not rounded up into a settlement", async () => {
+  const short = "0.0099995";
+  await assert.rejects(
+    () => settler(fakeApi({}, short)).settle(NODE, offer(ATTEST.price6)),
+    (error: Error) => {
+      assert.ok(error instanceof SettlementError);
+      assert.match(error.message, /still reports 0\.0099995/);
+      assert.match(error.message, new RegExp(`${ATTEST.price6} base units`));
+      return true;
+    },
   );
 });

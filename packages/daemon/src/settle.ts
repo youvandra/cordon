@@ -125,14 +125,27 @@ export class CircleSettler implements Settler {
       );
     }
 
+    /* What Circle will actually debit, and the reason this is a line of its
+       own. The fee is charged on top of the intent's value, so an intent that
+       lands `value - fee` with `maxFee` of the fee debits the whole tranche
+       and not a penny more — `required 0.01` for a one-cent purchase, which is
+       the refusal Circle answered with when this was worked out.
+
+       This waited for the tranche *plus* the fee, which is a balance the draw
+       never deposits: the vault releases the price, so the only operator that
+       ever got past it was one holding a float of its own from an earlier run.
+       A fresh operator waited out the whole window and then threw — after the
+       draw had already debited every ancestor's window. */
+    const released = payment.value - GATEWAY.baseFee6;
+    const debited = released + GATEWAY.baseFee6;
+
     /* The tranche is on chain the moment the draw returns, and Circle's
        indexer sees it a moment later. An intent sent in between is refused
        for a balance that already exists — `available 0.001000, required 0.01`
        against a deposit two seconds old — so wait for the balance rather than
        failing a purchase that has already been paid for. */
-    await this.awaitBalance(operator, payment.value);
+    await this.awaitBalance(operator, debited);
 
-    const released = payment.value - GATEWAY.baseFee6;
     const intent = buildBurnIntent({
       depositor: operator,
       wallet: GATEWAY.wallet as Address,
@@ -169,23 +182,23 @@ export class CircleSettler implements Settler {
   }
 
   /**
-   * Wait until Circle's own view of the balance covers what this purchase
-   * needs — the value plus the fee it charges on top of it.
+   * Wait until Circle's own view of the balance covers what the intent will
+   * debit — its value and the fee together, which is the tranche.
+   *
+   * `needed` is passed in rather than derived here. Deriving it twice is how
+   * this came to wait for a balance a draw does not produce.
    */
-  private async awaitBalance(operator: Address, value: bigint): Promise<void> {
-    const needed = value + GATEWAY.baseFee6;
+  private async awaitBalance(operator: Address, needed: bigint): Promise<void> {
     const deadline = (this.options.now?.() ?? Date.now()) + (this.options.balanceWaitMs ?? 60_000);
     let seen = "0";
 
     for (;;) {
       seen = await this.api.balance(GATEWAY.domain, operator);
-      /* The API answers in whole USDC as a decimal string; base units are what
-         every other figure in this project is in. */
-      if (BigInt(Math.round(Number(seen) * 1e6)) >= needed) return;
+      if (baseUnits(seen) >= needed) return;
       if ((this.options.now?.() ?? Date.now()) >= deadline) {
         throw new SettlementError(
-          `Circle still reports ${seen} for ${operator} after waiting, and this purchase needs ` +
-            `${needed} base units — the tranche plus the fee charged on top of it. The draw has ` +
+          `Circle still reports ${seen} for ${operator} after waiting, and this intent debits ` +
+            `${needed} base units — its value and the fee charged on top of it. The draw has ` +
             `already happened, so the window is debited and the money is in the Gateway balance.`,
         );
       }
@@ -262,6 +275,19 @@ function tokenDomain(payment: Payment, chainId: number): TokenDomain {
     );
   }
   return { name, version, chainId, verifyingContract: payment.asset };
+}
+
+/**
+ * Circle answers in whole USDC as a decimal string. Every other figure in this
+ * project is in base units, and the conversion is exact on purpose: parsing
+ * money through a float rounds it, and a rounded balance is one that reads as
+ * covering an intent Circle will then refuse.
+ */
+function baseUnits(decimal: string): bigint {
+  const [whole = "0", fraction = ""] = decimal.trim().split(".");
+  const padded = (fraction + "000000").slice(0, 6);
+  const sign = whole.startsWith("-") ? -1n : 1n;
+  return sign * (BigInt(whole.replace("-", "") || "0") * 1_000_000n + BigInt(padded || "0"));
 }
 
 function randomNonce(): Hex {
