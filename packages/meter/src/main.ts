@@ -20,6 +20,7 @@ import { sync } from "./sync.ts";
 import { createReadApi } from "./server.ts";
 import { emptyLedger, type Ledger } from "./ledger.ts";
 import { reconcileGateway, type Reconciliation } from "./reconcile.ts";
+import { everyAfter } from "./loop.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -200,24 +201,15 @@ if (!args.once) {
     console.log(`       read api on ${args.bind}:${args.port}`),
   );
 
-  /* One tick at a time, scheduled after the last one finished rather than on
-     a fixed interval. A tick that waits out a rate limit outlives the
-     interval, and `setInterval` then starts a second read of the same range
-     against the same ledger object — twice the load on the endpoint that just
-     asked for less of it, and two writers of one snapshot. */
-  const loop = (): void => {
-    tick()
-      .catch((error: unknown) => {
-        /* A failed read leaves the last good ledger in place. The alternative —
-           serving a partial one — is a page that quietly disagrees with the
-           chain, which is the failure this package exists to make impossible. */
-        console.error(`sync failed, keeping the last good ledger: ${(error as Error).message}`);
-      })
-      .finally(() => {
-        setTimeout(loop, args.intervalMs).unref?.();
-      });
-  };
-  /* Read first, then keep reading. The API is already listening by then, so a
-     slow catch-up is a range that grows rather than a port that refuses. */
-  loop();
+  /* Read first, then keep reading, one at a time. The API is already listening
+     by then, so a slow catch-up is a range that grows rather than a port that
+     refuses. The scheduling itself lives in `loop.ts` because this file had it
+     and attest did not. */
+  everyAfter(tick, {
+    intervalMs: args.intervalMs,
+    /* A failed read leaves the last good ledger in place. The alternative —
+       serving a partial one — is a page that quietly disagrees with the chain,
+       which is the failure this package exists to make impossible. */
+    onError: (error) => console.error(`sync failed, keeping the last good ledger: ${error.message}`),
+  });
 }

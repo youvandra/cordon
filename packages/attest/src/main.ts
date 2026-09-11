@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 import { createPublicClient, defineChain, http, type Address, type Hex, type PublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ARC, ATTEST } from "../../fixtures/src/index.ts";
-import { deserialize, serialize, sync, type Ledger } from "../../meter/src/index.ts";
+import { deserialize, everyAfter, serialize, sync, type Ledger } from "../../meter/src/index.ts";
 import { Eip3009Collector, resolveDomain } from "./collect.ts";
 import { createAttestApi } from "./server.ts";
 import type { Terms } from "./payment.ts";
@@ -135,10 +135,14 @@ server.listen(port, bind, () => {
   console.log(`       on ${bind}:${port}`);
 });
 
-setInterval(() => {
-  tick().catch((error: unknown) => {
-    /* A failed read leaves the last good ledger in place. Serving a partial
-       one would sell an answer that disagrees with the chain. */
-    console.error(`sync failed, keeping the last good ledger: ${(error as Error).message}`);
-  });
-}, Number(flag(argv, "interval") ?? 5_000));
+/* One read at a time, scheduled after the last one finished. This was a
+   `setInterval`, which starts a second read of the same range whenever a tick
+   outlives its interval — and because `reduce` folds events into the ledger in
+   place, the same draws and refusals land in it twice while two writers race
+   one snapshot file. On the surface that sells the answer. */
+everyAfter(tick, {
+  intervalMs: Number(flag(argv, "interval") ?? 5_000),
+  /* A failed read leaves the last good ledger in place. Serving a partial one
+     would sell an answer that disagrees with the chain. */
+  onError: (error) => console.error(`sync failed, keeping the last good ledger: ${error.message}`),
+});

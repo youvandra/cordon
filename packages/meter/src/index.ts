@@ -10,4 +10,5 @@ export * from "./ledger.ts";
 export * from "./read.ts";
 export * from "./snapshot.ts";
 export { sync, type SyncOptions } from "./sync.ts";
+export { everyAfter, type Loop, type LoopOptions } from "./loop.ts";
 export * from "./reconcile.ts";
