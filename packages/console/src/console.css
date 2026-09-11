@@ -938,3 +938,8 @@ body {
 /* One line under the figures, saying the only thing left to say about a
    mandate that cannot be edited. */
 .setup__after { margin: var(--cordon-space-5) 0 0; max-width: 62ch; }
+
+/* A release into a branch that has been cut. The colour is the one every other
+   exception in this system uses, because a reader should not have to learn a
+   new signal to notice that this one is different. */
+.refusal__warn { color: var(--cordon-critical); }

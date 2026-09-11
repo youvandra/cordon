@@ -189,4 +189,42 @@ contract G1_Refusal is Base {
         vault.release(id);
         vm.stopPrank();
     }
+
+    /**
+     * Cutting a branch stops it drawing. It does not stop the owner paying it.
+     *
+     * The claim everywhere in this project is that a revoked node draws
+     * nothing afterwards, and against `draw` that is enforced: `_evaluate`
+     * asks `revokedAt` first and refuses the whole branch. `release` does not
+     * ask. So an owner who cuts a branch and then releases one of its earlier
+     * refusals still funds that operator's Gateway balance.
+     *
+     * That is the owner's own signature on their own money, which is the one
+     * thing release exists for — but it is not what "a cut node draws nothing"
+     * says, and the difference is exactly the kind a reader would not expect.
+     * This test states the behaviour rather than asserting what we wish were
+     * true, so that if the contracts are redeployed with a revocation check in
+     * `release`, it fails and has to be rewritten deliberately.
+     */
+    function test_a_cut_branch_can_still_be_paid_by_the_owner_that_cut_it() public {
+        (, uint256 id,) = _draw(opG, grandchild, aisa, Fixtures.TRANCHE6 + 1);
+
+        vm.prank(owner);
+        reg.revoke(grandchild);
+        assertFalse(reg.isLive(grandchild), "the branch is cut");
+
+        (bool ok,, TreeVault.Reason reason) = _draw(opG, grandchild, aisa, Fixtures.TRANCHE6 / 2);
+        assertFalse(ok, "and it draws nothing");
+        assertEq(uint256(reason), uint256(TreeVault.Reason.Revoked));
+
+        uint128 before = uint128(gateway.availableBalance(address(usdc), opG));
+        vm.prank(owner);
+        vault.release(id);
+
+        assertEq(
+            uint128(gateway.availableBalance(address(usdc), opG)) - before,
+            Fixtures.TRANCHE6 + 1,
+            "release pays a cut node's operator: it checks the owner, not the revocation"
+        );
+    }
 }

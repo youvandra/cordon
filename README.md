@@ -62,7 +62,7 @@ missing from it reads as pending.
 
 | Gate | Ends when | Status |
 |---|---|---|
-| G1 tree arithmetic | every draw debits every ancestor, exactly | green, 65 tests |
+| G1 tree arithmetic | every draw debits every ancestor, exactly | green, 66 tests |
 | G2 live on Arc | four-agent tree, no agent holds a key, refusal on arcscan | green, 8 checks |
 | G3 the hostile drill | an unrestricted agent is told to spend, and the number is published | green, 5 checks |
 | G4 bounded search | thousands of strategies scored by the contract, none passes a bound | green |

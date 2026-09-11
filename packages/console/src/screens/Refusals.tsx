@@ -176,9 +176,12 @@ function RefusalCard({ refusal }: { refusal: Refusal }) {
 function ChainRefusalCard({
   refusal,
   owner,
+  cut,
 }: {
   refusal: ChainRefusal;
   owner: string | null;
+  /** Whether this refusal's node, or an ancestor of it, has been revoked. */
+  cut: boolean;
 }) {
   const short = `${refusal.counterparty.slice(0, 6)}…${refusal.counterparty.slice(-4)}`;
   const notify = useNotify();
@@ -253,8 +256,10 @@ function ChainRefusalCard({
                 >
                   {state.status === "working" ? state.step : "Sign to release"}
                 </Button>
-                <Text variant="micro" tone="dim" as="span">
-                  one transaction from your own key, and it does not move the bound
+                <Text variant="micro" tone="dim" as="span" className={cut ? "refusal__warn" : undefined}>
+                  {cut
+                    ? "this branch is cut — releasing still pays its operator, because the vault checks the owner and not the revocation"
+                    : "one transaction from your own key, and it does not move the bound"}
                 </Text>
               </>
             ) : (
@@ -295,6 +300,14 @@ function ChainRefusalCard({
           window is debited, because this amount was never inside the authority
           they describe.
         </Text>
+        {cut ? (
+          <Text variant="body" tone="copy" as="p" className="refusal__warn">
+            <b>This branch has been revoked.</b> It can draw nothing on its own,
+            and a release still reaches its operator: `release` checks that you
+            are the owner, not that the node is live. Cutting a branch stops it
+            spending; it does not stop you paying it.
+          </Text>
+        ) : null}
       </Modal>
     </Card>
   );
@@ -338,6 +351,20 @@ export default function Refusals() {
   const live = useChainRefusals(nodes);
   const mine = real && Boolean(address);
 
+  /* Revocation runs down a branch: `revokedAt` walks up from a node, so a
+     child of a cut parent is cut too even though its own flag is false. */
+  const byId = new Map(
+    (chain.state === "read" ? chain.nodes : []).map((node) => [node.node.toLowerCase(), node]),
+  );
+  const isCut = (id: string): boolean => {
+    let cursor = byId.get(id.toLowerCase());
+    while (cursor) {
+      if (cursor.revoked) return true;
+      cursor = cursor.parent ? byId.get(cursor.parent.toLowerCase()) : undefined;
+    }
+    return false;
+  };
+
   if (!ready) return <RefusalsSkeleton note="restoring this session…" />;
 
   /* The same rule as the tree screen: a wallet whose refusals are being read
@@ -376,7 +403,12 @@ export default function Refusals() {
         ) : (
           <Stack direction="column" gap="lg">
             {live.refusals.map((refusal) => (
-              <ChainRefusalCard key={String(refusal.id)} refusal={refusal} owner={mine ? address : null} />
+              <ChainRefusalCard
+                key={String(refusal.id)}
+                refusal={refusal}
+                owner={mine ? address : null}
+                cut={isCut(refusal.node)}
+              />
             ))}
           </Stack>
         )}
