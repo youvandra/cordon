@@ -70,6 +70,9 @@ const settler = (api: GatewayApi) =>
     /* The mint is one contract call and needs a chain; the rest of the path
        is signatures and arithmetic, which is what these tests are about. */
     mint: async () => MINT_TX,
+    /* An operator that carries its float. The test below is the one about an
+       operator that does not. */
+    balanceOf: async () => 1_000_000n,
   });
 
 /** Base units the way Circle reports them: whole USDC, six places. */
@@ -228,6 +231,43 @@ test("a balance half a base unit short is not rounded up into a settlement", asy
       assert.ok(error instanceof SettlementError);
       assert.match(error.message, /still reports 0\.0099995/);
       assert.match(error.message, new RegExp(`${ATTEST.price6} base units`));
+      return true;
+    },
+  );
+});
+
+/**
+ * The operator has to hold what it is about to authorise, and nothing looked.
+ *
+ * The burn returns the price less Circle's fee; the authorisation is for the
+ * whole price. An operator without that difference in its own token balance
+ * signs something the token refuses when the seller submits it — and the
+ * seller is the one who finds out, having already served the answer, from a
+ * signature that verified against the right domain. The daemon can see it
+ * coming with one read.
+ */
+test("an operator that cannot cover the authorisation is told so rather than the seller", async () => {
+  const settler = new CircleSettler({
+    publicClient: {} as never,
+    walletFor: () => wallet,
+    chainId: arc.id,
+    api: fakeApi(),
+    now: () => 1_757_000_000_000,
+    balanceWaitMs: 0,
+    balancePollMs: 1,
+    nonce: () => ("0x" + "11".repeat(32)) as Hex,
+    mint: async () => MINT_TX,
+    /* What the mint just landed, and not a base unit more: an operator whose
+       only money is the tranche it was released. */
+    balanceOf: async () => ATTEST.price6 - GATEWAY.baseFee6,
+  });
+
+  await assert.rejects(
+    () => settler.settle(NODE, offer(ATTEST.price6)),
+    (error: Error) => {
+      assert.ok(error instanceof SettlementError);
+      assert.match(error.message, new RegExp(`authorises ${ATTEST.price6}`));
+      assert.match(error.message, /own float/);
       return true;
     },
   );

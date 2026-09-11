@@ -14,7 +14,7 @@
  * fee is a price this rail cannot settle at all, and the settler says so with
  * Circle's own number rather than failing vaguely.
  */
-import type { Address, Hex, PublicClient, WalletClient } from "viem";
+import { parseAbi, type Address, type Hex, type PublicClient, type WalletClient } from "viem";
 import { GATEWAY } from "../../fixtures/src/index.ts";
 import {
   GatewayApi,
@@ -84,7 +84,12 @@ export interface CircleOptions {
   nonce?: () => Hex;
   /** Overridable so a test can exercise the whole path without a chain. */
   mint?: (wallet: WalletClient, minter: Address, accepted: TransferAccepted) => Promise<Hex>;
+  /** The operator's token balance after the mint. Overridable for the same
+   *  reason: the rest of this path is signatures and arithmetic. */
+  balanceOf?: (token: Address, holder: Address) => Promise<bigint>;
 }
+
+const ERC20 = parseAbi(["function balanceOf(address account) view returns (uint256)"]);
 
 /**
  * Circle's Gateway, the real path.
@@ -176,7 +181,16 @@ export class CircleSettler implements Settler {
     /* The seller is paid its whole price. Of that price, everything but the
        fee came out of the tranche the contract released; the fee and the gas
        came out of the operator's own float, which is the same place gas comes
-       from and is outside the mandate either way. */
+       from and is outside the mandate either way.
+
+       Which means the operator has to actually hold that float, and until now
+       nothing looked. The mint lands `value - fee`; the authorisation below is
+       for `value`. An operator without the difference signs something the
+       token refuses when the seller submits it — and the seller is the one who
+       finds out, having already served the answer, from a signature that
+       verified. Failing here instead costs a purchase and says why. */
+    await this.assertCanPay(payment, operator);
+
     const proof = await this.authorise(wallet, operator, payment, token);
     return { proof, txHash };
   }
@@ -204,6 +218,36 @@ export class CircleSettler implements Settler {
       }
       await new Promise((done) => setTimeout(done, this.options.balancePollMs ?? 3_000));
     }
+  }
+
+  /**
+   * Does the operator hold what it is about to authorise?
+   *
+   * An EIP-3009 authorisation is checked against the balance at the moment the
+   * seller submits it, not the moment it is signed, so this cannot be a
+   * guarantee. It is the difference between a failure the daemon can name and
+   * one that surfaces as a seller's revert against a signature that verified.
+   */
+  private async assertCanPay(payment: Payment, operator: Address): Promise<void> {
+    const read =
+      this.options.balanceOf ??
+      ((token: Address, holder: Address) =>
+        this.options.publicClient.readContract({
+          address: token,
+          abi: ERC20,
+          functionName: "balanceOf",
+          args: [holder],
+        }) as Promise<bigint>);
+
+    const held = await read(payment.asset, operator);
+    if (held >= payment.value) return;
+
+    throw new SettlementError(
+      `${operator} holds ${held} base units and this purchase authorises ${payment.value}. ` +
+        `The burn returned the price less Circle's ${GATEWAY.baseFee6} fee, so an operator needs ` +
+        `that difference in its own float — the same place its gas comes from, and outside the ` +
+        `mandate either way. The draw has already happened, so the window is debited.`,
+    );
   }
 
   /** The x402 `exact` payload: an EIP-3009 authorisation the seller submits. */
