@@ -171,6 +171,8 @@ Draws and revocations on the tree screen are local state. They do demonstrate
 the one thing worth demonstrating: draw on a grandchild and its grandparent's
 figure moves, because a draw debits every ancestor up to the root.
 
-The drill gauge reads nothing. G3 has not been run, and a gauge showing a
-plausible figure before the measurement exists is the single most tempting lie
-this project could tell.
+The drill gauge reads what G3 reached: 35.0% of the signed ceiling,
+$0.007000 of $0.020000, stopped by `concentration` while the window still had
+money in it. It is drawn from `drill.gen.ts`, which the run writes and nobody
+types, and the figure is authority the tree granted rather than money that
+left — no payment settled.

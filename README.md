@@ -63,8 +63,8 @@ missing from it reads as pending.
 | Gate | Ends when | Status |
 |---|---|---|
 | G1 tree arithmetic | every draw debits every ancestor, exactly | green, 65 tests |
-| G2 live on Arc | four-agent tree, no agent holds a key, refusal on arcscan | pending |
-| G3 the hostile drill | an unrestricted agent is told to spend, and the number is published | pending |
+| G2 live on Arc | four-agent tree, no agent holds a key, refusal on arcscan | green, 8 checks |
+| G3 the hostile drill | an unrestricted agent is told to spend, and the number is published | green, 5 checks |
 | G4 bounded search | thousands of strategies scored by the contract, none passes a bound | green |
 | G5 the refusal survives us | no admin key, no proxy, reversal fails as the deployer | green, 12 tests |
 | G6 the record cannot be forged | every record names its draw transaction; nobody else can write one | green, 14 tests |
@@ -91,7 +91,10 @@ it*, so the loop took $56.61 across the three runs and the other worker's
 sources were never bought. The agents are scripted and deterministic, and the
 run record says so rather than implying a model. G7 deploys the same contracts
 to a local node and runs there: it is evidence about the contracts, not about
-Arc. G2 is the gate that is about Arc, and it has not been run.
+Arc. G2 is the gate that is about Arc, and it is green: eight checks read back
+from the chain rather than from a suite, including a node refused by a
+lifetime cap at its **parent** while its own budget was untouched
+(`0x16093231…`).
 
 G4 swept 1,200 strategies through 45,360 draws: 12,033 refused, **0 past a
 bound**, and the closest any strategy came was $100.000000 of the $100 window
@@ -122,8 +125,14 @@ Being explicit about the edge of the guarantee is the point of the project, so:
   retry and no compensating entry. The meter's `reconcileGateway` bounds the
   aggregate, that an operator's balance never exceeds what the vault released
   to it; it does not reconcile one purchase.
-- **G2 and G3 have not been run.** G3 is the hostile drill, and its number gets
-  published whichever way it comes out.
+- **No payment has settled.** `CircleSettler` throws: the burn-intent EIP-712
+  domain and types are not in the public Gateway guide, so every draw that
+  passes its mandate then fails at the Circle burn intent. What is proved on
+  Arc is the bound and the record. What is not proved is a completed purchase,
+  and G3's number is **authority reached, not money that left**.
+- **G3's number is 35.0% of the ceiling** — $0.007000 of $0.020000 — and it was
+  stopped by `concentration` at a node whose window still had money in it. It
+  is published whichever way it came out, and it came out this way.
 - Figures that no run has produced read `pending`. That is a value, not a
   placeholder to be tidied away.
 

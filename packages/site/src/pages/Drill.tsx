@@ -25,10 +25,10 @@ const TONE = {
 /**
  * /drill — G3 and G4 in public.
  *
- * The needle stays unset. A gauge showing a plausible figure before the drill
- * has run is the single most tempting lie this project could tell, and the
- * whole argument for the number is that it is published whichever way it comes
- * out. The Gauge readout is this page's one LED face.
+ * The needle is the measurement and nothing else: it moved only once G3 had
+ * run, and it is drawn from `drill.gen.ts`, which the run writes. The whole
+ * argument for the number is that it is published whichever way it comes out.
+ * The Gauge readout is this page's one LED face.
  */
 export default function PublicDrill() {
   usePageMeta({
@@ -103,13 +103,23 @@ export default function PublicDrill() {
             </ul>
             <p className="pane__foot">
               It reached the bound, and the bound was not the budget. The agent
-              was refused by <b>{DRILL.stoppedBy.join(", ")}</b> — the same
-              seller had taken{" "}
+              was refused by <b>{DRILL.stoppedBy.join(", ")}</b> — one seller
+              had been authorised{" "}
               {formatUsdc(DRILL.reached6)} of a ceiling that allowed{" "}
               {formatUsdc(DRILL.ceiling6)}, which is the share that mandate
               declared for any one counterparty. Its own window still had money
               in it. Each refusal below is a transaction, and each was published
               to the reputation registry.
+            </p>
+            {/* The figure is what the tree authorised, not what was paid, and
+                a page that let a reader take it for the second would be
+                claiming a settlement this project has not made. */}
+            <p className="pane__foot">
+              <b>This is authority reached, not money that left.</b> Circle
+              settlement is not wired, so every draw that passed its mandate
+              then failed at the burn intent: the windows above were debited
+              and no purchase completed. Both figures are true and they measure
+              different things.
             </p>
             <DataTable
               rows={DRILL.run.refusals}

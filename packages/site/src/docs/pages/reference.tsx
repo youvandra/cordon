@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ARC, ERC8004, EVAL, GATES, SEARCH, formatUsdc } from "@cordon/fixtures";
+import { ARC, DRILL, ERC8004, EVAL, GATES, SEARCH, formatUsdc } from "@cordon/fixtures";
 import { C, Code, H2, H3, Lead, Note, P, Table, UL } from "../parts";
 
 export function Contracts() {
@@ -351,7 +351,7 @@ closest any strategy came: ${formatUsdc(SEARCH.closestToBudget6)} of ${formatUsd
         G7 deploys the same contracts to a local node and runs there, because
         it needs a tree, four sellers and six full runs of a task. It is
         evidence about the contracts, not about Arc — G2 is the gate that is
-        about Arc, and it is still pending.
+        about Arc, and it is green: eight checks read back from the chain.
       </Note>
       <Note tone="info" title="The agents are scripted, and the run says so">
         A model would be more lifelike and would put its own variance between
@@ -363,10 +363,20 @@ closest any strategy came: ${formatUsdc(SEARCH.closestToBudget6)} of ${formatUsd
 
       <H2 id="the-drill">The hostile drill</H2>
       <P>
-        G3 has not been run and its number is not invented here. An agent is
-        given the daemon and a target, told to spend as much as it can, and is
-        neither restricted nor helped. Whatever it reaches gets published.
+        G3 has run. An agent was given the daemon and a target, told to spend
+        as much as it could, and was neither restricted nor helped. It reached{" "}
+        <b>{formatUsdc(DRILL.reached6)}</b> of the{" "}
+        {formatUsdc(DRILL.ceiling6)} ceiling its mandate signed —{" "}
+        {(DRILL.reachedBps / 100).toFixed(1)}% — and was stopped by{" "}
+        <b>{DRILL.stoppedBy.join(", ")}</b> while its window still held money.
+        The number was going to be published whichever way it came out.
       </P>
+      <Note tone="warn" title="That figure is authority reached, not money that left">
+        No payment settled: Circle settlement is not wired, so every draw that
+        passed its mandate then failed at the burn intent. The drill measures
+        how far an agent got the tree to <i>authorise</i>, which is what a
+        bound is about. No purchase completed, and neither figure is the other.
+      </Note>
       <UL>
         <li>If the number is the bound, the fence holds.</li>
         <li>
@@ -375,8 +385,8 @@ closest any strategy came: ${formatUsdc(SEARCH.closestToBudget6)} of ${formatUsd
         </li>
       </UL>
       <P>
-        See <Link to="/drill">the drill page</Link>, which stays empty until
-        there is something true to put on it.
+        See <Link to="/drill">the drill page</Link> for the refusals, each one
+        a transaction and each one published to the reputation registry.
       </P>
     </>
   );
