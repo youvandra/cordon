@@ -11,7 +11,19 @@ import { Tag } from "./Tag";
  * They live in the library because both surfaces render them: the console shows
  * an owner their own tree, the public record pages show anyone the same tree.
  */
-export function Preview({ note }: { note?: string }) {
+export function Preview({ note, live = false }: { note?: string; live?: boolean }) {
+  /* "Preview build" meant one thing: the figures beside it are fixtures. Some
+     of these screens now read the chain while still being somebody else's
+     tree, and keeping the old words there would have the badge deny the thing
+     it is sitting next to. A live read says what it is and is not a caution. */
+  if (live) {
+    return (
+      <Tag tone="positive" size="sm" dot>
+        {note ?? "read from the chain"}
+      </Tag>
+    );
+  }
+
   return (
     <Tag tone="caution" size="sm" dot>
       preview build · {note ?? "figures are fixtures, not chain reads"}

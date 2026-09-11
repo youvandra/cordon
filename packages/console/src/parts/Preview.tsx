@@ -13,11 +13,14 @@ export function ScreenHead({
   title,
   lede,
   note,
+  live = false,
   actions,
 }: {
   title: React.ReactNode;
   lede?: React.ReactNode;
   note?: string;
+  /** Whether the figures under this head were read from the chain. */
+  live?: boolean;
   /**
    * What to do next, in the corner the label was in.
    *
@@ -37,7 +40,7 @@ export function ScreenHead({
           </Text>
         ) : null}
       </div>
-      {actions ?? <Preview note={note} />}
+      {actions ?? <Preview note={note} live={live} />}
     </header>
   );
 }

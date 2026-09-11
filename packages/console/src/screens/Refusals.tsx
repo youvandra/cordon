@@ -412,6 +412,7 @@ export default function Refusals() {
               : "Every one of these is a decision the contract made about the tree Cordon runs on Arc, read from the events it emitted. Releasing one takes the owner's own signature, which is why the buttons below are theirs and not yours."
           }
           note={mine ? `read from ${ARC.name}` : `the public tree · read from ${ARC.name}`}
+          live
         />
         {live.refusals.length === 0 ? (
           <Card>

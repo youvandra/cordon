@@ -647,6 +647,7 @@ export default function Tree() {
               : "This is the tree Cordon runs on Arc, read from the contract that enforces it. It is not yours: opening one of your own takes a signature from your own key, and nothing on this screen can produce one."
           }
           note={mine ? `read from ${ARC.name}` : `the public tree · read from ${ARC.name}`}
+          live
         />
         <ChainTree nodes={chain.nodes} owner={mine ? address : null} />
         {/* Funding and spawning are the owner's, and the owner is the address
