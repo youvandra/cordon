@@ -138,6 +138,13 @@
 }
 @keyframes cordon-shimmer { to { transform: translateX(100%); } }
 
+/* A skeleton is still a skeleton without the sweep: the block holds the shape
+   and the shape is the message. A reader who asked for no motion gets a
+   slightly darker block instead, so it still reads as pending. */
+@media (prefers-reduced-motion: reduce) {
+  .cordon-skeleton::after { animation: none; background: rgba(34, 34, 34, 0.04); transform: none; }
+}
+
 .cordon-skeleton-text { display: flex; flex-direction: column; gap: 8px; width: 100%; }
 
 /* ---- empty state --------------------------------------------------------- */

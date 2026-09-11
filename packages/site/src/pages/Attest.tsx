@@ -28,6 +28,7 @@ import {
 import { TREE, attestationOf, flatten, type Attestation } from "@cordon/fixtures/preview";
 import { useLiveAgent, type LiveConduct } from "../parts/meter";
 import { RecordShell } from "../parts/RecordShell";
+import { RecordSkeleton } from "../parts/RecordSkeleton";
 import { useEntrance } from "../parts/motion";
 
 /**
@@ -150,6 +151,18 @@ export default function Attest() {
      nothing. */
   const previewId = nodes.some((candidate) => String(candidate.agentId) === id);
   if (live.state === "missing" && !previewId) return <NoSuchAgent id={id} />;
+  /* While the meter is answering about a real identity, show nothing in the
+     shape of the answer. Filling the layout with the demo tree meanwhile put
+     an imaginary agent's figures under a real agent's id and then swapped
+     them out under the reader. */
+  if (live.state === "loading" && !previewId) {
+    return (
+      <RecordSkeleton
+        eyebrow={`x402 · ${formatUsdc(ATTEST.price6)} per call`}
+        headline={["One question,", "asked before serving."]}
+      />
+    );
+  }
 
   return (
     <RecordShell>

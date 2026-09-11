@@ -18,7 +18,7 @@ import {
   Text,
   TextField,
   Tooltip,
-  useToast,
+  useNotify,
 } from "cordon-ui";
 import { ARC, ENFORCED_BY, MANDATE, isAddress } from "@cordon/fixtures";
 import { ScreenHead } from "../parts/Preview";
@@ -73,7 +73,7 @@ export default function Setup() {
   useTitle("Setup · Cordon console");
   const animate = useEntrance();
   const navigate = useNavigate();
-  const { notify } = useToast();
+  const notify = useNotify();
 
   const [budget, setBudget] = useState(String(MANDATE.budget6 / 1_000_000n));
   const [windowS, setWindowS] = useState(String(MANDATE.windowSeconds));

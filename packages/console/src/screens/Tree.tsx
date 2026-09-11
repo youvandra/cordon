@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Button,
@@ -15,10 +15,11 @@ import {
   Modal,
   ProgressBar,
   Section,
+  Skeleton,
   Stack,
   Tag,
   Text,
-  useToast,
+  useNotify,
 } from "cordon-ui";
 import { ARC, ENFORCED_BY, MANDATE, STRENGTH, formatUsdc, isAddress } from "@cordon/fixtures";
 import { TREE, flatten, lifetime, pathTo, type TreeNode } from "@cordon/fixtures/preview";
@@ -223,7 +224,7 @@ function Operate({
   owner: string;
   onDone: () => void;
 }) {
-  const { notify } = useToast();
+  const notify = useNotify();
   const { state: funding, fund } = useFundVault(owner);
   const { state: spawning, spawn } = useSpawnChild(owner);
 
@@ -237,25 +238,49 @@ function Operate({
     return BigInt(Math.round(value * 1_000_000));
   };
 
-  useEffect(() => {
-    if (funding.status === "done") {
-      notify({ id: funding.hash, tone: "positive", title: "The vault is funded", children: "Draws can be released now.", duration: 6000 });
-      onDone();
-    }
-    if (funding.status === "failed") {
-      notify({ id: "fund-failed", tone: "critical", title: "Not funded", children: funding.why, duration: 0 });
-    }
-  }, [funding, notify, onDone]);
+  /* Once per outcome, and never again for the same one.
+     
+     These effects used to depend on the callback the parent passes, which was
+     written inline and so was a new function on every render — and a toast
+     re-renders the parent. A failed funding therefore notified, re-rendered,
+     notified again, and did not stop. The ref is what makes an effect that
+     performs an action idempotent: the outcome is announced when it arrives
+     and the announcement is recorded, so a re-render announces nothing. */
+  const announced = useRef<string | null>(null);
+  const done = useRef(onDone);
+  done.current = onDone;
 
   useEffect(() => {
+    const outcome = `fund:${funding.status}:${"hash" in funding ? funding.hash : "why" in funding ? funding.why : ""}`;
+    if (announced.current === outcome) return;
+
+    if (funding.status === "done") {
+      announced.current = outcome;
+      notify({ id: funding.hash, tone: "positive", title: "The vault is funded", children: "Draws can be released now.", duration: 6000 });
+      done.current();
+    }
+    if (funding.status === "failed") {
+      announced.current = outcome;
+      notify({ id: "fund-failed", tone: "critical", title: "Not funded", children: funding.why, duration: 0 });
+    }
+  }, [funding, notify]);
+
+  const announcedSpawn = useRef<string | null>(null);
+
+  useEffect(() => {
+    const outcome = `spawn:${spawning.status}:${"hash" in spawning ? spawning.hash : "why" in spawning ? spawning.why : ""}`;
+    if (announcedSpawn.current === outcome) return;
+
     if (spawning.status === "done") {
+      announcedSpawn.current = outcome;
       notify({ id: spawning.hash, tone: "positive", title: "A child is open", children: "It is narrower than its parent, and the contract checked that.", duration: 6000 });
-      onDone();
+      done.current();
     }
     if (spawning.status === "failed") {
+      announcedSpawn.current = outcome;
       notify({ id: "spawn-failed", tone: "critical", title: "Not spawned", children: spawning.why, duration: 0 });
     }
-  }, [spawning, notify, onDone]);
+  }, [spawning, notify]);
 
   /* A share of the parent, never an amount: the contract refuses anything
      wider, and a number typed in dollars is one nobody checked against the
@@ -389,7 +414,7 @@ export default function Tree() {
     const path = pathTo(id);
     return path.length > 1 ? path[path.length - 2]!.id : null;
   };
-  const { notify } = useToast();
+  const notify = useNotify();
 
   const revoke = (node: TreeNode) => {
     setCutting(null);
@@ -451,6 +476,48 @@ export default function Tree() {
   const { address, real } = useWallet();
   const chain = useChainTree(real ? address : null);
 
+  /* A wallet that has mandates is about to be shown them, and the sample tree
+     in the meantime is somebody else's numbers under their own heading. Show
+     the shape and nothing in it until the chain has answered. */
+  if (chain.state === "looking") {
+    return (
+      <>
+        <ScreenHead
+          title="Live exposure across the whole tree"
+          lede="Every node here is one of your own agents, running on your own daemon keys. Every figure is read from the contract that enforces it."
+          note={`reading ${ARC.name}…`}
+        />
+        <Grid columns={2} min={360} gap="lg" align="start">
+          <Card>
+            <CardBody>
+              <Stack direction="column" gap="md" align="start">
+                <Skeleton width="54%" height={12} />
+                <Skeleton width="46%" height={48} />
+                <Skeleton variant="text" lines={2} />
+              </Stack>
+            </CardBody>
+          </Card>
+          <Card>
+            <CardBody>
+              <Stack direction="column" gap="md" align="start">
+                <Skeleton width="40%" height={12} />
+                <Skeleton variant="text" lines={5} />
+              </Stack>
+            </CardBody>
+          </Card>
+        </Grid>
+        <Card>
+          <CardBody>
+            <Stack direction="column" gap="md" align="start">
+              <Skeleton width="28%" height={12} />
+              <Skeleton height={172} />
+            </Stack>
+          </CardBody>
+        </Card>
+      </>
+    );
+  }
+
   if (chain.state === "read") {
     return (
       <>
@@ -472,7 +539,7 @@ export default function Tree() {
       <ScreenHead
         title="Live exposure across the whole tree"
         lede="Every node here is one of your own agents, running on your own daemon keys. Draw on a grandchild; its grandparent's bar moves."
-        note={chain.state === "looking" ? "reading the chain…" : "sample tree; draws are local"}
+        note="sample tree; draws are local"
       />
 
       <Grid columns={2} min={360} gap="lg" align="start">

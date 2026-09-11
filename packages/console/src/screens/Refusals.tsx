@@ -6,10 +6,11 @@ import {
   CardFooter,
   CardHeader,
   Modal,
+  Skeleton,
   Stack,
   Tag,
   Text,
-  useToast,
+  useNotify,
 } from "cordon-ui";
 import { formatUsdc } from "@cordon/fixtures";
 import {
@@ -44,7 +45,7 @@ function RefusalCard({ refusal }: { refusal: Refusal }) {
      recorded next to the refusal it stepped around — so it is asked for
      twice. */
   const [confirming, setConfirming] = useState(false);
-  const { notify } = useToast();
+  const notify = useNotify();
 
   const release = () => {
     setConfirming(false);
@@ -231,6 +232,33 @@ export default function Refusals() {
   const chain = useChainTree(real ? address : null);
   const nodes = chain.state === "read" ? chain.nodes.map((node) => node.node) : [];
   const live = useChainRefusals(nodes);
+
+  /* The same rule as the tree screen: a wallet whose refusals are being read
+     is not shown the sample ones in the meantime. */
+  if (chain.state === "looking" || live.state === "looking") {
+    return (
+      <>
+        <ScreenHead
+          title="Reading your refusals"
+          lede="Every one of these is a decision the contract made about your own tree, read from the events it emitted."
+          note={`reading ${ARC.name}…`}
+        />
+        <Stack direction="column" gap="lg">
+          {[0, 1].map((row) => (
+            <Card key={row}>
+              <CardBody>
+                <Stack direction="column" gap="md" align="start">
+                  <Skeleton width="32%" height={12} />
+                  <Skeleton width="64%" height={26} />
+                  <Skeleton variant="text" lines={3} />
+                </Stack>
+              </CardBody>
+            </Card>
+          ))}
+        </Stack>
+      </>
+    );
+  }
 
   if (live.state === "read") {
     const standing = live.refusals.filter((refusal) => !refusal.released).length;

@@ -57,7 +57,7 @@ export type { TagProps, TagTone } from "./lib/components/Tag";
 export { Tooltip } from "./lib/components/Tooltip";
 export type { TooltipProps, TooltipPlacement } from "./lib/components/Tooltip";
 
-export { Notification, ToastProvider, useToast } from "./lib/components/Notification";
+export { Notification, ToastProvider, useToast, useNotify } from "./lib/components/Notification";
 export type { NotificationProps, NotificationTone, Toast, ToastProviderProps } from "./lib/components/Notification";
 
 export { Modal, MessageBox } from "./lib/components/Modal";

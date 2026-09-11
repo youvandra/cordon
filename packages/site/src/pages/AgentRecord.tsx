@@ -41,6 +41,7 @@ import {
   type RecordEntry,
 } from "@cordon/fixtures/preview";
 import { RecordShell } from "../parts/RecordShell";
+import { RecordSkeleton } from "../parts/RecordSkeleton";
 import { useEntrance } from "../parts/motion";
 import { useLiveAgent, type LiveConduct } from "../parts/meter";
 import { shortId, isAddress } from "@cordon/fixtures";
@@ -83,18 +84,12 @@ export default function AgentRecord() {
 
 function ReadingRecord({ id }: { id: string | undefined }) {
   return (
-    <RecordShell>
-      <Container width="wide" className="stackpage">
-        <header className="public__head">
-          <Text variant="micro" tone="dim" as="p" className="eyebrow">
-            erc-8004 identity · token {id ?? "—"} · arc {ARC.chainId}
-          </Text>
-          <Headline lines={["Reading", "the record."]} />
-        </header>
-      </Container>
-    </RecordShell>
+    <RecordSkeleton
+      eyebrow={`erc-8004 identity · token ${id ?? "—"} · arc ${ARC.chainId}`}
+    />
   );
 }
+
 
 function NoSuchAgent({ id }: { id: string | undefined }) {
   usePageMeta({

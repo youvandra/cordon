@@ -24,6 +24,7 @@ import {
   type Refusal as RefusalRow,
 } from "@cordon/fixtures/preview";
 import { RecordShell } from "../parts/RecordShell";
+import { RecordSkeleton } from "../parts/RecordSkeleton";
 import { useLiveRefusal, type LiveRefusal } from "../parts/meter";
 import { useEntrance } from "../parts/motion";
 
@@ -284,19 +285,11 @@ function LiveRefusalPage({ data }: { data: LiveRefusal }) {
 
 /** Asked, not answered yet. A not-found that flashes first is a lie told fast. */
 function Loading({ id }: { id: string | undefined }) {
-  return (
-    <RecordShell>
-      <Container width="wide" className="stackpage">
-        <header className="public__head">
-          <Text variant="micro" tone="dim" as="p" className="eyebrow">
-            refusal {id ?? "—"} · {ARC.name}
-          </Text>
-          <Headline lines={["Reading", "the record."]} />
-        </header>
-      </Container>
-    </RecordShell>
-  );
+  /* One pane: a refusal page is a single record, not a record beside a column
+     of figures. A skeleton in the wrong shape moves the page twice. */
+  return <RecordSkeleton eyebrow={`refusal ${id ?? "—"} · ${ARC.name}`} columns={1} />;
 }
+
 
 function NotFound({ id }: { id: string | undefined }) {
   usePageMeta({
