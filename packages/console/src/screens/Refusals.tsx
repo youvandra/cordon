@@ -348,7 +348,8 @@ export default function Refusals() {
   const owner = real ? address : DEMO.owner;
   const chain = useChainTree(owner);
   const nodes = chain.state === "read" ? chain.nodes.map((node) => node.node) : [];
-  const live = useChainRefusals(nodes);
+  const rootNode = chain.state === "read" ? chain.nodes.find((node) => node.parent === null) : undefined;
+  const live = useChainRefusals(nodes, rootNode?.node ?? null);
   const mine = real && Boolean(address);
 
   /* Revocation runs down a branch: `revokedAt` walks up from a node, so a
@@ -371,6 +372,28 @@ export default function Refusals() {
      is not shown the sample ones in the meantime. */
   if (chain.state === "looking" || live.state === "looking") {
     return <RefusalsSkeleton note={`reading ${ARC.name}…`} />;
+  }
+
+  /* The chain was asked and did not answer. Saying so is the only honest
+     option: the alternative is a screen of samples that looks like a clean
+     record, which is what this used to do. */
+  if (live.state === "failed") {
+    return (
+      <>
+        <ScreenHead
+          title="The chain did not answer."
+          lede="Refusals are read from the meter beside this console, and from the chain when there is none. Neither answered, so this screen has nothing to show — which is not the same as there being nothing to show."
+          note="read failed"
+        />
+        <Card>
+          <CardBody>
+            <Text variant="body" tone="copy" as="p" className="mono">
+              {live.why}
+            </Text>
+          </CardBody>
+        </Card>
+      </>
+    );
   }
 
   if (live.state === "read") {

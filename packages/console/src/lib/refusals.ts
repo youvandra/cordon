@@ -39,9 +39,64 @@ export interface ChainRefusal {
 export type ChainRefusals =
   | { state: "unconfigured" }
   | { state: "looking" }
-  | { state: "read"; refusals: ChainRefusal[] };
+  | { state: "read"; refusals: ChainRefusal[] }
+  /* A read that failed is not an absence of refusals, and the screen must not
+     draw one as the other. It used to: the error was swallowed, the state went
+     back to `unconfigured`, and the sample refusals appeared in its place. */
+  | { state: "failed"; why: string };
 
-export function useChainRefusals(nodes: Hex[]): ChainRefusals {
+/** The meter, when the console is served beside one. Same origin in
+ *  production, so `/api` reaches it without a second host or CORS. */
+const METER: string | undefined =
+  (import.meta.env.VITE_METER_URL as string | undefined) || undefined;
+
+interface MeterRefusal {
+  id: string;
+  node: Hex;
+  breachedAt: Hex;
+  counterparty: Address;
+  amount6: string;
+  reason: string;
+  site: { blockNumber: string; transactionHash: Hex };
+  released: boolean | null;
+}
+
+/**
+ * Ask the meter first.
+ *
+ * `Refused` carries the node as an indexed topic, so reading these from the
+ * chain is one `getLogs` — over the whole deployment range, which Arc's public
+ * RPC refuses outright and then rate-limits the address for asking. The meter
+ * has already read every block once; this is the same data, and the chain is
+ * still there behind it for anyone who wants to check a transaction.
+ */
+async function fromMeter(root: Hex | null): Promise<ChainRefusal[] | null> {
+  if (!METER) return null;
+  try {
+    const query = root ? `?root=${root}` : "";
+    const response = await fetch(`${METER}/refusals${query}`, {
+      headers: { accept: "application/json" },
+    });
+    if (!response.ok) return null;
+    const body = (await response.json()) as { refusals?: MeterRefusal[] };
+    if (!body.refusals) return null;
+    return body.refusals.map((row) => ({
+      id: BigInt(row.id),
+      node: row.node,
+      breachedAt: row.breachedAt,
+      counterparty: row.counterparty,
+      amount6: BigInt(row.amount6),
+      reason: row.reason,
+      blockNumber: BigInt(row.site.blockNumber),
+      transactionHash: row.site.transactionHash,
+      released: row.released === true,
+    }));
+  } catch {
+    return null;
+  }
+}
+
+export function useChainRefusals(nodes: Hex[], root?: Hex | null): ChainRefusals {
   const [found, setFound] = useState<ChainRefusals>({ state: "unconfigured" });
   const key = nodes.join(",");
 
@@ -58,6 +113,20 @@ export function useChainRefusals(nodes: Hex[]): ChainRefusals {
     const fromBlock = BigInt(DEPLOYMENT.fromBlock);
 
     (async () => {
+      const indexed = await fromMeter(root ?? null);
+      if (indexed) {
+        /* The meter answers for a whole root; a caller holding a subset of
+           nodes still only shows its own. */
+        const wanted = new Set(nodes.map((node) => node.toLowerCase()));
+        if (live) {
+          setFound({
+            state: "read",
+            refusals: indexed.filter((row) => wanted.has(row.node.toLowerCase())),
+          });
+        }
+        return;
+      }
+
       try {
         const [refused, released] = await Promise.all([
           client.getLogs({ address: vault, event: REFUSED, args: { node: nodes }, fromBlock }),
@@ -87,10 +156,12 @@ export function useChainRefusals(nodes: Hex[]): ChainRefusals {
 
         rows.sort((a, b) => Number(b.id - a.id));
         if (live) setFound({ state: "read", refusals: rows });
-      } catch {
+      } catch (error) {
         /* A read that fails is not an absence of refusals, and rendering it as
-           one would be the console inventing a clean record. */
-        if (live) setFound({ state: "unconfigured" });
+           one would be the console inventing a clean record. Arc's public RPC
+           refuses a range this wide, which is how this failure reached a user
+           as a screen full of samples. */
+        if (live) setFound({ state: "failed", why: (error as Error).message });
       }
     })();
 

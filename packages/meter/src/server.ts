@@ -96,6 +96,25 @@ export function createReadApi(
       return json(res, 200, { ...range, ...conductOf(ledger, row.node) });
     }
 
+    /**
+     * Every refusal under one root.
+     *
+     * The console read these from the chain with one `eth_getLogs` over the
+     * whole deployment range, which Arc's public RPC refuses — and the failure
+     * was caught and rendered as "no refusals", so the screen fell back to its
+     * sample ones and nobody saw a real refusal in a browser. The meter has
+     * already read every one of them.
+     */
+    if (parts[0] === "refusals") {
+      const root = url.searchParams.get("root");
+      if (root && !HEX32.test(root)) return json(res, 400, { error: "a node id is 32 bytes" });
+      const under = root
+        ? new Set(subtree(ledger, root as Hex).map((n) => n.node.toLowerCase()))
+        : null;
+      const rows = ledger.refusals.filter((r) => !under || under.has(r.node.toLowerCase()));
+      return json(res, 200, { ...range, refusals: [...rows].reverse() });
+    }
+
     if (parts[0] === "refusal" && parts[1]) {
       const id = /^\d+$/.test(parts[1]) ? BigInt(parts[1]) : -1n;
       const row = ledger.refusals.find((r) => r.id === id);
@@ -111,6 +130,7 @@ export function createReadApi(
         "GET /tree/:root",
         "GET /node/:node",
         "GET /agent/:agentId",
+        "GET /refusals?root=:root",
         "GET /refusal/:id",
       ],
     });
