@@ -20,7 +20,7 @@ import type { Hex } from "viem";
 import { createMcpServer } from "../src/server.ts";
 import { ABSENT_TOOLS } from "../src/tools.ts";
 import { ENV } from "../../daemon/src/config.ts";
-import { ARC } from "../../fixtures/src/index.ts";
+import { ARC, DEPLOYMENT } from "../../fixtures/src/index.ts";
 import type { Gate } from "../../daemon/src/gate.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -86,6 +86,15 @@ function configBlock(): string {
   const env: Record<string, string> = {};
   for (const name of Object.keys(ENV.required)) {
     env[name.replace("<label>", "ME")] = name.startsWith("CORDON_KEY") ? "…" : "0x…";
+  }
+  /* The two addresses are public and deployed, so an ellipsis there is a
+     reader copying a block that cannot work and having to go and find them.
+     The node id and the key stay blank because they are the reader's own: a
+     node they have not opened yet, and a key nobody should ever paste from a
+     web page. */
+  if (DEPLOYMENT) {
+    env.CORDON_VAULT = DEPLOYMENT.vault;
+    env.CORDON_REGISTRY = DEPLOYMENT.registry;
   }
   env.CORDON_RPC = ARC.rpc;
 

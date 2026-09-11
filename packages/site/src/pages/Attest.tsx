@@ -33,8 +33,10 @@ import { useEntrance } from "../parts/motion";
 /**
  * /attest/<id> — the x402 endpoint, as a page.
  *
- * A seller pays a tenth of a cent to ask one question before serving: does
- * this buyer hold a live mandate, and what did the contract refuse it?
+ * A seller pays a cent to ask one question before serving: does this buyer
+ * hold a live mandate, and what did the contract refuse it? The price is a
+ * cent rather than a tenth of one because Circle's settlement fee is $0.0035
+ * — see GATEWAY in fixtures — and a price under the fee cannot be settled.
  *
  * The body below is built by `attestationOf` in fixtures, which is the same
  * type `packages/attest` returns from the chain. It used to be assembled here
@@ -95,6 +97,9 @@ function liveAttestation(data: LiveConduct): Attestation {
   };
 }
 
+const plural = (count: number, noun: string): string =>
+  `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
+
 export default function Attest() {
   const { id } = useParams();
   const nodes = flatten(TREE);
@@ -145,7 +150,7 @@ export default function Attest() {
           <Card>
             <CardHeader>
               <Text variant="micro" tone="dim" as="span" className="eyebrow">
-                GET {ATTEST.resourcePath}/{node.agentId}
+                GET {ATTEST.resourcePath}/{body.agentId}
               </Text>
             </CardHeader>
             <CardBody>
@@ -189,10 +194,13 @@ export default function Attest() {
                     {body.mandate.live ? "mandate live" : "mandate revoked"}
                   </Tag>
                   <Text variant="body" tone="copy" as="p">
-                    {body.conduct.refusals} refusals in{" "}
-                    {body.conduct.draws.toLocaleString()} draws, against a
-                    mandate of {formatUsdc(BigInt(body.mandate.budget6))} per
-                    window at depth {body.mandate.depth}.
+                    {/* A live record is often one of something, and "1 draws"
+                        reads as a page that has never had a real number in
+                        it. */}
+                    {plural(body.conduct.refusals, "refusal")} in{" "}
+                    {plural(body.conduct.draws, "draw")}, against a mandate of{" "}
+                    {formatUsdc(BigInt(body.mandate.budget6))} per window at
+                    depth {body.mandate.depth}.
                   </Text>
                   <Text variant="body" tone="copy" as="p">
                     {/* The window is a rate. A buyer pricing an agent off the

@@ -372,10 +372,12 @@ closest any strategy came: ${formatUsdc(SEARCH.closestToBudget6)} of ${formatUsd
         The number was going to be published whichever way it came out.
       </P>
       <Note tone="warn" title="That figure is authority reached, not money that left">
-        No payment settled: Circle settlement is not wired, so every draw that
-        passed its mandate then failed at the burn intent. The drill measures
-        how far an agent got the tree to <i>authorise</i>, which is what a
-        bound is about. No purchase completed, and neither figure is the other.
+        The drill ran the day before settlement was wired: every draw that
+        passed its mandate then failed at the burn intent, so no purchase
+        completed. It measures how far an agent got the tree to{" "}
+        <i>authorise</i>, which is what a bound is about. Settlement works now
+        — one purchase has run end to end — and this number was not re-measured
+        against it. Neither figure is the other.
       </Note>
       <UL>
         <li>If the number is the bound, the fence holds.</li>
