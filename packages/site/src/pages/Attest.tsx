@@ -100,6 +100,31 @@ function liveAttestation(data: LiveConduct): Attestation {
 const plural = (count: number, noun: string): string =>
   `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
 
+function NoSuchAgent({ id }: { id: string | undefined }) {
+  usePageMeta({
+    title: "No such agent · Cordon",
+    description: "This identity is not in the range the meter has indexed.",
+  });
+  return (
+    <RecordShell>
+      <Container width="wide" className="stackpage">
+        <header className="public__head">
+          <Text variant="micro" tone="dim" as="p" className="eyebrow">
+            x402 · {formatUsdc(ATTEST.price6)} per call
+          </Text>
+          <Headline lines={["No agent", "with that identity."]} />
+          <Text variant="lead" tone="copy" as="p" className="public__lede">
+            The endpoint answers by ERC-8004 identity, and {id ?? "that id"} is
+            not one the meter has seen in the range it has read. The endpoint
+            itself answers the same way, and charges nothing for it: a payer
+            must never be billed for an answer this range does not contain.
+          </Text>
+        </header>
+      </Container>
+    </RecordShell>
+  );
+}
+
 export default function Attest() {
   const { id } = useParams();
   const nodes = flatten(TREE);
@@ -118,6 +143,13 @@ export default function Attest() {
 
   const body = live.state === "live" ? liveAttestation(live.data) : attestationOf(node);
   const linkagePct = Math.round(body.conduct.linkage * 100);
+
+  /* An id the meter was asked about and did not have is not an invitation to
+     show the demo tree. The preview ids are the preview's own; a number the
+     chain does not carry gets the same answer the record pages give, which is
+     nothing. */
+  const previewId = nodes.some((candidate) => String(candidate.agentId) === id);
+  if (live.state === "missing" && !previewId) return <NoSuchAgent id={id} />;
 
   return (
     <RecordShell>
