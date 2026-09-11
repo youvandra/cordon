@@ -1404,6 +1404,25 @@ export const ConductRecordAbi = [
   },
   {
     "type": "function",
+    "name": "reasonTag",
+    "inputs": [
+      {
+        "name": "reason",
+        "type": "uint8",
+        "internalType": "enum TreeVault.Reason"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
     "name": "recordUri",
     "inputs": [
       {

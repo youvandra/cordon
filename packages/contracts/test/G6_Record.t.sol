@@ -244,4 +244,54 @@ contract G6_Record is Base {
         record.attestRelease(refusalId);
     }
 
+    /* ------------------------------------------------------------------ */
+    /* The reason, in one spelling                                         */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Every bound the contract can refuse on has a word here.
+     *
+     * This is the test that was missing, and its absence cost four permanent
+     * records. `Reason.LifetimeCap` was appended to the enum months after
+     * `reasonTag` was written; the two tests that existed asserted the two
+     * reasons that predated it, so nothing noticed that a lifetime-cap refusal
+     * published itself to the Reputation Registry as `none` — a record saying
+     * a draw was refused for no reason at all.
+     *
+     * Written over the enum rather than over a list of reasons, so appending a
+     * member without a word for it fails here and not on chain.
+     */
+    function test_every_reason_the_contract_can_refuse_on_has_a_word_of_its_own() public view {
+        uint8 last = uint8(type(TreeVault.Reason).max);
+
+        for (uint8 i = 1; i <= last; ++i) {
+            string memory tag = record.reasonTag(TreeVault.Reason(i));
+            assertTrue(bytes(tag).length != 0, "a reason with no word publishes an empty record");
+            assertNotEq(
+                tag,
+                "none",
+                "this reason falls through to `none`, and a record of it says the draw was refused for nothing"
+            );
+        }
+
+        assertEq(record.reasonTag(TreeVault.Reason.None), "none", "and only None is none");
+    }
+
+    /**
+     * The spelling itself, against `packages/fixtures`.
+     *
+     * The words are decoded from the enum index by everything that reads a
+     * refusal — the daemon, the meter, the console, the public record page —
+     * and they are generated into `Fixtures.gen.sol` from the same list. A tag
+     * that disagrees with the list is a record the surfaces cannot read back.
+     */
+    function test_the_word_is_the_one_every_other_surface_decodes() public {
+        (, uint256 refusalId,) = _draw(opA, childA, aisa, Fixtures.TRANCHE6 + 1);
+        record.attest(refusalId);
+
+        MockReputationRegistry.Feedback memory f = reputation.feedbackAt(agentA, address(record), 0);
+        assertEq(f.tag2, record.reasonTag(TreeVault.Reason.TrancheCap), "the record carries the mapping's own word");
+        assertEq(record.reasonTag(TreeVault.Reason.LifetimeCap), "lifetime-cap", "the reason four records lost");
+    }
+
 }

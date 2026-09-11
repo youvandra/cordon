@@ -173,7 +173,7 @@ contract ConductRecord {
             int128(uint128(r.amount6)),
             6,
             TAG_REFUSED,
-            _reasonTag(r.reason),
+            reasonTag(r.reason),
             "",
             _recordUri(refusalId),
             recordHash
@@ -257,14 +257,27 @@ contract ConductRecord {
         return string.concat(RECORD_BASE, _toString(refusalId));
     }
 
-    /// @dev The reason, as the same word the daemon and the console use. One
-    ///      spelling of a reason, in one place, is the whole discipline.
-    function _reasonTag(TreeVault.Reason reason) private pure returns (string memory) {
+    /**
+     * @notice The reason, as the same word the daemon and the console use.
+     *
+     * Public because it was private, fell behind the enum it reads, and
+     * nothing could ask it what it thought. `LifetimeCap` was appended to
+     * `TreeVault.Reason` after this function was written and never given a
+     * branch here, so every lifetime-cap refusal was published to the
+     * Reputation Registry tagged `none` — a permanent record saying a draw was
+     * refused for no reason, while the event it was derived from named the
+     * bound. Four of the first eight published records carry it.
+     *
+     * `G6_Record` now walks every member of the enum through this function, so
+     * the next appended reason fails a test instead of a record.
+     */
+    function reasonTag(TreeVault.Reason reason) public pure returns (string memory) {
         if (reason == TreeVault.Reason.Revoked) return "revoked";
         if (reason == TreeVault.Reason.TrancheCap) return "tranche-cap";
         if (reason == TreeVault.Reason.WindowBudget) return "window-budget";
         if (reason == TreeVault.Reason.Concentration) return "concentration";
         if (reason == TreeVault.Reason.VaultBalance) return "vault-balance";
+        if (reason == TreeVault.Reason.LifetimeCap) return "lifetime-cap";
         return "none";
     }
 
