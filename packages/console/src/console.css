@@ -639,9 +639,22 @@ body {
   }
 }
 
-.drill__unset {
-  font-size: 30px;
-  color: var(--cordon-on-glaze-soft);
+/* The readout is the number the screen exists to show; it was the quietest
+   thing on the panel. Same change as the public page, same reason. */
+.drill__readout {
+  font-size: clamp(40px, 4.4vw, 58px);
+  line-height: 1;
+  color: var(--cordon-on-glaze);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* A sentence that bounds what the figures mean, rather than another sentence
+   reporting them. */
+.pane__foot--aside {
+  padding: var(--cordon-space-3) 0 0;
+  margin-top: var(--cordon-space-3);
+  border-top: 1px solid rgba(255, 214, 228, 0.32);
 }
 
 .drill__statement,

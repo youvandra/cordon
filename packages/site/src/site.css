@@ -727,7 +727,9 @@ main { flex: 1 1 auto; }
 
 .drill {
   display: grid;
-  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  /* The dial had 320px against a column of text three times its width, which
+     reads as an illustration beside the argument rather than as the result. */
+  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
   align-items: center;
   gap: clamp(24px, 4vw, 56px);
 }
@@ -738,9 +740,15 @@ main { flex: 1 1 auto; }
   }
 }
 
-.drill__unset {
-  font-size: 30px;
-  color: var(--cordon-on-glaze-soft);
+/* The readout is what this page is for. It was set at 30px in the dim
+   on-glaze colour, left of a column of body copy that outweighed it, so the
+   one measured number on the page was the quietest thing on it. */
+.drill__readout {
+  font-size: clamp(40px, 4.4vw, 58px);
+  line-height: 1;
+  color: var(--cordon-on-glaze);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .drill__statement,
@@ -788,6 +796,15 @@ main { flex: 1 1 auto; }
 .drill .pane__foot,
 .compare__panel .pane__foot {
   color: var(--cordon-on-glaze-soft);
+}
+
+/* A sentence that limits what the figures above it mean, rather than another
+   sentence reporting them. It gets a rule and a little air instead of a
+   colour, because colour on this panel already means something. */
+.pane__foot--aside {
+  padding: var(--cordon-space-3) 0 0;
+  margin-top: var(--cordon-space-3);
+  border-top: 1px solid rgba(255, 214, 228, 0.32);
 }
 
 /* A figure the contract bounds only as a declaration. The colour is the same

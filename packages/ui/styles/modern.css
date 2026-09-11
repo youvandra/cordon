@@ -234,7 +234,16 @@
   background: rgba(255, 255, 255, 0.56);
 }
 
-.cordon-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--cordon-size-caption); }
+/* The shell scrolls, so the table is allowed to keep its columns rather than
+   crushing them: at 800px the G7 comparison wrapped "A plain shared cap" over
+   three lines and the eye read it as three rows. */
+.cordon-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--cordon-size-caption);
+}
 
 .cordon-table thead th {
   padding: 0 var(--cordon-space-4);

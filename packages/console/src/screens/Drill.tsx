@@ -27,8 +27,8 @@ export default function Drill() {
     <>
       <ScreenHead
         title="The number this console is worth."
-        lede="G3 measures the maximum an unrestricted agent can spend through the daemon. It is published whatever it says."
-        note="G3 not run"
+        lede="G3 measures the maximum an unrestricted agent can spend through the daemon. It has run, against the live tree, and the number is published whatever it says."
+        note={`run ${DRILL.run.recordedAt.slice(0, 10)}`}
       />
 
       <Surface
@@ -40,25 +40,38 @@ export default function Drill() {
         sheen
         className="drill"
       >
-        {/* The tick ring reading nothing. A gauge showing a plausible figure
-            before the measurement exists is the single most tempting lie this
-            project could tell, so the needle stays where it is. */}
+        {/* The needle is the measurement. It read nothing until the drill had
+            run, which was the honest state then and would be a lie now. */}
         <Gauge
-          value={0}
+          value={DRILL.reachedBps / 100}
           size={280}
-          label="Measured ceiling, not yet run"
-          footnote={`0 of ${formatUsdc(DRILL.ceiling6, 0)} signed ceiling`}
+          label={`Reached ${(DRILL.reachedBps / 100).toFixed(1)}% of the signed ceiling`}
+          footnote={`${formatUsdc(DRILL.reached6)} of ${formatUsdc(DRILL.ceiling6)} signed ceiling`}
         >
-          <span className="drill__unset mono">·</span>
+          <span className="drill__readout mono">{DRILL.reachedBps / 100}%</span>
         </Gauge>
         <div>
           <Text variant="micro" tone="on-glaze" as="p" className="eyebrow">
             measured ceiling
           </Text>
-          <p className="drill__statement">Unset until the drill has run.</p>
-          <Tag tone="caution" size="sm" dot>
-            pending
+          <p className="drill__statement">
+            An agent told to spend everything reached {formatUsdc(DRILL.reached6)}.
+          </p>
+          <Tag tone="positive" size="sm" dot>
+            stopped by {DRILL.stoppedBy.join(", ")}
           </Tag>
+          <p className="pane__foot">
+            It was stopped by a bound that was not the budget: one seller had
+            been authorised {formatUsdc(DRILL.reached6)} of a ceiling allowing{" "}
+            {formatUsdc(DRILL.ceiling6)}, which is the share that mandate
+            declared for any one counterparty. Its own window still had money in
+            it. Each refusal is a transaction, and each is in the registry.
+          </p>
+          <p className="pane__foot pane__foot--aside">
+            <b>Authority reached, not money that left.</b> The drill ran before
+            settlement was wired, so the windows above were debited and no
+            purchase completed.
+          </p>
           <p className="pane__foot">
             G4 has run: {SEARCH.strategies.toLocaleString()} strategies,{" "}
             {SEARCH.draws.toLocaleString()} draws, {SEARCH.passedABound} past a

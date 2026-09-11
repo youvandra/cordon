@@ -85,7 +85,7 @@ export default function PublicDrill() {
             label={`Reached ${(DRILL.reachedBps / 100).toFixed(1)}% of the signed ceiling`}
             footnote={`${formatUsdc(DRILL.reached6)} of ${formatUsdc(DRILL.ceiling6)} signed ceiling`}
           >
-            <span className="drill__unset mono">{DRILL.reachedBps / 100}%</span>
+            <span className="drill__readout mono">{DRILL.reachedBps / 100}%</span>
           </Gauge>
           <div>
             <Text variant="micro" tone="on-glaze" as="p" className="eyebrow">
@@ -113,8 +113,11 @@ export default function PublicDrill() {
             </p>
             {/* The figure is what the tree authorised, not what was paid, and
                 a page that let a reader take it for the second would be
-                claiming a settlement this project has not made. */}
-            <p className="pane__foot">
+                claiming a settlement this project has not made. It is set
+                apart because it is a different kind of sentence from the ones
+                around it: every other paragraph here reports the run, and this
+                one bounds what the run means. */}
+            <p className="pane__foot pane__foot--aside">
               <b>This is authority reached, not money that left.</b> The drill
               ran before settlement was wired: every draw that passed its
               mandate then failed at the burn intent, so the windows above were
