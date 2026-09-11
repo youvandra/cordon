@@ -14,13 +14,13 @@
  * it is the difference between a payer being refused by the token and a payer
  * being told the price they will actually be able to pay.
  */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPublicClient, defineChain, http, type Address, type Hex, type PublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ARC, ATTEST } from "../../fixtures/src/index.ts";
-import { deserialize, everyAfter, serialize, sync, type Ledger } from "../../meter/src/index.ts";
+import { deserialize, everyAfter, sync, writeSnapshot, type Ledger } from "../../meter/src/index.ts";
 import { Eip3009Collector, resolveDomain } from "./collect.ts";
 import { createAttestApi } from "./server.ts";
 import type { Terms } from "./payment.ts";
@@ -104,7 +104,7 @@ let ledger: Ledger | undefined = existsSync(snapshot)
 
 async function tick(): Promise<void> {
   ledger = await sync(client, { contracts, fromBlock }, ledger);
-  writeFileSync(snapshot, serialize(ledger));
+  writeSnapshot(snapshot, ledger);
 }
 
 await tick();

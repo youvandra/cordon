@@ -10,12 +10,12 @@
  * deploy script from the broadcast — a meter pointed at a hand-typed address
  * would produce a ledger that looks right and is about another tree.
  */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPublicClient, defineChain, http, type Address, type PublicClient } from "viem";
 import { ARC, GATEWAY } from "../../fixtures/src/index.ts";
-import { deserialize, serialize } from "./snapshot.ts";
+import { deserialize, writeSnapshot } from "./snapshot.ts";
 import { sync } from "./sync.ts";
 import { createReadApi } from "./server.ts";
 import { emptyLedger, type Ledger } from "./ledger.ts";
@@ -172,7 +172,7 @@ async function tick(): Promise<void> {
     },
     ledger,
   );
-  writeFileSync(args.out, serialize(ledger));
+  writeSnapshot(args.out, ledger);
   /* Reads the Gateway once per operator. It is a chain read and can fail on
      its own; a failed reconciliation must not throw away a good ledger, so it
      keeps the last answer and says when it was taken. */

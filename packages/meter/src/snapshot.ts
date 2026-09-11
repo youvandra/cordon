@@ -11,6 +11,7 @@
  * written as decimal strings with an `n` suffix, so the file says which fields
  * are money instead of relying on a reader to remember.
  */
+import { renameSync, writeFileSync } from "node:fs";
 import type { Ledger } from "./ledger.ts";
 
 const BIGINT = /^-?\d+n$/;
@@ -40,4 +41,24 @@ function normalise(ledger: Ledger): Ledger {
   ledger.releasedUnattributed6 ??= 0n;
   for (const row of Object.values(ledger.nodes)) row.releasedTo6 ??= 0n;
   return ledger;
+}
+
+/**
+ * Write the snapshot so a reader never sees half of one.
+ *
+ * `writeFileSync` truncates the file and then fills it, so a process killed in
+ * between — a deploy, an OOM, a box rebooting — leaves a file that is valid
+ * JSON up to the cut and nothing after it. The next start hands that to
+ * `deserialize`, which throws, and the service does not come up at all: a
+ * cache that cannot be read has taken down the thing it exists to speed up.
+ *
+ * Writing beside it and renaming is atomic within a filesystem, so the old
+ * snapshot stays whole until the new one is complete. The worst case becomes a
+ * snapshot one tick behind, which the ledger's own block range already admits
+ * to and which the next tick closes.
+ */
+export function writeSnapshot(path: string, ledger: Ledger): void {
+  const beside = `${path}.tmp`;
+  writeFileSync(beside, serialize(ledger));
+  renameSync(beside, path);
 }

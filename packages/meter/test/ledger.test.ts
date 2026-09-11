@@ -18,7 +18,10 @@ import {
   topCounterparty,
   type Event,
 } from "../src/ledger.ts";
-import { deserialize, serialize } from "../src/snapshot.ts";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { deserialize, serialize, writeSnapshot } from "../src/snapshot.ts";
 
 const ROOT = `0x${"a1".repeat(32)}` as Hex;
 const CHILD = `0x${"b2".repeat(32)}` as Hex;
@@ -272,4 +275,50 @@ test("a lifetime read over a range that starts after the node was opened says so
     false,
     "the root was opened in block 1 and the range starts at 2",
   );
+});
+
+/**
+ * A snapshot is written beside itself and renamed.
+ *
+ * `writeFileSync` truncates before it fills, so a process killed mid-write
+ * leaves valid JSON up to the cut and nothing after it — and the next start
+ * hands that to `deserialize`, which throws. A cache that cannot be read then
+ * takes down the service it exists to speed up, which is how this box has gone
+ * down before.
+ */
+test("a snapshot is never half written where a reader can find it", () => {
+  const ledger = reduce(emptyLedger(5042002), tree());
+  const dir = mkdtempSync(join(tmpdir(), "cordon-snapshot-"));
+  const path = join(dir, "ledger.json");
+
+  writeSnapshot(path, ledger);
+  assert.deepEqual(readdirSync(dir), ["ledger.json"], "and nothing beside it is left behind");
+
+  /* The file that a kill would have truncated is the temporary one, and the
+     name a reader opens still holds the last whole snapshot. */
+  const whole = readFileSync(path, "utf8");
+  writeFileSync(`${path}.tmp`, whole.slice(0, 40));
+  assert.equal(readFileSync(path, "utf8"), whole);
+  assert.equal(deserialize(readFileSync(path, "utf8")).chainId, 5042002);
+
+  rmSync(dir, { recursive: true, force: true });
+});
+
+/**
+ * A running box carries its snapshot across a deploy, so every field added to
+ * the ledger is absent from the file already on disk. Absent has to mean zero
+ * and not `undefined`, which is a `TypeError` inside the loop that must keep
+ * running.
+ */
+test("a snapshot from an older build is read rather than crashed on", () => {
+  const ledger = reduce(emptyLedger(5042002), tree());
+  const older = JSON.parse(serialize(ledger)) as Record<string, unknown>;
+  delete older.releasedUnattributed6;
+  for (const row of Object.values(older.nodes as Record<string, Record<string, unknown>>)) {
+    delete row.releasedTo6;
+  }
+
+  const read = deserialize(JSON.stringify(older));
+  assert.equal(read.releasedUnattributed6, 0n);
+  for (const row of Object.values(read.nodes)) assert.equal(row.releasedTo6, 0n);
 });
