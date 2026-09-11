@@ -173,6 +173,45 @@ export const GATEWAY = {
    * Until a key confirms it, the meter has no verified buyer-side source.
    */
   searchX402Transfers: "unverified" as const,
+
+  /* ---------------------------------------------------------------- */
+  /* Settlement, answered on 2026-09-11 by doing it                    */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * The two facts that were missing, and are not missing any more.
+   *
+   * `settle.ts` used to refuse on the grounds that the burn-intent EIP-712
+   * definition was unpublished and that submission needed a Circle key.
+   * Neither is true: the domain is `{ name: "GatewayWallet", version: "1" }`
+   * with the types the daemon now carries, and
+   * `https://gateway-api-testnet.circle.com` answers `/v1/info`,
+   * `/v1/balances` and `/v1/transfer` with no credential at all.
+   */
+  api: "https://gateway-api-testnet.circle.com",
+  /** Gateway's own id for Arc testnet, from `/v1/info`. */
+  domain: 26,
+  /** GatewayMinter on Arc. The mint is the call that lands the money. */
+  minter: "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+
+  /**
+   * RISK 6, AND THE ONE THAT DECIDES THE RAIL.
+   *
+   * Circle's fee for a same-chain Gateway transfer on Arc, in base units:
+   * **$0.0035**, quoted by the API itself and charged **on top of** the value
+   * — a burn of $0.0065 against a $0.0100 balance is accepted, a burn of
+   * $0.0100 against it is refused for `required 0.0135`. So a tranche can
+   * only pay for its own settlement when it is larger than this.
+   *
+   * The alternative is `withdrawalDelay` on GatewayWallet, which reads
+   * 1,209,600 — fourteen days. Neither is compatible with a payment of a
+   * tenth of a cent, and that is a fact about the rail rather than about us.
+   */
+  baseFee6: 3_500n,
+  withdrawalDelaySeconds: 1_209_600,
+  /** Gas the mint itself cost on Arc, measured: 0.002975 of one balance. */
+  mintGas6: 2_975n,
+  settlementVerifiedOn: "2026-09-11",
 } as const;
 
 /* ------------------------------------------------------------------ */
@@ -211,8 +250,17 @@ export const MARKETPLACE = {
  * is a check nobody makes.
  */
 export const ATTEST = {
-  /** Base units, 6 dp. $0.001. */
-  price6: 1_000n,
+  /**
+   * Base units, 6 dp. $0.01.
+   *
+   * It was $0.001 until 11 September, and Circle's own settlement floor is
+   * what moved it: a tranche of a tenth of a cent cannot pay the $0.0035 fee
+   * Gateway charges to release it, so a price below that floor is a price no
+   * buyer on this rail can actually settle. It still sits under the
+   * catalogue's $0.024 median and inside the band where 651 of 1,535 live
+   * offers already are.
+   */
+  price6: 10_000n,
   /** x402 `exact`, the only scheme with an EOA signature and no gas. */
   scheme: "exact",
   x402Version: 2,

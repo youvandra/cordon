@@ -20,6 +20,7 @@ import {
 import type { Strength } from "cordon-ui";
 import {
   ARC,
+  ATTEST,
   ENFORCED_BY,
   ERC8004,
   MANDATE,
@@ -552,7 +553,7 @@ function PreviewAgentRecord({ node }: { node: ReturnType<typeof flatten>[number]
                   magnetic
                   iconEnd="arrow-right"
                 >
-                  /attest/{node.agentId} · $0.001
+                  /attest/{node.agentId} · ${Number(ATTEST.price6) / 1e6}
                 </Button>
               </Link>
             </Stack>

@@ -11,7 +11,11 @@ const gate = new Gate(config);
 
 const server = createDaemon({
   gate,
-  settler: new CircleSettler(),
+  settler: new CircleSettler({
+    publicClient: gate.publicClientForSettlement,
+    walletFor: (node) => gate.signerFor(node),
+    chainId: config.chainId,
+  }),
   acceptable: { networks: config.networks, assets: config.assets },
 });
 

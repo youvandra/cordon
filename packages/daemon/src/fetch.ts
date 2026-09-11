@@ -79,6 +79,11 @@ export async function cordonFetch(
     value: offer.amount,
     asset: offer.asset as Address,
     network: offer.network,
+    /* The seller's own terms for the signature it will submit: the token's
+       EIP-712 name and version, and how long the authorisation must stay
+       valid. Both come from the challenge, neither from us. */
+    extra: offer.extra,
+    maxTimeoutSeconds: offer.maxTimeoutSeconds,
   });
 
   const second = await transport(request.url, {

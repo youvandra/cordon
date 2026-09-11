@@ -97,6 +97,12 @@ export class Gate {
     }
   }
 
+  /** The reader the settler shares, so one process holds one connection to
+   *  the chain rather than two that can disagree about its head. */
+  get publicClientForSettlement(): PublicClient {
+    return this.publicClient;
+  }
+
   /** The nodes this daemon can act for. It holds no other key. */
   nodes(): Hex[] {
     return [...this.wallets.keys()];
@@ -132,6 +138,17 @@ export class Gate {
       }),
     );
     this.pending.delete(operator.toLowerCase());
+  }
+
+  /**
+   * Lend this node's signer.
+   *
+   * The settler needs to sign a burn intent and an EIP-3009 authorisation as
+   * the operator, and borrowing the signer keeps the key in one place rather
+   * than handing a copy of it out — the same arrangement the recorder has.
+   */
+  signerFor(node: Hex): WalletClient {
+    return this.walletFor(node);
   }
 
   private walletFor(node: Hex): WalletClient {
