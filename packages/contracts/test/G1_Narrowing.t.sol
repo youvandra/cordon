@@ -124,7 +124,10 @@ contract G1_Narrowing is Base {
         uint16 bps
     ) public {
         budget6 = uint128(bound(budget6, 1, type(uint96).max));
-        tranche6 = uint128(bound(tranche6, 0, type(uint96).max));
+        /* From 1: a zero tranche cap is refused at the door now, and this test
+           is about narrowing rather than about that. `open` and `spawn` both
+           refuse it, and `G1_Lifetime` is where that is stated. */
+        tranche6 = uint128(bound(tranche6, 1, type(uint96).max));
         bps = uint16(bound(bps, 1, 10_000));
 
         MandateRegistry.Params memory p = MandateRegistry.Params({

@@ -1225,6 +1225,11 @@ export const MandateRegistryAbi = [
     "type": "error",
     "name": "ZeroOperator",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroTrancheCap",
+    "inputs": []
   }
 ] as const;
 

@@ -68,6 +68,7 @@ contract MandateRegistry {
     error ZeroOperator();
     error ZeroBudget();
     error ZeroLifetimeCap();
+    error ZeroTrancheCap();
     error ConcentrationOutOfRange(uint16 bps);
 
     /* ------------------------------------------------------------------ */
@@ -102,6 +103,12 @@ contract MandateRegistry {
            close: a window budget on its own is a rate, and a tree left running
            spends it again every window. Zero is not "unlimited" here. */
         if (p.lifetimeCap6 == 0) revert ZeroLifetimeCap();
+        /* Every other bound is checked here, and this one was not — so a
+           mandate could be opened, funded and handed to a daemon that would be
+           refused for `tranche-cap` on its very first purchase and every one
+           after it. Zero is not "unlimited" for any field on this struct, and
+           a tree that can never draw is a setup mistake, not a bound. */
+        if (p.trancheCap6 == 0) revert ZeroTrancheCap();
         if (p.concentrationBps == 0 || p.concentrationBps > BPS) {
             revert ConcentrationOutOfRange(p.concentrationBps);
         }
@@ -150,6 +157,7 @@ contract MandateRegistry {
         if (p.operator == address(0)) revert ZeroOperator();
         if (p.budget6 == 0) revert ZeroBudget();
         if (p.lifetimeCap6 == 0) revert ZeroLifetimeCap();
+        if (p.trancheCap6 == 0) revert ZeroTrancheCap();
 
         uint8 depth = m.depth + 1;
         if (depth > m.maxDepth) revert DepthExceeded(depth, m.maxDepth);

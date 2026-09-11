@@ -161,6 +161,28 @@ contract G1_Lifetime is Base {
     }
 
     /**
+     * A mandate that can never draw is a setup mistake, not a bound.
+     *
+     * Every other field on `Params` was checked at the door and this one was
+     * not, so a tree could be opened, funded and handed to a daemon that would
+     * be refused `tranche-cap` on its first purchase and on every one after
+     * it — a fence that looks like it is working while nothing can ever get
+     * through it. Zero is not "unlimited" for any field on this struct.
+     */
+    function test_a_mandate_with_no_tranche_cap_is_refused_rather_than_silently_useless() public {
+        MandateRegistry.Params memory none = _params(makeAddr("op:tranche"), Fixtures.BUDGET6);
+        none.trancheCap6 = 0;
+
+        vm.prank(owner);
+        vm.expectRevert(MandateRegistry.ZeroTrancheCap.selector);
+        reg.open(none);
+
+        vm.prank(opRoot);
+        vm.expectRevert(MandateRegistry.ZeroTrancheCap.selector);
+        reg.spawn(root, none);
+    }
+
+    /**
      * Headroom answers with the tighter of the two, and names the node.
      *
      * A headroom that reported only the window would tell an agent it may
