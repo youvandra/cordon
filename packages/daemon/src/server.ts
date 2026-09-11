@@ -13,7 +13,8 @@
  * unattributed tranche this design exists to remove.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import type { Address, Hex } from "viem";
+import type { Hex } from "viem";
+import { generatePrivateKey } from "viem/accounts";
 import type { Gate } from "./gate.ts";
 import type { Settler } from "./settle.ts";
 import { cordonFetch, httpTransport, type Transport } from "./fetch.ts";
@@ -24,6 +25,8 @@ export interface ServerDeps {
   settler: Settler;
   acceptable: Acceptable;
   transport?: Transport;
+  /** Overridden only by a test that needs a key it can predict. */
+  newOperatorKey?: () => Hex;
 }
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
@@ -47,6 +50,7 @@ async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> 
 
 export function createDaemon(deps: ServerDeps) {
   const transport = deps.transport ?? httpTransport;
+  const newKey = deps.newOperatorKey ?? generatePrivateKey;
 
   return createServer(async (req, res) => {
     try {
@@ -87,11 +91,24 @@ export function createDaemon(deps: ServerDeps) {
 
       if (req.method === "POST" && url.pathname === "/spawn") {
         const body = await readBody(req);
-        if (typeof body.node !== "string" || typeof body.operator !== "string") {
-          return json(res, 400, { error: "node and operator are required" });
+        if (typeof body.node !== "string") {
+          return json(res, 400, { error: "node is required" });
         }
+        /* The child's operator is not the caller's to choose. An address the
+           caller names is an address whose key this daemon does not hold, and
+           a node whose key nobody here holds can neither draw nor be stopped
+           from holding money that never came from this tree — which is what
+           the hostile drill did, twice, with addresses that already had a
+           Gateway balance. The key is generated here and never leaves. */
+        if (body.operator !== undefined) {
+          return json(res, 400, {
+            error: "operator is not accepted: this daemon holds the child's key",
+            why: "a node this daemon holds no key for can be funded from outside the tree",
+          });
+        }
+        const operator = deps.gate.addOperator(newKey());
         const spawned = await deps.gate.spawn(body.node as Hex, {
-          operator: body.operator as Address,
+          operator,
           budget6: BigInt(String(body.budget6 ?? "0")),
           /* Omitted means the parent's total, not none: the gate resolves it
              from the chain rather than sending a zero the contract refuses. */
@@ -99,7 +116,9 @@ export function createDaemon(deps: ServerDeps) {
           trancheCap6: BigInt(String(body.trancheCap6 ?? "0")),
           concentrationBps: Number(body.concentrationBps ?? 0),
         });
-        return json(res, 200, spawned);
+        /* The address is public; the key it came from is not returned, not
+           logged and not written down. */
+        return json(res, 200, { ...spawned, operator });
       }
 
       return json(res, 404, {

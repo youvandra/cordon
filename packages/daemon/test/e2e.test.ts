@@ -1,6 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import type { Hex } from "viem";
+import type { Address, Hex } from "viem";
 import { load } from "../src/config.ts";
 import { Gate } from "../src/gate.ts";
 import { cordonFetch, type Transport } from "../src/fetch.ts";
@@ -100,6 +100,83 @@ test("headroom the daemon reports is the tightest limit above it", async () => {
     address: h.vault, abi: TreeVaultAbi, functionName: "windowSpent", args: [h.root],
   }) as bigint;
   assert.equal(available, ROOT_BUDGET - rootSpent);
+});
+
+/**
+ * The hostile drill spawned children naming `0x2222…` and `0x3333…` as their
+ * operators — addresses it had never seen, both of which already held a
+ * Gateway balance. Two defects, one cause: the daemon could not act as the
+ * node it had just created, and an operator holding money from outside the
+ * tree can pay past a mandate with money that was never ours.
+ */
+test("an agent cannot name the operator of a child it spawns", async () => {
+  const gate = makeGate();
+  const daemon = createDaemon({ ...deps(), gate });
+  await new Promise<void>((r) => daemon.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${(daemon.address() as { port: number }).port}`;
+
+  try {
+    const outside = "0x2222222222222222222222222222222222222222";
+    const res = await fetch(`${base}/spawn`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        node: h.child, operator: outside,
+        budget6: (ROOT_BUDGET / 10n).toString(), trancheCap6: (PRICE * 2n).toString(),
+        concentrationBps: 3500,
+      }),
+    });
+    assert.equal(res.status, 400);
+    assert.match(((await res.json()) as { error: string }).error, /operator is not accepted/);
+  } finally {
+    await new Promise<void>((r) => daemon.close(() => r()));
+  }
+});
+
+test("a child spawned at run time is one this daemon can then act as", async () => {
+  const gate = makeGate();
+  const daemon = createDaemon({ ...deps(), gate });
+  await new Promise<void>((r) => daemon.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${(daemon.address() as { port: number }).port}`;
+
+  try {
+    const spawned = (await (await fetch(`${base}/spawn`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        node: h.child,
+        budget6: (ROOT_BUDGET / 10n).toString(), trancheCap6: (PRICE * 2n).toString(),
+        concentrationBps: 3500,
+      }),
+    })).json()) as { node: Hex; operator: Address };
+
+    assert.match(spawned.node, /^0x[0-9a-f]{64}$/i);
+    assert.ok(gate.nodes().includes(spawned.node.toLowerCase() as Hex),
+      "the key was minted here and bound to the node the registry assigned");
+
+    /* Gas is the one thing the tree does not provide. A new operator is an
+       address with no balance, and money sent to it from anywhere is money
+       from outside the mandate — so it is gassed by whoever runs the daemon,
+       here by the chain itself. */
+    await h.publicClient.request({
+      method: "anvil_setBalance", params: [spawned.operator, "0xde0b6b3a7640000"],
+    } as never);
+
+    /* Acting as the child is the whole claim: the key it draws with was
+       generated inside this process a moment ago. The drill could not do this
+       — it had named an operator whose key nobody here held, and the daemon
+       answered `this daemon holds no key for <node>` until it was restarted. */
+    const outcome = await gate.draw(spawned.node, SELLER_PAYOUT, PRICE);
+    assert.equal(outcome.released, true, "it drew as a node that did not exist at start-up");
+
+    const credited = (await h.publicClient.readContract({
+      address: h.gateway, abi: GATEWAY, functionName: "availableBalance",
+      args: [h.usdc, spawned.operator],
+    })) as bigint;
+    assert.equal(credited, PRICE, "and the tranche went to the operator this daemon holds");
+  } finally {
+    await new Promise<void>((r) => daemon.close(() => r()));
+  }
 });
 
 test("the daemon serves fetch, status and spawn — and no way to transfer", async () => {
