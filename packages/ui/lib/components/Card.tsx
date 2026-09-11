@@ -154,7 +154,10 @@ export function MetricCard({
 
   return (
     <motion.article
-      className={cx("cordon-metriccard", className)}
+      /* `--bare` shortens the tile by exactly the action's share. Without it a
+         tile with no action keeps the hero's proportions and reserves a
+         quarter of itself for a button that was never passed. */
+      className={cx("cordon-metriccard", !action && "cordon-metriccard--bare", className)}
       initial={on ? { opacity: 0.52, y: 10, scale: 0.985 } : false}
       animate={on ? { opacity: 1, y: 0, scale: 1 } : undefined}
       transition={on ? { ...transition.establish, delay: base } : undefined}
