@@ -38,18 +38,19 @@ export function attestation(ledger: Ledger, row: NodeRow, sources: Sources): Att
   return {
     agentId: (row.agentId ?? 0n).toString(),
     node: row.node,
+    /* The terms come from the meter's own projection rather than being read
+       off the row a second time here: the public page reads the same fields
+       from the same function, and two copies of one fact is what this
+       repository keeps paying for. */
     mandate: {
-      /* "Live" is a fact with two parts, both from events: the mandate was
-         opened and it was not revoked. Whether it has headroom right now is a
-         window question the vault answers, not history. */
-      live: !row.revoked,
-      revoked: row.revoked,
-      root: row.root,
-      parent: row.parent,
-      depth: row.depth,
-      operator: row.operator,
-      budget6: row.budget6.toString(),
-      lifetimeCap6: row.lifetimeCap6.toString(),
+      live: conduct.mandate.live,
+      revoked: conduct.mandate.revoked,
+      root: conduct.mandate.root,
+      parent: conduct.mandate.parent,
+      depth: conduct.mandate.depth,
+      operator: conduct.mandate.operator,
+      budget6: conduct.mandate.budget6.toString(),
+      lifetimeCap6: conduct.mandate.lifetimeCap6.toString(),
     },
     conduct: {
       draws: conduct.draws,

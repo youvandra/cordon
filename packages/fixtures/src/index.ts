@@ -64,13 +64,41 @@ export function scaleUsdc(
   return value / 1_000_000_000_000n;
 }
 
-/** Display helper. Never used to compute a bound. */
+/**
+ * Display helper. Never used to compute a bound.
+ *
+ * Two decimals is what money looks like, and for most of this project's
+ * figures it is right. It is wrong for the small ones, and wrong in the
+ * direction that erases the argument: x402 prices live below a cent, and at
+ * two decimals the hostile drill's whole result — $0.007000 of a $0.020000
+ * ceiling — printed as **"it reached: $0.00"** in the headline of its own
+ * page, beside a gauge that said 35%. Circle's settlement fee printed as
+ * $0.00 in the sentence explaining why it decides the price.
+ *
+ * So: an amount that is not zero is never shown as zero. When the requested
+ * precision would round a real amount away, the fraction is extended until a
+ * significant digit appears, to at most the six decimals the token has.
+ * Truncation, never rounding up, because this is money and the direction that
+ * flatters is the one to refuse.
+ */
 export function formatUsdc(base6: bigint, dp = 2): string {
   const neg = base6 < 0n;
   const v = neg ? -base6 : base6;
   const whole = v / 1_000_000n;
-  const frac = (v % 1_000_000n).toString().padStart(6, "0").slice(0, dp);
-  const s = dp > 0 ? `${whole}.${frac}` : `${whole}`;
+  const digits = (v % 1_000_000n).toString().padStart(6, "0");
+
+  let places = dp;
+  /* Only ever widens, and only for an amount under a dollar that would
+     otherwise read as nothing at all — $20.00 and $4.68 are untouched. It
+     widens past the first significant digit to the last one, because
+     truncating $0.0035 to $0.003 understates a cost, and understating a cost
+     is the direction that flatters us. */
+  if (v > 0n && whole === 0n) {
+    while (places < 6 && /^0*$/.test(digits.slice(0, places))) places += 1;
+    while (places < 6 && !/^0*$/.test(digits.slice(places))) places += 1;
+  }
+
+  const s = places > 0 ? `${whole}.${digits.slice(0, places)}` : `${whole}`;
   return `${neg ? "-" : ""}$${s}`;
 }
 

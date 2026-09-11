@@ -14,8 +14,19 @@ import {
   Text,
   usePageMeta,
 } from "cordon-ui";
-import { ARC, ATTEST, ENFORCED_BY, GATEWAY, REGISTRY_BASELINE, SETTLEMENT, formatUsdc } from "@cordon/fixtures";
-import { TREE, attestationOf, flatten } from "@cordon/fixtures/preview";
+import {
+  ARC,
+  ATTEST,
+  DEPLOYMENT,
+  ENFORCED_BY,
+  GATEWAY,
+  PENDING_ADDRESS,
+  REGISTRY_BASELINE,
+  SETTLEMENT,
+  formatUsdc,
+} from "@cordon/fixtures";
+import { TREE, attestationOf, flatten, type Attestation } from "@cordon/fixtures/preview";
+import { useLiveAgent, type LiveConduct } from "../parts/meter";
 import { RecordShell } from "../parts/RecordShell";
 import { useEntrance } from "../parts/motion";
 
@@ -36,19 +47,71 @@ import { useEntrance } from "../parts/motion";
  * recompute a bound from history, because an all-time total and a rolling
  * window look alike and only one of them refuses anything.
  */
+/**
+ * The live answer, in the shape the paid endpoint returns.
+ *
+ * The fields come from the meter, which is the same reduction of the same
+ * events `packages/attest` sells — the seat is what a buyer pays for, not the
+ * server. `verify` names the contracts so a reader can check any of it
+ * without trusting either process.
+ */
+function liveAttestation(data: LiveConduct): Attestation {
+  return {
+    agentId: data.agentId ?? "",
+    node: data.node,
+    mandate: { ...data.mandate },
+    conduct: {
+      draws: data.draws,
+      refusals: data.refusals,
+      breaches: data.breaches,
+      drawn6: data.drawn6,
+      refused6: data.refused6,
+      lifetimeSpent6: data.lifetime.spent6,
+      lifetimeComplete: data.lifetime.complete,
+      attested: data.attested,
+      linkage: data.linkage,
+    },
+    refusals: data.rows.map((row) => ({
+      id: row.id,
+      reason: row.reason,
+      amount6: row.amount6,
+      counterparty: row.counterparty,
+      breachedAt: row.breachedAt,
+      blockNumber: row.site.blockNumber,
+      transactionHash: row.site.transactionHash,
+      released: row.released === true,
+      attested: row.attested === true,
+    })),
+    range: { chainId: data.chainId, fromBlock: data.fromBlock, toBlock: data.toBlock },
+    /* Never a literal: the addresses come from the deployment file, and an
+       undeployed tree reads `pending` rather than an address that opens in an
+       explorer and shows somebody else's contract. */
+    verify: {
+      vault: DEPLOYMENT?.vault ?? PENDING_ADDRESS,
+      registry: DEPLOYMENT?.registry ?? PENDING_ADDRESS,
+      record: DEPLOYMENT?.record ?? PENDING_ADDRESS,
+      explorer: ARC.explorer,
+    },
+  };
+}
+
 export default function Attest() {
   const { id } = useParams();
   const nodes = flatten(TREE);
   const node =
     nodes.find((candidate) => String(candidate.agentId) === id) ?? nodes[0];
+  /* An id the chain knows is answered from the chain. The preview tree is the
+     illustration of last resort, and it says so when it is showing: this page
+     used to draw fixtures for every id, so asking it about a real agent got a
+     confident answer about an imaginary one. */
+  const live = useLiveAgent(id);
   usePageMeta({
-    title: `Attest ${node.agentId} · Cordon`,
-    description: `One x402 call: does ${node.label} hold a live mandate, and what did the contract refuse it?`,
+    title: `Attest ${live.state === "live" ? live.data.agentId : node.agentId} · Cordon`,
+    description: `One x402 call: does this agent hold a live mandate, and what did the contract refuse it?`,
   });
   const animate = useEntrance();
 
-  const body = attestationOf(node);
-  const price = Number(ATTEST.price6) / 1e6;
+  const body = live.state === "live" ? liveAttestation(live.data) : attestationOf(node);
   const linkagePct = Math.round(body.conduct.linkage * 100);
 
   return (
@@ -56,7 +119,7 @@ export default function Attest() {
       <Container width="wide" className="stackpage">
         <header className="public__head">
           <Text variant="micro" tone="dim" as="p" className="eyebrow">
-            x402 · ${price.toFixed(3)} per call
+            x402 · {formatUsdc(ATTEST.price6)} per call
           </Text>
           <Headline
             animate={animate}
@@ -64,11 +127,18 @@ export default function Attest() {
           />
           <Text variant="lead" tone="copy" as="p" className="public__lede">
             Does this buyer hold a live mandate, and what did the contract
-            refuse it? A seller pays a tenth of a cent rather than trusting a
-            claim, and every line of the answer names the transaction it came
-            from.
+            refuse it? A seller pays {formatUsdc(ATTEST.price6)} rather than
+            trusting a claim, and every line of the answer names the
+            transaction it came from.
           </Text>
-          <Preview note="the shape is the server's own; these figures are fixtures" />
+          {live.state === "live" ? (
+            <Text variant="micro" tone="dim" as="p" className="public__stamp">
+              Read from the chain · blocks {body.range.fromBlock}–
+              {body.range.toBlock}
+            </Text>
+          ) : (
+            <Preview note="the shape is the server's own; these figures are fixtures" />
+          )}
         </header>
 
         <Grid columns={2} min={340} gap="lg" align="start">

@@ -18,7 +18,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { GATES } from "../src/index.ts";
+import { GATES, formatUsdc } from "../src/index.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -75,4 +75,25 @@ test("every page printing the drill's figure also says no payment settled", () =
       `${surface} prints what the drill reached without saying it is authority, not settlement`,
     );
   }
+});
+
+/**
+ * An amount that is not zero must never print as zero.
+ *
+ * This is not a formatting preference. At two decimals the drill's entire
+ * result printed as "it reached: $0.00" in the headline of its own page, and
+ * Circle's fee printed as $0.00 in the sentence that explains why it sets the
+ * price. x402 lives below a cent; a money formatter that cannot say so is a
+ * surface showing a number the contract does not enforce.
+ */
+test("no amount the contract moved is displayed as nothing", () => {
+  assert.equal(formatUsdc(0n), "$0.00", "zero is zero, and says so at the usual width");
+  assert.equal(formatUsdc(20_000_000n), "$20.00");
+  assert.equal(formatUsdc(4_680_000n), "$4.68");
+  assert.equal(formatUsdc(10_000n), "$0.01", "a cent needs no widening");
+  assert.equal(formatUsdc(7_000n), "$0.007", "the drill's result");
+  assert.equal(formatUsdc(3_500n), "$0.0035", "Circle's fee");
+  assert.equal(formatUsdc(1n), "$0.000001", "one base unit, the smallest thing there is");
+  assert.equal(formatUsdc(-7_000n), "-$0.007");
+  assert.equal(formatUsdc(20_000_000n, 0), "$20", "an explicit width still means what it says");
 });

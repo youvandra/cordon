@@ -12,7 +12,7 @@ import {
   Text,
   usePageMeta,
 } from "cordon-ui";
-import { DRILL, EVAL, GATES, MANDATE, SEARCH, formatUsdc } from "@cordon/fixtures";
+import { DRILL, EVAL, GATES, MANDATE, SEARCH, SETTLEMENT, formatUsdc } from "@cordon/fixtures";
 import { RecordShell } from "../parts/RecordShell";
 import { useEntrance } from "../parts/motion";
 
@@ -115,11 +115,13 @@ export default function PublicDrill() {
                 a page that let a reader take it for the second would be
                 claiming a settlement this project has not made. */}
             <p className="pane__foot">
-              <b>This is authority reached, not money that left.</b> Circle
-              settlement is not wired, so every draw that passed its mandate
-              then failed at the burn intent: the windows above were debited
-              and no purchase completed. Both figures are true and they measure
-              different things.
+              <b>This is authority reached, not money that left.</b> The drill
+              ran before settlement was wired: every draw that passed its
+              mandate then failed at the burn intent, so the windows above were
+              debited and no purchase completed. Settlement works now — one
+              purchase ran end to end on {SETTLEMENT.recordedAt.slice(0, 10)},
+              and this number was not re-measured against it. Both figures are
+              true and they measure different things.
             </p>
             <DataTable
               rows={DRILL.run.refusals}

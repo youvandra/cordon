@@ -327,9 +327,30 @@ export function refusalsOf(ledger: Ledger, node: Hex): RefusalRow[] {
  * computed rather than asserted so that a bug which loses a hash shows up as a
  * number below 1 instead of as a sentence that is quietly untrue.
  */
+/**
+ * The mandate itself, as the events opened it.
+ *
+ * A record of conduct with no mandate beside it is a list of counts with
+ * nothing to read them against, and every surface that shows one had to go
+ * somewhere else for the terms — which in practice meant the preview tree.
+ * `live` is two facts from two events: opened, and not revoked. Whether there
+ * is headroom right now is a window question only the vault answers.
+ */
+export interface ConductMandate {
+  live: boolean;
+  revoked: boolean;
+  root: Hex;
+  parent: Hex | null;
+  depth: number;
+  operator: Address;
+  budget6: bigint;
+  lifetimeCap6: bigint;
+}
+
 export interface Conduct {
   node: Hex;
   agentId: bigint | null;
+  mandate: ConductMandate;
   /** The total signed for and what is left of it. A record that shows only a
    *  window shows a rate, and a reader takes a rate for a total. */
   lifetime: Lifetime;
@@ -351,6 +372,16 @@ export function conductOf(ledger: Ledger, nodeId: Hex): Conduct | null {
   return {
     node: row.node,
     agentId: row.agentId,
+    mandate: {
+      live: !row.revoked,
+      revoked: row.revoked,
+      root: row.root,
+      parent: row.parent,
+      depth: row.depth,
+      operator: row.operator,
+      budget6: row.budget6,
+      lifetimeCap6: row.lifetimeCap6,
+    },
     lifetime: lifetimeOf(ledger, row),
     draws: row.draws,
     refusals: row.refusals,

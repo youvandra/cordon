@@ -51,6 +51,19 @@ export interface LiveRefusal extends Range {
 export interface LiveConduct extends Range {
   node: string;
   agentId: string | null;
+  /** The terms the record is read against. Without these a page has counts
+   *  and nothing to measure them by, which is what sent this one to the
+   *  preview tree for a mandate it then drew as if it were real. */
+  mandate: {
+    live: boolean;
+    revoked: boolean;
+    root: string;
+    parent: string | null;
+    depth: number;
+    operator: string;
+    budget6: string;
+    lifetimeCap6: string;
+  };
   lifetime: { spent6: string; cap6: string; complete: boolean };
   draws: number;
   refusals: number;
