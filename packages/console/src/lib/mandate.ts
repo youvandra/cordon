@@ -376,6 +376,51 @@ export function useFundVault(expected: string | null) {
  * bound is checked against the parent before it is sent, because the contract
  * will refuse a wider one and finding that out costs a transaction.
  */
+/**
+ * Cut a branch.
+ *
+ * The one owner action the console drew but could not perform: the sample
+ * tree's revoke was local state, and the rows read from the chain had no
+ * control at all. `MandateRegistry.revoke` takes the owner or any strict
+ * ancestor's operator, and a revoked node draws nothing from that block on —
+ * the subtree with it, because `revokedAt` walks up.
+ *
+ * It is deliberately not a bulk action. Each call names one node, and the
+ * node it names is the root of everything it stops.
+ */
+export function useRevoke(expected: string | null) {
+  const { wallets } = useWallets();
+  const [state, setState] = useState<ActionState>({ status: "idle" });
+
+  const revoke = useCallback(
+    async (node: Hex) => {
+      if (!REGISTRY || !expected) {
+        setState({ status: "failed", why: "no deployment, or no wallet" });
+        return;
+      }
+      try {
+        const { account, wallet, reader } = await signerFor(wallets, expected);
+        setState({ status: "working", step: "cutting the branch" });
+        const call = {
+          address: REGISTRY, abi: MandateRegistryAbi, functionName: "revoke" as const,
+          args: [node] as const, account,
+        };
+        /* Simulated first, so an owner who is not the owner of this node is
+           told before a wallet asks them to sign anything. */
+        await reader.simulateContract(call);
+        const hash = await wallet.writeContract(call);
+        await reader.waitForTransactionReceipt({ hash });
+        setState({ status: "done", hash });
+      } catch (error) {
+        setState({ status: "failed", why: why(error) });
+      }
+    },
+    [wallets, expected],
+  );
+
+  return { state, revoke };
+}
+
 export function useSpawnChild(expected: string | null) {
   const { wallets } = useWallets();
   const [state, setState] = useState<ActionState>({ status: "idle" });

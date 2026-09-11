@@ -12,7 +12,7 @@ import {
   Text,
   useNotify,
 } from "cordon-ui";
-import { formatUsdc } from "@cordon/fixtures";
+import { DEMO, formatUsdc } from "@cordon/fixtures";
 import {
   REFUSALS,
   refusalOrdinal,
@@ -225,39 +225,50 @@ function ChainRefusalCard({ refusal }: { refusal: ChainRefusal }) {
   );
 }
 
+function RefusalsSkeleton({ note }: { note: string }) {
+  return (
+    <>
+      <ScreenHead
+        title="Reading the refusals"
+        lede="Every one of these is a decision the contract made, read from the events it emitted."
+        note={note}
+      />
+      <Stack direction="column" gap="lg">
+        {[0, 1].map((row) => (
+          <Card key={row}>
+            <CardBody>
+              <Stack direction="column" gap="md" align="start">
+                <Skeleton width="32%" height={12} />
+                <Skeleton width="64%" height={26} />
+                <Skeleton variant="text" lines={3} />
+              </Stack>
+            </CardBody>
+          </Card>
+        ))}
+      </Stack>
+    </>
+  );
+}
+
 export default function Refusals() {
   useTitle("Refusals · Cordon console");
 
-  const { address, real } = useWallet();
-  const chain = useChainTree(real ? address : null);
+  /* An owner sees their own refusals; a visitor sees the ones the public tree
+     on Arc has actually collected. Neither is a sample: a refusal that nobody
+     was refused is the one thing this screen must never show. */
+  const { address, real, ready } = useWallet();
+  const owner = real ? address : DEMO.owner;
+  const chain = useChainTree(owner);
   const nodes = chain.state === "read" ? chain.nodes.map((node) => node.node) : [];
   const live = useChainRefusals(nodes);
+  const mine = real && Boolean(address);
+
+  if (!ready) return <RefusalsSkeleton note="restoring this session…" />;
 
   /* The same rule as the tree screen: a wallet whose refusals are being read
      is not shown the sample ones in the meantime. */
   if (chain.state === "looking" || live.state === "looking") {
-    return (
-      <>
-        <ScreenHead
-          title="Reading your refusals"
-          lede="Every one of these is a decision the contract made about your own tree, read from the events it emitted."
-          note={`reading ${ARC.name}…`}
-        />
-        <Stack direction="column" gap="lg">
-          {[0, 1].map((row) => (
-            <Card key={row}>
-              <CardBody>
-                <Stack direction="column" gap="md" align="start">
-                  <Skeleton width="32%" height={12} />
-                  <Skeleton width="64%" height={26} />
-                  <Skeleton variant="text" lines={3} />
-                </Stack>
-              </CardBody>
-            </Card>
-          ))}
-        </Stack>
-      </>
-    );
+    return <RefusalsSkeleton note={`reading ${ARC.name}…`} />;
   }
 
   if (live.state === "read") {
@@ -270,8 +281,12 @@ export default function Refusals() {
               ? "Nothing has been refused yet."
               : `${standing} standing, ${live.refusals.length - standing} released.`
           }
-          lede="Every one of these is a decision the contract made about your own tree, read from the events it emitted. A refusal is not an error and it costs no budget; the money simply did not move."
-          note={`read from ${ARC.name}`}
+          lede={
+            mine
+              ? "Every one of these is a decision the contract made about your own tree, read from the events it emitted. A refusal is not an error and it costs no budget; the money simply did not move."
+              : "Every one of these is a decision the contract made about the tree Cordon runs on Arc, read from the events it emitted. Releasing one takes the owner's own signature, which is why the buttons below are theirs and not yours."
+          }
+          note={mine ? `read from ${ARC.name}` : `the public tree · read from ${ARC.name}`}
         />
         {live.refusals.length === 0 ? (
           <Card>

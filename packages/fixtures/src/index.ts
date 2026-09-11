@@ -321,6 +321,30 @@ export const ENDPOINTS = [
  * shows nothing, which reads as a broken deployment rather than as an absent
  * one.
  */
+/**
+ * The tree anyone can look at.
+ *
+ * Every console screen used to draw a tree of invented agents for a visitor
+ * without a wallet — six nodes with names nobody had opened, spending money
+ * nobody had funded. It reads as a mockup because it was one, and a judge
+ * cannot tell from a screenshot which half of the product is real.
+ *
+ * This owner opened the live tree on Arc, and both numbers below are public on
+ * chain: a mandate's owner is a field of the mandate, and the console derives
+ * every node id from the owner's address without asking anyone. So the same
+ * code path that shows an owner their own tree shows a visitor this one,
+ * read-only, with a banner saying whose it is.
+ *
+ * No key is implied by either. The owner signs from their own wallet, and
+ * nothing here can.
+ */
+export const DEMO = {
+  owner: "0x736159a06C89Ea5b12eD88BE658741edCa64324D",
+  root: "0xd08820db0e1cd58426ba9dc8e78513b05d244b42cdaf841070b0a00d49b901ad",
+  /** Its ERC-8004 identity, which is what the public record pages address. */
+  agentId: "894124",
+} as const;
+
 export const PENDING_ADDRESS = "pending — written by the deploy script";
 
 /** The same absence, for the two fields no deploy can fill. A mandate exists

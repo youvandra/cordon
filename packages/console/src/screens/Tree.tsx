@@ -21,13 +21,13 @@ import {
   Text,
   useNotify,
 } from "cordon-ui";
-import { ARC, ENFORCED_BY, MANDATE, STRENGTH, formatUsdc, isAddress } from "@cordon/fixtures";
+import { ARC, DEMO, ENFORCED_BY, MANDATE, STRENGTH, formatUsdc, isAddress } from "@cordon/fixtures";
 import { TREE, flatten, lifetime, pathTo, type TreeNode } from "@cordon/fixtures/preview";
 import { ScreenHead } from "../parts/Preview";
 import { useTitle } from "../parts/Shell";
 import { useWallet } from "../lib/wallet";
 import { useChainTree, type ChainNode } from "../lib/tree";
-import { useFundVault, useSpawnChild } from "../lib/mandate";
+import { useFundVault, useRevoke, useSpawnChild } from "../lib/mandate";
 import { TreeGraph } from "../parts/TreeGraph";
 import { useEntrance } from "../lib/entrance";
 
@@ -70,17 +70,61 @@ const DRAW6 = 1_000_000n;
  * registry and the spending from the vault's own views. Nothing here is a
  * reduction of events, so nothing here can disagree with the contract.
  *
- * There are no draw or revoke controls on these rows. A draw is the daemon's
- * to make and a revocation is a transaction, and a button that pretends to do
- * either from a table would be the surface lying about what it can do.
+ * There is no draw control on these rows: a draw is the daemon's to make, and
+ * a button that pretended to make one from a table would be the surface lying
+ * about what it can do. Revoking is different — it is the owner's own
+ * transaction, and the console had drawn it for the sample tree while leaving
+ * the real rows with no way to do it at all. It is here now, for the owner of
+ * the tree being shown and nobody else.
  */
 /** The root this owner is operating: the first one, and the live one. */
 function rootOf(nodes: ChainNode[]): ChainNode | undefined {
   return nodes.find((node) => node.parent === null && !node.revoked);
 }
 
-function ChainTree({ nodes }: { nodes: ChainNode[] }) {
+function ChainTree({ nodes, owner }: { nodes: ChainNode[]; owner: string | null }) {
   const root = nodes.find((node) => node.parent === null);
+  const notify = useNotify();
+  const { state: cut, revoke } = useRevoke(owner);
+  const [cutting, setCutting] = useState<ChainNode | null>(null);
+
+  /* Announced once per outcome, for the same reason the funding toast is:
+     a toast re-renders this screen, and an effect that announces on every
+     render announces for ever. */
+  const announced = useRef<string | null>(null);
+  useEffect(() => {
+    const outcome = `cut:${cut.status}:${"hash" in cut ? cut.hash : "why" in cut ? cut.why : ""}`;
+    if (announced.current === outcome) return;
+    if (cut.status === "done") {
+      announced.current = outcome;
+      notify({
+        id: cut.hash,
+        tone: "caution",
+        title: "The branch is cut",
+        children: "That node and everything under it draws nothing from this block on. The record stays.",
+        duration: 8000,
+      });
+      window.location.reload();
+    }
+    if (cut.status === "failed") {
+      announced.current = outcome;
+      notify({ id: "cut-failed", tone: "critical", title: "Not cut", children: cut.why, duration: 0 });
+    }
+  }, [cut, notify]);
+
+  /** How many live nodes stop drawing if this one is cut — it and its issue. */
+  const subtreeOfChain = (node: ChainNode): ChainNode[] => {
+    const out: ChainNode[] = [];
+    const walk = (id: string) => {
+      for (const candidate of nodes) {
+        if (candidate.parent?.toLowerCase() !== id.toLowerCase()) continue;
+        out.push(candidate);
+        walk(candidate.node);
+      }
+    };
+    walk(node.node);
+    return [node, ...out];
+  };
 
   return (
     <>
@@ -199,9 +243,71 @@ function ChainTree({ nodes }: { nodes: ChainNode[] }) {
                 </span>
               ),
             },
+            /* Only for the owner of this tree. A visitor reading the public
+               one is shown no control rather than one that fails at the
+               wallet. */
+            ...(owner
+              ? [
+                  {
+                    id: "cut",
+                    header: "",
+                    width: 96,
+                    cell: (node: ChainNode) => (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={node.revoked || cut.status === "working"}
+                        onClick={() => setCutting(node)}
+                      >
+                        {node.revoked ? "cut" : "Revoke"}
+                      </Button>
+                    ),
+                  },
+                ]
+              : []),
           ]}
         />
       </Section>
+
+      <Modal
+        open={Boolean(cutting)}
+        onClose={() => setCutting(null)}
+        title="Cut this branch?"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setCutting(null)}>
+              Keep it
+            </Button>
+            <Button
+              variant="danger"
+              disabled={cut.status === "working"}
+              onClick={() => {
+                const node = cutting;
+                setCutting(null);
+                if (node) void revoke(node.node as `0x${string}`);
+              }}
+            >
+              {cut.status === "working" ? cut.step : "Revoke on chain"}
+            </Button>
+          </>
+        }
+      >
+        {cutting ? (
+          <>
+            <Text variant="body" tone="copy" as="p">
+              {subtreeOfChain(cutting).length}{" "}
+              {subtreeOfChain(cutting).length === 1 ? "node" : "nodes"} stop drawing:{" "}
+              this one and everything under it. The branch stays in the record —
+              conduct under a cut mandate is the point — and the money already
+              released is not recalled.
+            </Text>
+            <Text variant="caption" tone="dim" as="p" className="mono">
+              {cutting.node}
+            </Text>
+            <Enforced>{ENFORCED_BY.revoke}</Enforced>
+          </>
+        ) : null}
+      </Modal>
     </>
   );
 }
@@ -380,6 +486,47 @@ function Operate({
   );
 }
 
+/** The screen with nothing in it yet: the shape of the answer, never a
+ *  different tree's numbers under this one's heading. */
+function TreeSkeleton({ note }: { note: string }) {
+  return (
+    <>
+      <ScreenHead
+        title="Live exposure across the whole tree"
+        lede="Every figure on this screen is read from the contract that enforces it."
+        note={note}
+      />
+      <Grid columns={2} min={360} gap="lg" align="start">
+        <Card>
+          <CardBody>
+            <Stack direction="column" gap="md" align="start">
+              <Skeleton width="54%" height={12} />
+              <Skeleton width="46%" height={48} />
+              <Skeleton variant="text" lines={2} />
+            </Stack>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody>
+            <Stack direction="column" gap="md" align="start">
+              <Skeleton width="40%" height={12} />
+              <Skeleton variant="text" lines={5} />
+            </Stack>
+          </CardBody>
+        </Card>
+      </Grid>
+      <Card>
+        <CardBody>
+          <Stack direction="column" gap="md" align="start">
+            <Skeleton width="28%" height={12} />
+            <Skeleton height={172} />
+          </Stack>
+        </CardBody>
+      </Card>
+    </>
+  );
+}
+
 export default function Tree() {
   useTitle("Tree · Cordon console");
   const animate = useEntrance();
@@ -470,64 +617,42 @@ export default function Tree() {
   const rootSpent = spend.root ?? TREE.spent6;
   const rootShare = Number((rootSpent * 100n) / TREE.budget6);
 
-  /* A wallet with mandates on chain gets its own tree; everyone else gets the
-     illustration, which says so. Both cannot be shown at once — two trees on
-     one screen is a reader asking which one is theirs. */
-  const { address, real } = useWallet();
-  const chain = useChainTree(real ? address : null);
+  /* A signed-in owner sees their own tree. A visitor sees the public one on
+     Arc — the same screen, the same code path, and a banner saying whose it
+     is. It used to be a tree of invented agents, which is indistinguishable
+     from a mockup in a screenshot and was one. */
+  const { address, real, ready } = useWallet();
+  const owner = real ? address : DEMO.owner;
+  const chain = useChainTree(owner);
+  const mine = real && Boolean(address);
+
+  /* Privy restores its session asynchronously. Deciding whose tree to draw
+     before it has finished shows an owner the public one and then swaps it. */
+  if (!ready) return <TreeSkeleton note="restoring this session…" />;
 
   /* A wallet that has mandates is about to be shown them, and the sample tree
      in the meantime is somebody else's numbers under their own heading. Show
      the shape and nothing in it until the chain has answered. */
-  if (chain.state === "looking") {
-    return (
-      <>
-        <ScreenHead
-          title="Live exposure across the whole tree"
-          lede="Every node here is one of your own agents, running on your own daemon keys. Every figure is read from the contract that enforces it."
-          note={`reading ${ARC.name}…`}
-        />
-        <Grid columns={2} min={360} gap="lg" align="start">
-          <Card>
-            <CardBody>
-              <Stack direction="column" gap="md" align="start">
-                <Skeleton width="54%" height={12} />
-                <Skeleton width="46%" height={48} />
-                <Skeleton variant="text" lines={2} />
-              </Stack>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody>
-              <Stack direction="column" gap="md" align="start">
-                <Skeleton width="40%" height={12} />
-                <Skeleton variant="text" lines={5} />
-              </Stack>
-            </CardBody>
-          </Card>
-        </Grid>
-        <Card>
-          <CardBody>
-            <Stack direction="column" gap="md" align="start">
-              <Skeleton width="28%" height={12} />
-              <Skeleton height={172} />
-            </Stack>
-          </CardBody>
-        </Card>
-      </>
-    );
-  }
+  if (chain.state === "looking") return <TreeSkeleton note={`reading ${ARC.name}…`} />;
 
   if (chain.state === "read") {
     return (
       <>
         <ScreenHead
           title="Live exposure across the whole tree"
-          lede="Every node here is one of your own agents, running on your own daemon keys. Every figure is read from the contract that enforces it."
-          note={`read from ${ARC.name}`}
+          lede={
+            mine
+              ? "Every node here is one of your own agents, running on your own daemon keys. Every figure is read from the contract that enforces it."
+              : "This is the tree Cordon runs on Arc, read from the contract that enforces it. It is not yours: opening one of your own takes a signature from your own key, and nothing on this screen can produce one."
+          }
+          note={mine ? `read from ${ARC.name}` : `the public tree · read from ${ARC.name}`}
         />
-        <ChainTree nodes={chain.nodes} />
-        {rootOf(chain.nodes) && address ? (
+        <ChainTree nodes={chain.nodes} owner={mine ? address : null} />
+        {/* Funding and spawning are the owner's, and the owner is the address
+            that signed the mandate. A visitor reading the public tree is shown
+            what they can do about it, which is nothing, rather than a form
+            that would fail at the wallet. */}
+        {mine && rootOf(chain.nodes) && address ? (
           <Operate root={rootOf(chain.nodes)!} owner={address} onDone={() => window.location.reload()} />
         ) : null}
       </>

@@ -53,6 +53,16 @@ interface WalletState {
   real: boolean;
   /** Whether a real wallet is available at all, whatever this session chose. */
   available: boolean;
+  /**
+   * Whether the session above is settled.
+   *
+   * Privy restores a session asynchronously, and until it has, `real` is false
+   * for a reader who is in fact signed in. Every screen used to take that
+   * moment at face value and draw the demo tree, so a reload showed an owner
+   * somebody else's numbers under their own heading and then swapped them.
+   * A screen that reads this shows a skeleton instead.
+   */
+  ready: boolean;
 }
 
 const WalletContext = createContext<WalletState>({
@@ -62,6 +72,7 @@ const WalletContext = createContext<WalletState>({
   preview: () => {},
   real: false,
   available: false,
+  ready: true,
 });
 
 export const useWallet = () => useContext(WalletContext);
@@ -95,6 +106,8 @@ function MockWallet({ children }: { children: ReactNode }) {
       address,
       real: false,
       available: false,
+      /* Nothing to restore: the mock reads sessionStorage synchronously. */
+      ready: true,
       /* With no Privy app id there is one way in, and it is this one. */
       preview: () => enter(),
       connect: () => enter(),
@@ -132,6 +145,7 @@ function PrivyWallet({ children }: { children: ReactNode }) {
       address: signedIn ? (user?.wallet?.address ?? null) : previewing ? MANDATE.owner : null,
       real: signedIn,
       available: true,
+      ready,
       preview: () => {
         try {
           sessionStorage.setItem(KEY, MANDATE.owner);
@@ -151,7 +165,7 @@ function PrivyWallet({ children }: { children: ReactNode }) {
         void logout();
       },
     }),
-    [signedIn, previewing, user, login, logout],
+    [ready, signedIn, previewing, user, login, logout],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
