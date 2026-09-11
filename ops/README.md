@@ -61,11 +61,21 @@ sudo certbot certonly --webroot -w /var/www/cordon \
 sudo certbot certonly --webroot -w /var/www/cordon -d attest.getcordon.xyz
 
 # 4. the real configuration
-sudo cp ops/nginx/cordon-locations.conf /etc/nginx/snippets/
+# Both snippets. `cordon-headers.conf` is included from every `location` in
+# the other one and from the attest vhost, because nginx's `add_header` does
+# not merge — a `location` that sets one of its own inherits none from above.
+sudo cp ops/nginx/cordon-headers.conf ops/nginx/cordon-locations.conf /etc/nginx/snippets/
 sudo cp ops/nginx/getcordon.xyz.conf /etc/nginx/sites-available/cordon
 sudo cp ops/nginx/attest.getcordon.xyz.conf /etc/nginx/sites-available/cordon-attest
 sudo ln -sf /etc/nginx/sites-available/cordon-attest /etc/nginx/sites-enabled/cordon-attest
 sudo nginx -t && sudo systemctl reload nginx
+
+# 5. check the headers actually arrived, on a route that sets its own
+# Cache-Control and on one that does not. This is the step the add_header
+# inheritance rule exists to catch.
+curl -sI https://getcordon.xyz/console/ | grep -i 'frame-ancestors\|nosniff\|strict-transport'
+curl -sI https://getcordon.xyz/assets/ -o /dev/null -w '%{http_code}\n'
+curl -sI https://attest.getcordon.xyz/health | grep -i 'nosniff\|strict-transport'
 ```
 
 ## The services, after the deploy exists
