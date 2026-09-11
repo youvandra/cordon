@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Button,
   Card,
@@ -26,6 +26,7 @@ import { useTitle } from "../parts/Shell";
 import { useWallet } from "../lib/wallet";
 import { useChainTree } from "../lib/tree";
 import { useChainRefusals, type ChainRefusal } from "../lib/refusals";
+import { useRelease } from "../lib/mandate";
 import { ARC, REASON_MEANING } from "@cordon/fixtures";
 
 /**
@@ -167,13 +168,43 @@ function RefusalCard({ refusal }: { refusal: Refusal }) {
 /**
  * A refusal the contract actually wrote, and the decision it leaves open.
  *
- * Releasing is a transaction from the owner's own key and the console cannot
- * make it yet, so the button says what it is waiting for rather than pretending
- * — a control that looks live and does nothing is worse than one that admits
- * what it is.
+ * Releasing is a transaction from the owner's own key, and it is one now: it
+ * pays this one refused draw out of the treasury, raises no bound, and is
+ * written beside the refusal it overrode. A visitor reading the public tree
+ * sees no button, because the signature is not theirs to give.
  */
-function ChainRefusalCard({ refusal }: { refusal: ChainRefusal }) {
+function ChainRefusalCard({
+  refusal,
+  owner,
+}: {
+  refusal: ChainRefusal;
+  owner: string | null;
+}) {
   const short = `${refusal.counterparty.slice(0, 6)}…${refusal.counterparty.slice(-4)}`;
+  const notify = useNotify();
+  const { state, release } = useRelease(owner);
+  const [confirming, setConfirming] = useState(false);
+
+  const announced = useRef<string | null>(null);
+  useEffect(() => {
+    const outcome = `release:${state.status}:${"hash" in state ? state.hash : "why" in state ? state.why : ""}`;
+    if (announced.current === outcome) return;
+    if (state.status === "done") {
+      announced.current = outcome;
+      notify({
+        id: state.hash,
+        tone: "caution",
+        title: `Refusal ${String(refusal.id)} released`,
+        children: "The bound did not move. The refusal and the release are both on the record, side by side.",
+        duration: 8000,
+      });
+      window.location.reload();
+    }
+    if (state.status === "failed") {
+      announced.current = outcome;
+      notify({ id: `release-failed-${refusal.id}`, tone: "critical", title: "Not released", children: state.why, duration: 0 });
+    }
+  }, [state, notify, refusal.id]);
 
   return (
     <Card className="refusal">
@@ -211,16 +242,60 @@ function ChainRefusalCard({ refusal }: { refusal: ChainRefusal }) {
 
       <CardFooter>
         <div className="refusal__actions">
-          <Stack direction="row" gap="sm">
-            <Button size="sm" variant="secondary" disabled>
-              Sign to release
-            </Button>
-            <Text variant="micro" tone="dim" as="span">
-              needs a transaction from your own key — not built here yet
-            </Text>
+          <Stack direction="row" gap="sm" align="center" wrap>
+            {owner ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  disabled={refusal.released || state.status === "working"}
+                  onClick={() => setConfirming(true)}
+                >
+                  {state.status === "working" ? state.step : "Sign to release"}
+                </Button>
+                <Text variant="micro" tone="dim" as="span">
+                  one transaction from your own key, and it does not move the bound
+                </Text>
+              </>
+            ) : (
+              <Text variant="micro" tone="dim" as="span">
+                Releasing takes the owner's own signature. This is their tree, not yours.
+              </Text>
+            )}
           </Stack>
         </div>
       </CardFooter>
+
+      <Modal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={`Release ${formatUsdc(refusal.amount6)} past this bound?`}
+        description="This does not raise the bound. The same purchase is refused again a second later, and both the refusal and your release stay on the record."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirming(false)}>
+              Leave it refused
+            </Button>
+            <Button
+              variant="danger"
+              disabled={state.status === "working"}
+              onClick={() => {
+                setConfirming(false);
+                void release(refusal.id);
+              }}
+            >
+              Sign the release
+            </Button>
+          </>
+        }
+      >
+        <Text variant="body" tone="copy" as="p">
+          The money comes out of the treasury and goes to this node's operator,
+          sized to the draw the contract refused. It is not a new draw: no
+          window is debited, because this amount was never inside the authority
+          they describe.
+        </Text>
+      </Modal>
     </Card>
   );
 }
@@ -301,7 +376,7 @@ export default function Refusals() {
         ) : (
           <Stack direction="column" gap="lg">
             {live.refusals.map((refusal) => (
-              <ChainRefusalCard key={String(refusal.id)} refusal={refusal} />
+              <ChainRefusalCard key={String(refusal.id)} refusal={refusal} owner={mine ? address : null} />
             ))}
           </Stack>
         )}

@@ -278,6 +278,7 @@ const ERC20 = parseAbi([
 const VAULT = parseAbi([
   "function fund(bytes32 root, uint128 amount6)",
   "function treasury6(bytes32 root) view returns (uint128)",
+  "function release(uint256 refusalId)",
 ]);
 
 export type ActionState =
@@ -388,6 +389,52 @@ export function useFundVault(expected: string | null) {
  * It is deliberately not a bulk action. Each call names one node, and the
  * node it names is the root of everything it stops.
  */
+/**
+ * The human exit, signed.
+ *
+ * `TreeVault.release` pays one refused draw out of the treasury on the owner's
+ * signature. It raises no bound, re-runs no draw and erases nothing: the
+ * refusal stays on chain and the release is written beside it, which is the
+ * whole point of having the exit be a transaction rather than a setting.
+ *
+ * The console drew this button for a year and it set a boolean. A control that
+ * looks live and does nothing is worse than one that admits what it is — and
+ * both are worse than one that works.
+ */
+export function useRelease(expected: string | null) {
+  const { wallets } = useWallets();
+  const [state, setState] = useState<ActionState>({ status: "idle" });
+
+  const release = useCallback(
+    async (refusalId: bigint) => {
+      if (!DEPLOYED || !expected) {
+        setState({ status: "failed", why: "no deployment, or no wallet" });
+        return;
+      }
+      try {
+        const { account, wallet, reader } = await signerFor(wallets, expected);
+        setState({ status: "working", step: "signing the release" });
+        const call = {
+          address: DEPLOYED.vault, abi: VAULT, functionName: "release" as const,
+          args: [refusalId] as const, account,
+        };
+        /* Simulated first: the vault refuses a release from anyone but the
+           owner, one already released, and one the treasury cannot cover.
+           Each of those is worth telling an owner before a wallet opens. */
+        await reader.simulateContract(call);
+        const hash = await wallet.writeContract(call);
+        await reader.waitForTransactionReceipt({ hash });
+        setState({ status: "done", hash });
+      } catch (error) {
+        setState({ status: "failed", why: why(error) });
+      }
+    },
+    [wallets, expected],
+  );
+
+  return { state, release };
+}
+
 export function useRevoke(expected: string | null) {
   const { wallets } = useWallets();
   const [state, setState] = useState<ActionState>({ status: "idle" });
