@@ -12,7 +12,6 @@ import {
   useNoIndex,
 } from "cordon-ui";
 import { ARC, DEMO, MANDATE, isAddress, shortAddress } from "@cordon/fixtures";
-import { REFUSALS } from "@cordon/fixtures/preview";
 import { useWallet } from "../lib/wallet";
 import { site } from "../lib/links";
 import { SCREENS, SCREEN_GROUPS } from "./screens";
@@ -127,7 +126,10 @@ export function ConsoleShell() {
     );
   }
 
-  const standing = REFUSALS.filter((refusal) => !refusal.released).length;
+  /* The rail used to carry a count of the preview's refusals — a badge saying
+     "2" beside a screen that reads a chain with eight. A count that is not the
+     count of the thing it labels is worse than no count, and the screen itself
+     says how many there are the moment it is opened. */
 
   return (
     /* Compact, and not a control. The docs offer a density switcher because
@@ -221,9 +223,7 @@ export function ConsoleShell() {
                           <span className="side__label">{screen.label}</span>
                           <span className="side__desc">{screen.description}</span>
                         </span>
-                        {screen.id === "refusals" && standing > 0 ? (
-                          <span className="side__count">{standing}</span>
-                        ) : null}
+
                       </button>
                     </li>
                   );
