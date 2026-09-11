@@ -174,9 +174,26 @@ body {
   padding: var(--cordon-space-8) var(--cordon-gutter);
 }
 
+/* The one surface here that is white type on a light glaze.
+   The violet glaze is built to be luminous and its lightest region sits
+   exactly where this card's eyebrow and first line of copy fall, so white at
+   87% was reading at somewhere under 2:1 up there. The metric card solved the
+   same problem with a shadow — a dark one, tight, under the type — and it is
+   the same answer here: the glaze stays as designed and the type stops
+   depending on it.
+
+   The glaze itself being too light for white type is the thing underneath
+   this, and changing a brand surface is not a contrast fix. */
 .gate__panel {
   width: min(100%, 640px);
   padding: clamp(28px, 4vw, 48px);
+}
+
+.gate__panel .gate__title,
+.gate__panel .gate__copy,
+.gate__panel .eyebrow,
+.gate__panel .gate__fn {
+  text-shadow: 0 1px 2px rgba(60, 21, 35, 0.34);
 }
 
 .gate__title {
@@ -858,7 +875,34 @@ body {
 }
 
 /* ---- the mandate tree, drawn ------------------------------------------- */
-.graph { overflow-x: auto; padding: 8px 2px 12px; }
+/* The tree is wider than the card on any real tree, so this scrolls. What it
+   did not do was say so: node cards were cut clean through at the right edge
+   with only a scrollbar under them, which reads as a layout that broke rather
+   than as content that continues.
+
+   The fade is in CSS and permanent, deliberately. A scroll listener would have
+   to run to decide whether to show it, and anything whose visibility waits on
+   a frame is blank in a background tab. A permanent fade is correct in both
+   the states that matter: over a tree too narrow to scroll it falls on empty
+   ground and is invisible, and at the end of a scroll it softens the last
+   card's outer edge — which is why it stops at 0.3 rather than at 0, so the
+   edge is softened and never erased.
+
+   `scrollbar-gutter` keeps the strip reserved, so the graph does not jump by
+   the scrollbar's height the first time a tree grows wide enough for one. */
+.graph {
+  overflow-x: auto;
+  padding: 8px 2px 12px;
+  scrollbar-gutter: stable;
+  --graph-fade: linear-gradient(
+    to right,
+    rgb(0 0 0) calc(100% - 40px),
+    rgb(0 0 0 / 0.3) 100%
+  );
+  -webkit-mask-image: var(--graph-fade);
+  mask-image: var(--graph-fade);
+}
+
 .graph__canvas { position: relative; margin-inline: auto; }
 .graph__edges { position: absolute; inset: 0; pointer-events: none; }
 .graph__edge { fill: none; stroke: var(--cordon-hairline); stroke-width: 1.5; }
