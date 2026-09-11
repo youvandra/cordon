@@ -29,6 +29,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import type { Payment, TokenDomain } from "./payment.ts";
 import { retryOnRateLimit } from "../../fixtures/src/rpc.ts";
+import { serialiseByKey } from "../../fixtures/src/serial.ts";
 
 export const EIP3009_ABI = parseAbi([
   "function DOMAIN_SEPARATOR() view returns (bytes32)",
@@ -144,6 +145,16 @@ export class Eip3009Collector implements Collector {
   private readonly publicClient: PublicClient;
   private readonly wallet: ReturnType<typeof createWalletClient>;
   private readonly token: Address;
+  /**
+   * One settlement at a time.
+   *
+   * This process holds one submitter key and nginx hands it as many paying
+   * requests at once as arrive. Two settlements that overlap between reading
+   * the pending nonce and sending ask for the same nonce, and the loser is a
+   * payer who signed a valid authorisation and got a 402 saying settlement
+   * failed — for a reason that is nothing to do with them or their money.
+   */
+  private readonly inTurn = serialiseByKey();
 
   constructor(options: Eip3009Options) {
     this.token = options.token;
@@ -177,6 +188,10 @@ export class Eip3009Collector implements Collector {
    * newer tokens take `bytes`. Whichever simulates is the one that exists.
    */
   async collect(payment: Payment): Promise<Collection> {
+    return this.inTurn(this.submitter, () => this.collectInTurn(payment));
+  }
+
+  private async collectInTurn(payment: Payment): Promise<Collection> {
     const a = payment.authorization;
     const base = [a.from, a.to, a.value, a.validAfter, a.validBefore, a.nonce] as const;
 

@@ -28,6 +28,7 @@ import { Recorder } from "./record.ts";
    second copy of this list is a second thing that can fall behind the
    contract. Re-exported so nothing that already imports them has to move. */
 import { REASONS, UNRECOGNISED, type Reason } from "../../fixtures/src/index.ts";
+import { serialiseByKey } from "../../fixtures/src/serial.ts";
 
 export { REASONS, UNRECOGNISED };
 export type { Reason };
@@ -54,6 +55,16 @@ export class Gate {
   private readonly pending = new Map<string, Hex>();
   private readonly config: Config;
   private readonly chain: ReturnType<typeof defineChain>;
+  /**
+   * One send at a time per operator key.
+   *
+   * An agent's purchases are concurrent by design — that is what a tree of
+   * them is for — and every draw for one node signs with one EOA. Two that
+   * overlap between reading the pending nonce and sending ask for the same
+   * one, and the second is refused for `nonce too low` after its simulation
+   * said it was in bounds. Keyed by node, so two nodes still draw at once.
+   */
+  private readonly inTurn = serialiseByKey();
   /**
    * The record. It borrows this gate's signer rather than holding a copy of a
    * key, so there is still exactly one place in the process where an operator
@@ -217,6 +228,19 @@ export class Gate {
       concentrationBps: number;
     },
   ): Promise<{ node: Hex; txHash: Hex }> {
+    return this.inTurn(parent, () => this.spawnInTurn(parent, params));
+  }
+
+  private async spawnInTurn(
+    parent: Hex,
+    params: {
+      operator: Address;
+      lifetimeCap6?: bigint;
+      budget6: bigint;
+      trancheCap6: bigint;
+      concentrationBps: number;
+    },
+  ): Promise<{ node: Hex; txHash: Hex }> {
     const wallet = this.walletFor(parent);
     const inherited = (await this.mandate(parent)) as {
       lifetimeCap6: bigint;
@@ -276,6 +300,13 @@ export class Gate {
    * both cases and the caller reads `released`. It never throws to mean "no".
    */
   async draw(node: Hex, counterparty: Address, amount: bigint): Promise<DrawOutcome> {
+    /* Queued on the node, because the simulation and the send have to stay
+       next to each other: a second draw that simulates inside this one's gap
+       reads a window this one is about to debit. */
+    return this.inTurn(node, () => this.drawInTurn(node, counterparty, amount));
+  }
+
+  private async drawInTurn(node: Hex, counterparty: Address, amount: bigint): Promise<DrawOutcome> {
     const wallet = this.walletFor(node);
 
     /* Simulate first: a refusal that has not been sent costs nothing, and the
