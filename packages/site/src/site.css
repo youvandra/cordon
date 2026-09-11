@@ -81,6 +81,15 @@ main { flex: 1 1 auto; }
   text-transform: uppercase;
 }
 
+/* On a phone the bar was 22px wider than the screen, so every record page
+   scrolled sideways — the whole page, not the bar. The word beside the mark
+   is the one thing in it that repeats what the page already says, so it is
+   the one thing that goes. */
+@media (max-width: 460px) {
+  .nav__inner { gap: var(--cordon-space-4); }
+  .nav__mark { display: none; }
+}
+
 /* The bar has to end where the page under it ends. The landing's own column
    is 1180, the docs grid is 1400, and the record pages run in a wide
    container; a bar capped anywhere else reads as a second, narrower page

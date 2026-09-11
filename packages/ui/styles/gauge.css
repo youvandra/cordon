@@ -16,7 +16,11 @@
 }
 .cordon-gauge__tick--lit { stroke: rgba(173, 49, 77, 0.66); }
 
-.cordon-on-glaze .cordon-gauge__tick { stroke: rgba(255, 214, 228, 0.22); }
+/* On a glazed panel the unlit ticks sat at 0.22 and the dial read as a smudge
+   rather than as a dial, which made the lit arc look like it had been cut off
+   at the panel's edge. The lit ticks are unchanged: the contrast between the
+   two is the measurement. */
+.cordon-on-glaze .cordon-gauge__tick { stroke: rgba(255, 214, 228, 0.34); }
 .cordon-on-glaze .cordon-gauge__tick--lit { stroke: rgba(255, 226, 236, 0.82); }
 
 .cordon-gauge__pointer { stroke: rgba(173, 49, 77, 0.55); }
