@@ -513,6 +513,8 @@ export const DRILL = {
  */
 export { DRILL_RUN } from "./drill.gen.ts";
 export type { DrillRun, DrillRefusal } from "./drill.gen.ts";
+export { SETTLEMENT } from "./settlement.gen.ts";
+export type { SettledPurchase } from "./settlement.gen.ts";
 export { SEARCH } from "./search.gen.ts";
 export type { SearchRun } from "./search.gen.ts";
 

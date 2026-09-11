@@ -125,11 +125,20 @@ Being explicit about the edge of the guarantee is the point of the project, so:
   retry and no compensating entry. The meter's `reconcileGateway` bounds the
   aggregate, that an operator's balance never exceeds what the vault released
   to it; it does not reconcile one purchase.
-- **No payment has settled.** `CircleSettler` throws: the burn-intent EIP-712
-  domain and types are not in the public Gateway guide, so every draw that
-  passes its mandate then fails at the Circle burn intent. What is proved on
-  Arc is the bound and the record. What is not proved is a completed purchase,
-  and G3's number is **authority reached, not money that left**.
+- **A payment has settled, and it cost more than it bought.** One purchase
+  ran end to end on Arc on 11 September: draw `0x860378ac…`, Gateway release
+  `0x296b8c88…`, and the seller's own collection `0xc70f76f1…` moving $0.01 to
+  the payee the contract was asked about. Circle charges **$0.0035** on top of
+  a same-chain Gateway transfer and the release costs about $0.003 of gas, so
+  settling a purchase costs roughly two thirds of a one-cent purchase — paid
+  by the operator, like gas, and outside the mandate. The other rail,
+  `GatewayWallet.withdraw`, is fourteen days. **That floor is why the
+  attestation endpoint is priced at $0.01**: below it a tranche cannot pay for
+  its own release, and the settler refuses such a purchase with Circle's own
+  number.
+- **G3's number is authority reached, not money that left.** The drill ran
+  before settlement was wired and settled nothing; both figures are true and
+  they measure different things.
 - **G3's number is 35.0% of the ceiling** — $0.007000 of $0.020000 — and it was
   stopped by `concentration` at a node whose window still had money in it. It
   is published whichever way it came out, and it came out this way.

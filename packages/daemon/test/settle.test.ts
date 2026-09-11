@@ -33,6 +33,10 @@ const wallet = createWalletClient({ account, chain: arc, transport: http() });
 /** Circle, answering from a fixture instead of from Virginia. */
 function fakeApi(recorder: { body?: string } = {}): GatewayApi {
   const fetchImpl = (async (url: string, init?: { body?: string }) => {
+    if (String(url).endsWith("/v1/balances")) {
+      /* Circle's own view of the tranche, which the settler waits for. */
+      return new Response(JSON.stringify({ balances: [{ balance: "0.020000" }] }), { status: 200 });
+    }
     if (String(url).endsWith("/v1/info")) {
       return new Response(
         JSON.stringify({ domains: [{ domain: GATEWAY.domain, burnIntentExpirationHeight: "62790718" }] }),
@@ -60,6 +64,8 @@ const settler = (api: GatewayApi) =>
     chainId: arc.id,
     api,
     now: () => 1_757_000_000_000,
+    balanceWaitMs: 0,
+    balancePollMs: 1,
     nonce: () => ("0x" + "11".repeat(32)) as Hex,
     /* The mint is one contract call and needs a chain; the rest of the path
        is signatures and arithmetic, which is what these tests are about. */

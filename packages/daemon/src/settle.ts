@@ -76,6 +76,10 @@ export interface CircleOptions {
    *  moves between reading it and submitting: Circle refused an intent built
    *  on a height three blocks stale. */
   heightMargin?: bigint;
+  /** How long to wait for Circle to see the tranche the vault just deposited,
+   *  and how often to ask. */
+  balanceWaitMs?: number;
+  balancePollMs?: number;
   now?: () => number;
   nonce?: () => Hex;
   /** Overridable so a test can exercise the whole path without a chain. */
@@ -121,6 +125,13 @@ export class CircleSettler implements Settler {
       );
     }
 
+    /* The tranche is on chain the moment the draw returns, and Circle's
+       indexer sees it a moment later. An intent sent in between is refused
+       for a balance that already exists — `available 0.001000, required 0.01`
+       against a deposit two seconds old — so wait for the balance rather than
+       failing a purchase that has already been paid for. */
+    await this.awaitBalance(operator, payment.value);
+
     const released = payment.value - GATEWAY.baseFee6;
     const intent = buildBurnIntent({
       depositor: operator,
@@ -155,6 +166,31 @@ export class CircleSettler implements Settler {
        from and is outside the mandate either way. */
     const proof = await this.authorise(wallet, operator, payment, token);
     return { proof, txHash };
+  }
+
+  /**
+   * Wait until Circle's own view of the balance covers what this purchase
+   * needs — the value plus the fee it charges on top of it.
+   */
+  private async awaitBalance(operator: Address, value: bigint): Promise<void> {
+    const needed = value + GATEWAY.baseFee6;
+    const deadline = (this.options.now?.() ?? Date.now()) + (this.options.balanceWaitMs ?? 60_000);
+    let seen = "0";
+
+    for (;;) {
+      seen = await this.api.balance(GATEWAY.domain, operator);
+      /* The API answers in whole USDC as a decimal string; base units are what
+         every other figure in this project is in. */
+      if (BigInt(Math.round(Number(seen) * 1e6)) >= needed) return;
+      if ((this.options.now?.() ?? Date.now()) >= deadline) {
+        throw new SettlementError(
+          `Circle still reports ${seen} for ${operator} after waiting, and this purchase needs ` +
+            `${needed} base units — the tranche plus the fee charged on top of it. The draw has ` +
+            `already happened, so the window is debited and the money is in the Gateway balance.`,
+        );
+      }
+      await new Promise((done) => setTimeout(done, this.options.balancePollMs ?? 3_000));
+    }
   }
 
   /** The x402 `exact` payload: an EIP-3009 authorisation the seller submits. */

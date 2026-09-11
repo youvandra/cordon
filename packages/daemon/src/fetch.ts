@@ -36,6 +36,10 @@ export type FetchResult =
       body: unknown;
       draw: DrawOutcome;
       offer: Offer;
+      /** The transaction that brought the tranche out of the Gateway balance
+       *  so it could be paid. A purchase has two transactions of ours — the
+       *  draw and this — and a third that is the seller's own collection. */
+      settlementTx?: string;
     };
 
 export interface Transport {
@@ -99,6 +103,7 @@ export async function cordonFetch(
     body: second.body,
     draw,
     offer,
+    settlementTx: settlement.txHash,
   };
 }
 

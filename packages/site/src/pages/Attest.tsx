@@ -14,7 +14,7 @@ import {
   Text,
   usePageMeta,
 } from "cordon-ui";
-import { ATTEST, ENFORCED_BY, REGISTRY_BASELINE, formatUsdc } from "@cordon/fixtures";
+import { ARC, ATTEST, ENFORCED_BY, GATEWAY, REGISTRY_BASELINE, SETTLEMENT, formatUsdc } from "@cordon/fixtures";
 import { TREE, attestationOf, flatten } from "@cordon/fixtures/preview";
 import { RecordShell } from "../parts/RecordShell";
 import { useEntrance } from "../parts/motion";
@@ -140,6 +140,54 @@ export default function Attest() {
                     human, and the answer says which.
                   </Text>
                   <Enforced>{ENFORCED_BY.record}</Enforced>
+                </Stack>
+              </CardBody>
+            </Card>
+
+            {/* The one purchase that has settled. Three transactions, each of
+                which anyone can open, written into fixtures by a script that
+                reads them back off the chain and refuses to record a purchase
+                where the payer is not the node's operator or the payee is not
+                the counterparty the contract was asked about. */}
+            <Card>
+              <CardBody>
+                <Stack direction="column" gap="sm" align="start">
+                  <Text variant="micro" tone="dim" as="p" className="eyebrow">
+                    One of these has been paid for
+                  </Text>
+                  <Text variant="body" tone="copy" as="p">
+                    On {SETTLEMENT.recordedAt.slice(0, 10)} an agent bought this
+                    answer end to end: the contract released{" "}
+                    {formatUsdc(SETTLEMENT.price6)} against every bound above
+                    it, Circle's Gateway put that tranche into the operator's
+                    own balance, and the seller collected the authorisation it
+                    was handed. Three transactions, none of them ours to edit.
+                  </Text>
+                  <Stack direction="column" gap="xs" align="start">
+                    {[
+                      ["draw", SETTLEMENT.drawTx],
+                      ["release", SETTLEMENT.mintTx],
+                      ["collect", SETTLEMENT.collectTx],
+                    ].map(([label, tx]) => (
+                      <a
+                        key={label}
+                        className="mono"
+                        href={`${ARC.explorer}/tx/${tx}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {label} {tx.slice(0, 10)}…{tx.slice(-6)}
+                      </a>
+                    ))}
+                  </Stack>
+                  <Text variant="micro" tone="dim" as="p">
+                    Settling it cost {formatUsdc(GATEWAY.baseFee6)} in Circle's
+                    fee and about {formatUsdc(GATEWAY.mintGas6)} in gas, both
+                    from the operator's own float and neither inside the
+                    mandate. That floor is why this call is priced at{" "}
+                    {formatUsdc(ATTEST.price6)}: a tranche smaller than the fee
+                    cannot pay for its own release.
+                  </Text>
                 </Stack>
               </CardBody>
             </Card>
