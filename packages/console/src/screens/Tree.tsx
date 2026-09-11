@@ -159,10 +159,11 @@ function ChainTree({ nodes, owner }: { nodes: ChainNode[]; owner: string | null 
         <Section title={`${nodes.length} ${nodes.length === 1 ? "node" : "nodes"} on ${ARC.name}`}>
           <CardBody>
             <Text variant="body" tone="copy" as="p">
-              Read from the registry and the vault directly. The ids are derived
-              from your address, so nobody had to be asked how many agents you
-              have — and nothing between you and the contract could have got the
-              answer wrong.
+              Read from the registry and the vault directly. Every id is derived
+              from {owner ? "your address" : "the owner's address"}, so nobody
+              had to be asked how many agents there are — and nothing between{" "}
+              {owner ? "you" : "this screen"} and the contract could have got
+              the answer wrong.
             </Text>
           </CardBody>
         </Section>

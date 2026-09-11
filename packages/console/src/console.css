@@ -349,6 +349,45 @@ body {
   }
 }
 
+/* On a phone the rail became a full screen of navigation above the screen it
+   navigates to: a card, three groups with titles, four items with a
+   description each, and three outbound links — all before the first figure.
+   Under 760px it is a strip of tabs instead, scrollable sideways, in the
+   order a reader needs them. */
+@media (max-width: 760px) {
+  .console { padding: var(--cordon-space-5) var(--cordon-space-4); gap: var(--cordon-space-5); }
+
+  .side {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--cordon-space-2);
+    overflow-x: auto;
+    /* The strip scrolls; the page must not. */
+    margin-inline: calc(-1 * var(--cordon-space-4));
+    padding-inline: var(--cordon-space-4);
+    scrollbar-width: none;
+  }
+  .side::-webkit-scrollbar { display: none; }
+
+  /* The bar above already says which network this is, and the address is on
+     the session menu beside it. */
+  .side__head { display: none; }
+  .side__group { flex-direction: row; gap: var(--cordon-space-2); }
+  .side__group-title { display: none; }
+  .side__list { flex-direction: row; gap: var(--cordon-space-2); }
+
+  .side__item,
+  .side__out {
+    white-space: nowrap;
+    padding: 7px 12px;
+    border: 1px solid var(--cordon-hairline-soft);
+    border-radius: var(--cordon-radius-pill);
+    background: rgba(255, 255, 255, 0.62);
+  }
+  /* One line per tab: the description is a sentence for a rail with room. */
+  .side__desc { display: none; }
+}
+
 .screen__head {
   display: flex;
   align-items: flex-start;

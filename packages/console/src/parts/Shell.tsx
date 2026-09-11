@@ -11,7 +11,7 @@ import {
   Text,
   useNoIndex,
 } from "cordon-ui";
-import { ARC, MANDATE, isAddress, shortAddress } from "@cordon/fixtures";
+import { ARC, DEMO, MANDATE, isAddress, shortAddress } from "@cordon/fixtures";
 import { REFUSALS } from "@cordon/fixtures/preview";
 import { useWallet } from "../lib/wallet";
 import { site } from "../lib/links";
@@ -103,7 +103,7 @@ export function ConsoleShell() {
                   Look around first
                 </Button>
               ) : null}
-              <a href={site("/agent/41827")}>
+              <a href={site(`/agent/${DEMO.agentId}`)}>
                 <Button variant="glaze" size="lg">
                   See a public record
                 </Button>
@@ -189,9 +189,14 @@ export function ConsoleShell() {
           {/* The mandate this console is looking at. A sidebar that opens with
               navigation and never says which tree you are in is a sidebar for
               a product with one tree. */}
+          {/* Whose tree these screens are showing. It used to print a fixture
+              id — "pending" — beside four screens that were by then reading a
+              real one off the chain. */}
           <div className="side__head">
-            <span className="side__head-label">Mandate</span>
-            <span className="mono side__head-id">{shortAddress(MANDATE.id)}</span>
+            <span className="side__head-label">{real ? "Your tree" : "The public tree"}</span>
+            <span className="mono side__head-id">
+              {shortAddress(real && address ? address : DEMO.owner)}
+            </span>
             <Tag tone={ARC.mainnetLaunched ? "positive" : "caution"} size="sm" dot>
               {ARC.mainnetLaunched ? "mainnet" : "testnet"}
             </Tag>
@@ -234,7 +239,7 @@ export function ConsoleShell() {
             <p className="side__group-title">Elsewhere</p>
             <ul className="side__list">
               <li>
-                <a className="side__out" href={site("/agent/41827")}>
+                <a className="side__out" href={site(`/agent/${DEMO.agentId}`)}>
                   <Icon name="globe" size={14} />
                   Public record
                 </a>
