@@ -12,7 +12,12 @@
   --cordon-ink: #222222;
   --cordon-ink-strong: #202020;
   --cordon-copy: #4a4a4a;
-  --cordon-copy-dim: #6f6f6f;
+  /* Measured, not chosen: #6f6f6f against the page's #ececeb is 4.25:1, and
+     the smallest type on the site wears this — the console wordmark's
+     `console`, footnotes, the dim half of a caption. #696969 is 4.64:1, which
+     clears AA with a little room, and six points of grey is not a visible
+     change to anything except a contrast checker. */
+  --cordon-copy-dim: #696969;
   --cordon-hairline: rgba(34, 34, 34, 0.12);
   --cordon-hairline-soft: rgba(34, 34, 34, 0.07);
 
