@@ -6,9 +6,11 @@ import { Gate } from "../src/gate.ts";
 import { cordonFetch, type Transport } from "../src/fetch.ts";
 import { createDaemon } from "../src/server.ts";
 import type { Settler, Payment, Settlement } from "../src/settle.ts";
-import { TreeVaultAbi } from "../src/abi.gen.ts";
+import { decodeEventLog } from "viem";
+import { TreeVaultAbi, MandateRegistryAbi } from "../src/abi.gen.ts";
+import { REASONS } from "../../fixtures/src/index.ts";
 import {
-  startHarness, type Harness, ERC20, GATEWAY, OP_CHILD_KEY, SELLER_PAYOUT, PRICE, ROOT_BUDGET,
+  startHarness, type Harness, ERC20, GATEWAY, OP_CHILD_KEY, SELLER_PAYOUT, PRICE, ROOT_BUDGET, TRANCHE,
 } from "./harness.ts";
 
 /**
@@ -205,4 +207,103 @@ test("the daemon serves fetch, status and spawn — and no way to transfer", asy
   }
 
   await new Promise<void>((r) => daemon.close(() => r()));
+});
+
+/**
+ * The tree moves between the simulation and the block.
+ *
+ * `draw` simulates before it sends, so a refusal is known before an operator
+ * key signs anything. What the simulation is for is that decision and nothing
+ * else: by the time the transaction lands, an ancestor may have been revoked,
+ * a tree may have been funded, and the bound that actually stopped the draw is
+ * the one in the `Refused` event — not the one a call against an older block
+ * predicted.
+ *
+ * This once spread the receipt's outcome underneath the simulated reason, so
+ * the simulation won every disagreement. Two shapes came out of it: a refusal
+ * reported against a bound that did not stop it, which the meter reading the
+ * same event then contradicts; and a `released: true` carrying a refusal's
+ * reason, for a draw the chain let through.
+ *
+ * Run with automine off so the ordering is stated rather than raced: the
+ * revocation is in the pool before the draw is, and both land in one block.
+ */
+test("the reason is the one the chain gave, not the one the simulation predicted", async () => {
+  const opChild = h.asOpChild.account!.address;
+
+  /* A node of its own. Revoking the harness's shared child would cut the tree
+     every other test in this file draws through. */
+  let hash = await h.asOwner.writeContract({
+    address: h.registry, abi: MandateRegistryAbi, functionName: "spawn",
+    args: [h.root, {
+      operator: opChild, budget6: ROOT_BUDGET, lifetimeCap6: (1n << 128n) - 1n,
+      windowSeconds: 86_400n, trancheCap6: TRANCHE, concentrationBps: 3500, maxDepth: 3,
+    }],
+    chain: null, account: h.asOwner.account!,
+  });
+  let receipt = await h.publicClient.waitForTransactionReceipt({ hash });
+  const doomed = receipt.logs[0].topics[1] as Hex;
+
+  process.env.CORDON_KEY_DOOMED = OP_CHILD_KEY;
+  const gate = new Gate(load({
+    CORDON_RPC: h.rpc, CORDON_CHAIN_ID: "31337",
+    CORDON_VAULT: h.vault, CORDON_REGISTRY: h.registry, CORDON_USDC: h.usdc,
+    CORDON_NETWORKS: "eip155:31337", CORDON_ASSETS: h.usdc,
+    CORDON_NODE_DOOMED: doomed, CORDON_KEY_DOOMED: OP_CHILD_KEY,
+  } as NodeJS.ProcessEnv));
+
+  /* Over the tranche cap, so the simulation has an answer of its own to be
+     wrong with. Against the state on chain right now it is `tranche-cap`. */
+  const overCap = TRANCHE + 1n;
+  const predicted = await gate.evaluate(doomed, SELLER_PAYOUT, overCap);
+  assert.equal(predicted.reason, "tranche-cap", "what a call against the current block says");
+
+  await h.publicClient.request({ method: "evm_setAutomine", params: [false] } as never);
+  try {
+    /* In the pool first, so it is in the block first. */
+    const revoked = await h.asOwner.writeContract({
+      address: h.registry, abi: MandateRegistryAbi, functionName: "revoke",
+      args: [doomed], chain: null, account: h.asOwner.account!,
+    });
+
+    /* Unawaited: `draw` simulates against the last mined block — which has no
+       revocation in it — then sends and waits for a receipt that does not
+       exist until this test mines one. */
+    const drawing = gate.draw(doomed, SELLER_PAYOUT, overCap);
+    await new Promise((done) => setTimeout(done, 500));
+    await h.publicClient.request({ method: "evm_mine", params: [] } as never);
+
+    const outcome = await drawing;
+    assert.equal(outcome.released, false);
+    assert.equal(
+      outcome.reason,
+      "revoked",
+      "the branch was cut before the draw landed, and the cut is what refused it",
+    );
+    assert.equal(outcome.breachedAt, doomed, "and the record names the node that was cut");
+
+    /* The same event, read the way the meter reads it. A daemon whose reason
+       disagrees with this is a daemon telling an owner one thing and the
+       public record another. */
+    const receipts = await h.publicClient.getTransactionReceipt({ hash: outcome.txHash! });
+    const refused = receipts.logs
+      .map((log) => {
+        try {
+          return decodeEventLog({ abi: TreeVaultAbi, data: log.data, topics: log.topics });
+        } catch {
+          return null;
+        }
+      })
+      .find((event) => event?.eventName === "Refused");
+    assert.ok(refused, "the draw was refused on chain");
+    assert.equal(
+      REASONS[(refused!.args as { reason: number }).reason],
+      outcome.reason,
+      "the daemon reports the reason its own transaction emitted",
+    );
+
+    await h.publicClient.waitForTransactionReceipt({ hash: revoked });
+  } finally {
+    await h.publicClient.request({ method: "evm_setAutomine", params: [true] } as never);
+  }
 });

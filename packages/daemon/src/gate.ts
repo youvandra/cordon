@@ -289,22 +289,29 @@ export class Gate {
       account: wallet.account!,
     });
 
-    const [wouldRelease, , simulatedReason] = result as [boolean, bigint, number];
+    const [wouldRelease] = result as [boolean, bigint, number];
+
+    /* The simulation decides whether this is worth publishing afterwards, and
+       nothing else. What the draw did is read out of its own events below.
+       The two can differ — the tree moves between the simulation and the
+       block — and when they do it is the chain that is right: an ancestor
+       revoked in between refuses for `revoked` where the simulation said
+       `tranche-cap`, and a tree funded in between releases a draw the
+       simulation refused. This once took the simulated reason and spread the
+       chain's outcome underneath it, which produced both of those the wrong
+       way round, including a `released: true` carrying a refusal's reason. */
+    const txHash = await wallet.writeContract(request);
+    const outcome = { ...(await this.outcomeFrom(txHash)), txHash };
+
     if (!wouldRelease) {
-      /* Send it anyway. The refusal is the product: a draw that is never
-         recorded is a draw nobody can hold the tree to afterwards. */
-      const txHash = await wallet.writeContract(request);
-      const outcome = {
-        ...(await this.outcomeFrom(txHash)),
-        reason: REASONS[simulatedReason] ?? UNRECOGNISED,
-        txHash,
-      };
+      /* Sent anyway, and published. The refusal is the product: a draw that is
+         never recorded is a draw nobody can hold the tree to afterwards.
+         `publish` reads `outcome.released`, so a draw that turned out to be
+         released in the end publishes nothing. */
       await this.publish(node, outcome);
-      return outcome;
     }
 
-    const txHash = await wallet.writeContract(request);
-    return { ...(await this.outcomeFrom(txHash)), txHash };
+    return outcome;
   }
 
   /**
