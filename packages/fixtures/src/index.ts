@@ -45,6 +45,20 @@ export const ARC = {
    */
   erc20: "0x3600000000000000000000000000000000000000",
   erc20Decimals: 6,
+  /**
+   * Multicall3, at the address it has on every chain that has one.
+   *
+   * Not ours and not deployed by us, so it belongs here beside the USDC
+   * predeploy rather than in `deployments/`. Confirmed on Arc testnet on
+   * 12 Sep 2026: the address carries code and `getBlockNumber()` answers
+   * 61598855.
+   *
+   * The console reads a tree of mandates node by node, four views each. Packed
+   * through this, a whole level of the descent is one request; without it, a
+   * thirteen-node tree was a hundred and twenty calls to the public RPC and a
+   * third of them came back 429.
+   */
+  multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
   mainnetLaunched: false,
 } as const;
 

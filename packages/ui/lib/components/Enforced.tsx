@@ -11,7 +11,23 @@ import { Tag } from "./Tag";
  * They live in the library because both surfaces render them: the console shows
  * an owner their own tree, the public record pages show anyone the same tree.
  */
-export function Preview({ note, live = false }: { note?: string; live?: boolean }) {
+export function Preview({
+  note,
+  live = false,
+  figures = true,
+}: {
+  note?: string;
+  live?: boolean;
+  /**
+   * Whether there are figures beside this badge at all.
+   *
+   * A screen that is still reading, or one whose read failed, has none — and
+   * "preview build" is a claim about figures. Saying it over a skeleton tells
+   * a reader the build they are on is a mock-up while it is in fact reading
+   * the chain, which is the thing the live badge was introduced to stop.
+   */
+  figures?: boolean;
+}) {
   /* "Preview build" meant one thing: the figures beside it are fixtures. Some
      of these screens now read the chain while still being somebody else's
      tree, and keeping the old words there would have the badge deny the thing
@@ -20,6 +36,17 @@ export function Preview({ note, live = false }: { note?: string; live?: boolean 
     return (
       <Tag tone="positive" size="sm" dot>
         {note ?? "read from the chain"}
+      </Tag>
+    );
+  }
+
+  /* Nothing to caption yet, or nothing to caption at all. The note carries
+     what is happening and the badge claims nothing about figures that are not
+     on the screen. */
+  if (!figures) {
+    return (
+      <Tag tone="neutral" size="sm" dot>
+        {note ?? "reading"}
       </Tag>
     );
   }

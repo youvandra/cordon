@@ -496,6 +496,7 @@ function TreeSkeleton({ note }: { note: string }) {
         title="Live exposure across the whole tree"
         lede="Every figure on this screen is read from the contract that enforces it."
         note={note}
+        figures={false}
       />
       <Grid columns={2} min={360} gap="lg" align="start">
         <Card>
@@ -635,6 +636,31 @@ export default function Tree() {
      in the meantime is somebody else's numbers under their own heading. Show
      the shape and nothing in it until the chain has answered. */
   if (chain.state === "looking") return <TreeSkeleton note={`reading ${ARC.name}…`} />;
+
+  /* The chain was asked and did not answer. Every figure on this screen is
+     captioned as read from the contract that enforces it, so the one thing it
+     must never do is draw a tree that is missing a branch — which is exactly
+     what it did while a failed read was swallowed one node at a time and a
+     rate limit read as the end of a sequence. */
+  if (chain.state === "failed") {
+    return (
+      <>
+        <ScreenHead
+          title="The chain did not answer."
+          lede="This tree is read from the registry and the vault directly, so there is no cached copy of it to fall back on. A shorter tree would be a screen that quietly disagrees with the contract, which is worse than an empty one."
+          note="read failed"
+          figures={false}
+        />
+        <Card>
+          <CardBody>
+            <Text variant="body" tone="copy" as="p" className="mono">
+              {chain.why}
+            </Text>
+          </CardBody>
+        </Card>
+      </>
+    );
+  }
 
   if (chain.state === "read") {
     return (

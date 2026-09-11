@@ -14,6 +14,7 @@ export function ScreenHead({
   lede,
   note,
   live = false,
+  figures = true,
   actions,
 }: {
   title: React.ReactNode;
@@ -21,6 +22,9 @@ export function ScreenHead({
   note?: string;
   /** Whether the figures under this head were read from the chain. */
   live?: boolean;
+  /** False while there are no figures under it: a skeleton, or a read that
+   *  failed. The badge then claims nothing about figures that are not there. */
+  figures?: boolean;
   /**
    * What to do next, in the corner the label was in.
    *
@@ -40,7 +44,7 @@ export function ScreenHead({
           </Text>
         ) : null}
       </div>
-      {actions ?? <Preview note={note} live={live} />}
+      {actions ?? <Preview note={note} live={live} figures={figures} />}
     </header>
   );
 }

@@ -320,6 +320,7 @@ function RefusalsSkeleton({ note }: { note: string }) {
         title="Reading the refusals"
         lede="Every one of these is a decision the contract made, read from the events it emitted."
         note={note}
+        figures={false}
       />
       <Stack direction="column" gap="lg">
         {[0, 1].map((row) => (
@@ -384,6 +385,7 @@ export default function Refusals() {
           title="The chain did not answer."
           lede="Refusals are read from the meter beside this console, and from the chain when there is none. Neither answered, so this screen has nothing to show — which is not the same as there being nothing to show."
           note="read failed"
+          figures={false}
         />
         <Card>
           <CardBody>
