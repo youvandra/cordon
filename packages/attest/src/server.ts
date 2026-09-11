@@ -35,13 +35,39 @@ export interface AttestOptions {
   now?: () => bigint;
 }
 
+/**
+ * What a browser has to be told before it will let a page pay.
+ *
+ * `X-PAYMENT` is not one of the four header names a browser will send
+ * cross-origin without asking first, so any page calling this endpoint sends
+ * `OPTIONS` before the real request — and this endpoint answered that with
+ * `405: this endpoint sells a reading, not a writing`. The browser then blocks
+ * the payment, and nothing in the network tab says why except a preflight
+ * nobody was looking at. Every browser x402 client was locked out of the one
+ * surface here that takes money.
+ *
+ * The receipt has to be named too. `access-control-allow-origin: *` lets a
+ * page read the body and not the headers, so `x-payment-response` — the
+ * transaction the payer just paid in — was unreadable by the only kind of
+ * client that would have to be told about it.
+ */
+const CORS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, OPTIONS",
+  "access-control-allow-headers": "x-payment, payment-signature, content-type, accept",
+  "access-control-expose-headers": "x-payment-response",
+  /* A day. The offer a preflight guards does not move, and a browser asking
+     again before every payment is a round trip on the paying path. */
+  "access-control-max-age": "86400",
+} as const;
+
 const json = (res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) => {
   const text = JSON.stringify(body, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2);
   res.writeHead(status, {
     "content-type": "application/json",
     "content-length": Buffer.byteLength(text),
     /* The record is meant to be read by people who are not the owner. */
-    "access-control-allow-origin": "*",
+    ...CORS,
     ...headers,
   });
   res.end(text);
@@ -66,6 +92,15 @@ export function createAttestApi(options: AttestOptions) {
     const url = new URL(req.url ?? "/", "http://localhost");
     const parts = url.pathname.split("/").filter(Boolean);
     const range = { chainId: ledger.chainId, fromBlock: ledger.fromBlock, toBlock: ledger.toBlock };
+
+    /* The preflight, before the method check below turns it into a 405. It is
+       not a request for the resource and answering it grants nothing: this
+       process serves `GET` and `OPTIONS` and no other method, which is exactly
+       what it says here. */
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, { ...CORS, "content-length": "0" });
+      return res.end();
+    }
 
     if (req.method !== "GET") {
       return json(res, 405, { error: "this endpoint sells a reading, not a writing" });

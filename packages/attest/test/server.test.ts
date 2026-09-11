@@ -14,6 +14,8 @@ import { ATTEST } from "../../fixtures/src/index.ts";
 import { emptyLedger, reduce, type Event, type Ledger } from "../../meter/src/index.ts";
 import { parseChallenge, selectOffer } from "../../daemon/src/challenge.ts";
 import { createAttestApi } from "../src/server.ts";
+import { Eip3009Collector } from "../src/collect.ts";
+import { parsePayment as parsePaymentHeader } from "../src/payment.ts";
 import { TRANSFER_WITH_AUTHORIZATION_TYPES, type Authorization, type Terms } from "../src/payment.ts";
 import type { Collection, Collector } from "../src/collect.ts";
 import type { Payment } from "../src/payment.ts";
@@ -301,3 +303,104 @@ test("health says what the price is and how far the answer reaches", async () =>
     await stop();
   }
 });
+
+/* ------------------------------------------------------------------ */
+/* What a browser needs before it will let a page pay                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * `X-PAYMENT` is not a header a browser will send cross-origin without asking
+ * first, so a page paying this endpoint sends `OPTIONS` before the real
+ * request. That was answered with 405, and the browser then blocked the
+ * payment — every browser x402 client locked out of the one surface here that
+ * takes money, with nothing in the body to say so because there is no body.
+ */
+test("the preflight a browser sends before paying is answered", async () => {
+  const server = await serve(new StubCollector());
+  try {
+    const response = await fetch(`${server.url}/attest/7`, {
+      method: "OPTIONS",
+      headers: {
+        origin: "https://getcordon.xyz",
+        "access-control-request-method": "GET",
+        "access-control-request-headers": "x-payment",
+      },
+    });
+
+    assert.equal(response.status, 204, "a preflight is not a request for the resource");
+    assert.match(response.headers.get("access-control-allow-headers") ?? "", /x-payment/);
+    assert.match(response.headers.get("access-control-allow-methods") ?? "", /GET/);
+    assert.equal(response.headers.get("access-control-allow-origin"), "*");
+  } finally {
+    await server.stop();
+  }
+});
+
+test("the receipt is a header a page is allowed to read", async () => {
+  const server = await serve(new StubCollector());
+  try {
+    const response = await fetch(`${server.url}/attest/7`, {
+      headers: { "X-PAYMENT": await payment() },
+    });
+    assert.equal(response.status, 200);
+    assert.ok(response.headers.get("x-payment-response"), "the transaction the payer just paid in");
+    assert.match(
+      response.headers.get("access-control-expose-headers") ?? "",
+      /x-payment-response/,
+      "`*` origin lets a page read the body and not the headers, so the receipt has to be named",
+    );
+  } finally {
+    await server.stop();
+  }
+});
+
+/**
+ * One submitter key, and nginx hands this process as many paying requests at
+ * once as arrive. Two settlements that overlap between reading the pending
+ * nonce and sending ask for the same nonce; the loser is a payer who signed a
+ * valid authorisation and was told settlement failed.
+ */
+test("two payments arriving together settle one at a time", async () => {
+  let inFlight = 0;
+  let overlapped = false;
+
+  class SlowCollector implements Collector {
+    async collect(p: Parameters<Collector["collect"]>[0]) {
+      inFlight += 1;
+      if (inFlight > 1) overlapped = true;
+      await new Promise((done) => setTimeout(done, 40));
+      inFlight -= 1;
+      return {
+        txHash: `0x${"fe".repeat(32)}` as Hex,
+        payer: p.authorization.from,
+        amount6: p.authorization.value,
+      };
+    }
+  }
+
+  /* The queue lives in the collector the endpoint holds, so this exercises the
+     real one rather than the server around it. */
+  const collector = new Eip3009Collector({
+    rpcUrl: "http://127.0.0.1:1",
+    chain: { id: 31337, name: "t", nativeCurrency: { name: "e", symbol: "e", decimals: 18 }, rpcUrls: { default: { http: ["http://127.0.0.1:1"] } } } as never,
+    token: terms.asset,
+    privateKey: `0x${"11".repeat(32)}` as Hex,
+  });
+  const slow = new SlowCollector();
+  /* Borrow the real queue and the real key, and let the work be the stub's:
+     what is under test is the ordering, not the transaction. */
+  const queued = (p: Parameters<Collector["collect"]>[0]) =>
+    (collector as unknown as { inTurn: <T>(k: string, w: () => Promise<T>) => Promise<T> }).inTurn(
+      collector.submitter,
+      () => slow.collect(p),
+    );
+
+  const one = await parsePaymentFor(await payment({ nonce: `0x${"01".repeat(32)}` as Hex }));
+  const two = await parsePaymentFor(await payment({ nonce: `0x${"02".repeat(32)}` as Hex }));
+  await Promise.all([queued(one), queued(two)]);
+
+  assert.equal(overlapped, false, "the second waits for the first rather than racing it for a nonce");
+});
+
+/** The header a payer sends, decoded the way the server decodes it. */
+const parsePaymentFor = async (header: string) => parsePaymentHeader(header);
