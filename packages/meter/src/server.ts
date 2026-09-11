@@ -31,6 +31,31 @@ const json = (res: ServerResponse, status: number, body: unknown) => {
 
 const HEX32 = /^0x[0-9a-fA-F]{64}$/;
 
+/**
+ * How much of a collection one answer carries.
+ *
+ * These endpoints are public, uncredentialed and `*`-CORS by design, and both
+ * of them returned everything they held. That is fine for eight refusals and
+ * thirteen nodes; it is a response that grows without bound on a chain that
+ * only ever gets longer, from a process whose whole job is to stay up.
+ *
+ * A cap is only honest if the answer says it was capped, so every paged
+ * response carries `total` beside the rows and a cursor when there are more.
+ * A reader that draws `rows` and ignores `total` is the same defect as a
+ * console that draws a tree with a branch missing.
+ */
+const PAGE = { refusals: 200, nodes: 500 } as const;
+const MAX_PAGE = 1_000;
+
+/** A limit from a query string, or the default. Nonsense is the default. */
+function limitFrom(url: URL, fallback: number): number {
+  const raw = url.searchParams.get("limit");
+  if (raw === null) return fallback;
+  const asked = Number(raw);
+  if (!Number.isInteger(asked) || asked < 1) return fallback;
+  return Math.min(asked, MAX_PAGE);
+}
+
 export function createReadApi(
   current: () => Ledger,
   /* Optional so a test can build the API without a chain to reconcile
@@ -72,11 +97,18 @@ export function createReadApi(
       if (!HEX32.test(parts[1])) return json(res, 400, { error: "a node id is 32 bytes" });
       const nodes = subtree(ledger, parts[1] as Hex);
       if (nodes.length === 0) return json(res, 404, { error: "no such tree in this range", ...range });
+      /* A tree is a structure, so this is a cap and not a page: half a tree
+         with a cursor is a shape nobody can draw. `truncated` is there so a
+         reader knows it is holding part of one. */
+      const limit = limitFrom(url, PAGE.nodes);
+      const page = nodes.slice(0, limit);
       return json(res, 200, {
         ...range,
         funded6: ledger.funded6[parts[1].toLowerCase() as Hex] ?? 0n,
         withdrawn6: ledger.withdrawn6[parts[1].toLowerCase() as Hex] ?? 0n,
-        nodes: nodes.map((n) => ({ ...n, topCounterparty: topCounterparty(n) })),
+        total: nodes.length,
+        truncated: page.length < nodes.length,
+        nodes: page.map((n) => ({ ...n, topCounterparty: topCounterparty(n) })),
       });
     }
 
@@ -111,8 +143,30 @@ export function createReadApi(
       const under = root
         ? new Set(subtree(ledger, root as Hex).map((n) => n.node.toLowerCase()))
         : null;
-      const rows = ledger.refusals.filter((r) => !under || under.has(r.node.toLowerCase()));
-      return json(res, 200, { ...range, refusals: [...rows].reverse() });
+      const all = ledger.refusals.filter((r) => !under || under.has(r.node.toLowerCase()));
+
+      /* Newest first, and the cursor is the id to carry on below — refusal ids
+         are assigned by the vault in order, so they page without a second
+         index and without a snapshot the caller has to hold on to. */
+      const cursorRaw = url.searchParams.get("before");
+      if (cursorRaw !== null && !/^\d+$/.test(cursorRaw)) {
+        return json(res, 400, { error: "`before` is a refusal id" });
+      }
+      const before = cursorRaw === null ? null : BigInt(cursorRaw);
+      const limit = limitFrom(url, PAGE.refusals);
+
+      const newestFirst = [...all].reverse();
+      const start = before === null ? newestFirst : newestFirst.filter((r) => r.id < before);
+      const page = start.slice(0, limit);
+
+      return json(res, 200, {
+        ...range,
+        total: all.length,
+        /* Absent when this page is the end of them. A reader that draws the
+           rows and ignores this is drawing part of a record as all of it. */
+        nextBefore: start.length > page.length ? page[page.length - 1]!.id : null,
+        refusals: page,
+      });
     }
 
     if (parts[0] === "refusal" && parts[1]) {
@@ -130,7 +184,7 @@ export function createReadApi(
         "GET /tree/:root",
         "GET /node/:node",
         "GET /agent/:agentId",
-        "GET /refusals?root=:root",
+        "GET /refusals?root=:root&limit=&before=",
         "GET /refusal/:id",
       ],
     });

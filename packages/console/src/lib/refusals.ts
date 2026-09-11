@@ -16,6 +16,9 @@ import { createPublicClient, http, parseAbiItem, type Address, type Hex } from "
 import { ARC, DEPLOYMENT, REASONS, UNRECOGNISED } from "@cordon/fixtures";
 import { arc } from "./mandate";
 
+/** What one screen asks for. The meter's own cap is the authority above it. */
+const PAGE = 200;
+
 const REFUSED = parseAbiItem(
   "event Refused(uint256 indexed refusalId, bytes32 indexed node, bytes32 indexed breachedAt, address counterparty, uint128 amount6, uint8 reason)",
 );
@@ -39,7 +42,9 @@ export interface ChainRefusal {
 export type ChainRefusals =
   | { state: "unconfigured" }
   | { state: "looking" }
-  | { state: "read"; refusals: ChainRefusal[] }
+  /** `total` is how many exist; `refusals` is how many this page holds. They
+   *  differ when the meter capped the answer, and the screen has to say so. */
+  | { state: "read"; refusals: ChainRefusal[]; total: number }
   /* A read that failed is not an absence of refusals, and the screen must not
      draw one as the other. It used to: the error was swallowed, the state went
      back to `unconfigured`, and the sample refusals appeared in its place. */
@@ -70,17 +75,21 @@ interface MeterRefusal {
  * has already read every block once; this is the same data, and the chain is
  * still there behind it for anyone who wants to check a transaction.
  */
-async function fromMeter(root: Hex | null): Promise<ChainRefusal[] | null> {
+async function fromMeter(root: Hex | null): Promise<{ rows: ChainRefusal[]; total: number } | null> {
   if (!METER) return null;
   try {
-    const query = root ? `?root=${root}` : "";
-    const response = await fetch(`${METER}/refusals${query}`, {
+    /* Asked for explicitly. The meter caps what it returns either way, and a
+       caller that does not name a limit is a caller that will not notice the
+       day the cap starts biting. */
+    const query = new URLSearchParams({ limit: String(PAGE) });
+    if (root) query.set("root", root);
+    const response = await fetch(`${METER}/refusals?${query}`, {
       headers: { accept: "application/json" },
     });
     if (!response.ok) return null;
-    const body = (await response.json()) as { refusals?: MeterRefusal[] };
+    const body = (await response.json()) as { refusals?: MeterRefusal[]; total?: number };
     if (!body.refusals) return null;
-    return body.refusals.map((row) => ({
+    const rows = body.refusals.map((row) => ({
       id: BigInt(row.id),
       node: row.node,
       breachedAt: row.breachedAt,
@@ -91,6 +100,7 @@ async function fromMeter(root: Hex | null): Promise<ChainRefusal[] | null> {
       transactionHash: row.site.transactionHash,
       released: row.released === true,
     }));
+    return { rows, total: body.total ?? rows.length };
   } catch {
     return null;
   }
@@ -118,12 +128,11 @@ export function useChainRefusals(nodes: Hex[], root?: Hex | null): ChainRefusals
         /* The meter answers for a whole root; a caller holding a subset of
            nodes still only shows its own. */
         const wanted = new Set(nodes.map((node) => node.toLowerCase()));
-        if (live) {
-          setFound({
-            state: "read",
-            refusals: indexed.filter((row) => wanted.has(row.node.toLowerCase())),
-          });
-        }
+        const mine = indexed.rows.filter((row) => wanted.has(row.node.toLowerCase()));
+        /* `total` counts the whole root. Once the meter has capped its answer
+           this screen is holding part of a record, and the count it prints has
+           to be the count it drew. */
+        if (live) setFound({ state: "read", refusals: mine, total: Math.max(indexed.total, mine.length) });
         return;
       }
 
@@ -155,7 +164,7 @@ export function useChainRefusals(nodes: Hex[], root?: Hex | null): ChainRefusals
         });
 
         rows.sort((a, b) => Number(b.id - a.id));
-        if (live) setFound({ state: "read", refusals: rows });
+        if (live) setFound({ state: "read", refusals: rows, total: rows.length });
       } catch (error) {
         /* A read that fails is not an absence of refusals, and rendering it as
            one would be the console inventing a clean record. Arc's public RPC

@@ -17,11 +17,13 @@ import {
   subtree,
   topCounterparty,
   type Event,
+  type Ledger,
 } from "../src/ledger.ts";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deserialize, serialize, writeSnapshot } from "../src/snapshot.ts";
+import { createReadApi } from "../src/server.ts";
 
 const ROOT = `0x${"a1".repeat(32)}` as Hex;
 const CHILD = `0x${"b2".repeat(32)}` as Hex;
@@ -321,4 +323,87 @@ test("a snapshot from an older build is read rather than crashed on", () => {
   const read = deserialize(JSON.stringify(older));
   assert.equal(read.releasedUnattributed6, 0n);
   for (const row of Object.values(read.nodes)) assert.equal(row.releasedTo6, 0n);
+});
+
+/* ------------------------------------------------------------------ */
+/* The read API's page                                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Both collections were returned whole.
+ *
+ * Eight refusals and thirteen nodes make that invisible; a chain only gets
+ * longer, and these endpoints are public, uncredentialed and `*`-CORS by
+ * design. A cap is only honest if the answer says it was capped, so the tests
+ * below are as much about `total` and the cursor as about the slice.
+ */
+async function ask(ledger: Ledger, path: string): Promise<Record<string, unknown>> {
+  const api = createReadApi(() => ledger);
+  await new Promise<void>((done) => api.listen(0, "127.0.0.1", () => done()));
+  const { port } = api.address() as { port: number };
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}${path}`);
+    return (await response.json()) as Record<string, unknown>;
+  } finally {
+    await new Promise<void>((done) => api.close(() => done()));
+  }
+}
+
+function manyRefusals(count: number): Event[] {
+  const events = tree();
+  for (let i = 1; i <= count; i++) {
+    events.push(
+      at({ kind: "Refused", refusalId: BigInt(i), node: GRAND, breachedAt: ROOT, counterparty: AISA, amount6: 1_000n, reason: "window-budget" } as const),
+    );
+  }
+  return events;
+}
+
+test("a page of refusals says how many there are and where the next one starts", async () => {
+  const ledger = reduce(emptyLedger(5042002), manyRefusals(25));
+
+  const first = await ask(ledger, "/refusals?limit=10");
+  const rows = first.refusals as { id: string }[];
+  assert.equal(rows.length, 10);
+  assert.equal(first.total, 25, "a reader is told what it is holding a piece of");
+  assert.equal(rows[0]!.id, "25", "newest first");
+  assert.equal(first.nextBefore, "16", "and where to carry on below");
+
+  const second = await ask(ledger, `/refusals?limit=10&before=${first.nextBefore}`);
+  const next = second.refusals as { id: string }[];
+  assert.equal(next[0]!.id, "15", "the page after it starts where the last one stopped");
+  assert.equal(next.length, 10);
+
+  const last = await ask(ledger, "/refusals?limit=10&before=6");
+  assert.equal((last.refusals as unknown[]).length, 5);
+  assert.equal(last.nextBefore, null, "and the end of them says so rather than looping");
+});
+
+test("a refusals answer with nothing left out carries no cursor", async () => {
+  const ledger = reduce(emptyLedger(5042002), manyRefusals(3));
+  const answer = await ask(ledger, "/refusals");
+  assert.equal((answer.refusals as unknown[]).length, 3);
+  assert.equal(answer.total, 3);
+  assert.equal(answer.nextBefore, null);
+});
+
+test("a tree answer that was capped says it was", async () => {
+  const ledger = reduce(emptyLedger(5042002), tree());
+
+  const whole = await ask(ledger, `/tree/${ROOT}`);
+  assert.equal(whole.total, 3);
+  assert.equal(whole.truncated, false);
+
+  /* A tree is a structure, so this is a cap rather than a page — half a tree
+     with a cursor is a shape nobody can draw. It has to admit to being half. */
+  const part = await ask(ledger, `/tree/${ROOT}?limit=2`);
+  assert.equal((part.nodes as unknown[]).length, 2);
+  assert.equal(part.total, 3);
+  assert.equal(part.truncated, true);
+});
+
+test("a cursor that is not a refusal id is refused rather than guessed at", async () => {
+  const ledger = reduce(emptyLedger(5042002), manyRefusals(3));
+  const answer = await ask(ledger, "/refusals?before=yesterday");
+  assert.match(String(answer.error), /refusal id/);
 });

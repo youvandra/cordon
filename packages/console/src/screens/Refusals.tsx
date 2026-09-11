@@ -416,6 +416,20 @@ export default function Refusals() {
           note={mine ? `read from ${ARC.name}` : `the public tree · read from ${ARC.name}`}
           live
         />
+        {/* The meter caps what one answer carries. A screen that draws a page
+            and prints it as the whole record is the same defect as a tree with
+            a branch missing, so it says which it is holding. */}
+        {live.total > live.refusals.length ? (
+          <Card>
+            <CardBody>
+              <Text variant="body" tone="copy" as="p">
+                Showing the {live.refusals.length} most recent of {live.total}. The
+                rest are on the chain and in the meter; this screen asks for a
+                page of them rather than all of them at once.
+              </Text>
+            </CardBody>
+          </Card>
+        ) : null}
         {live.refusals.length === 0 ? (
           <Card>
             <CardBody>
