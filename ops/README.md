@@ -65,6 +65,9 @@ sudo certbot certonly --webroot -w /var/www/cordon -d attest.getcordon.xyz
 # the other one and from the attest vhost, because nginx's `add_header` does
 # not merge — a `location` that sets one of its own inherits none from above.
 sudo cp ops/nginx/cordon-headers.conf ops/nginx/cordon-locations.conf /etc/nginx/snippets/
+# The rate-limit zone. conf.d, not the vhost: `limit_req_zone` is http-context
+# and must be declared exactly once on the box.
+sudo cp ops/nginx/cordon-limits.conf /etc/nginx/conf.d/
 sudo cp ops/nginx/getcordon.xyz.conf /etc/nginx/sites-available/cordon
 sudo cp ops/nginx/attest.getcordon.xyz.conf /etc/nginx/sites-available/cordon-attest
 sudo ln -sf /etc/nginx/sites-available/cordon-attest /etc/nginx/sites-enabled/cordon-attest
