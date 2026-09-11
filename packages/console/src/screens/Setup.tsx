@@ -111,6 +111,7 @@ export default function Setup() {
   const questions = [
     {
       label: "How much may the whole tree spend?",
+      step: "window",
       complete: usdc6(budget) > 0n,
       field: (
         <Stack direction="row" gap="md" wrap>
@@ -140,6 +141,7 @@ export default function Setup() {
     },
     {
       label: "And how much in total, ever?",
+      step: "lifetime",
       complete: usdc6(lifetime) > 0n,
       field: (
         <Field
@@ -157,6 +159,7 @@ export default function Setup() {
     },
     {
       label: "What is the most one purchase may cost?",
+      step: "tranche",
       complete: usdc6(tranche) > 0n,
       field: (
         <Field
@@ -174,6 +177,7 @@ export default function Setup() {
     },
     {
       label: "How much may go to any one seller?",
+      step: "seller",
       complete: Number(concentration) > 0 && Number(concentration) <= 100,
       field: (
         <Field
@@ -191,6 +195,7 @@ export default function Setup() {
     },
     {
       label: "How deep may the tree go?",
+      step: "depth",
       complete: Number(depth) > 0,
       field: (
         <Field
@@ -207,6 +212,7 @@ export default function Setup() {
     },
     {
       label: "Which key does the spending?",
+      step: "operator",
       complete: isAddress(operator),
       field: (
         <Field
@@ -481,8 +487,13 @@ export default function Setup() {
             {(
 
               <Stack direction="column" gap="lg">
+                {/* Each node in this rail is already drawn as its number, so
+                    labelling the steps "1".."6" printed every numeral twice
+                    and told a reader nothing about where they were. The label
+                    is what the step is; it hides itself on a narrow screen,
+                    where the question above is the answer anyway. */}
                 <StepProgress
-                  steps={questions.map((_, index) => ({ label: `${index + 1}` }))}
+                  steps={questions.map((question) => ({ label: question.step }))}
                   current={stage === "review" ? questions.length - 1 : at}
                 />
 

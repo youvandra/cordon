@@ -153,5 +153,12 @@
 
 .cordon-steps__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .cordon-steps__label { color: var(--cordon-ink); font-size: var(--cordon-size-caption); font-weight: var(--cordon-weight-medium); letter-spacing: var(--cordon-track-caption); }
+
+/* Six labels do not fit on a phone, and the step's own question is on screen
+   directly under the rail. The lit node keeps the position. */
+@media (max-width: 640px) {
+  .cordon-steps--horizontal .cordon-steps__label,
+  .cordon-steps--horizontal .cordon-steps__description { display: none; }
+}
 .cordon-steps__item--todo .cordon-steps__label { color: var(--cordon-copy-dim); font-weight: var(--cordon-weight-regular); }
 .cordon-steps__description { color: var(--cordon-copy-dim); font-size: var(--cordon-size-micro); line-height: 1.4; }
