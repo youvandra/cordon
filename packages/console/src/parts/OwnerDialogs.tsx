@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Field, Modal, TextField, useNotify } from "cordon-ui";
 import { formatUsdc, isAddress } from "@cordon/fixtures";
-import { useFundVault, useRevoke, useSpawnChild, type ActionState } from "../lib/mandate";
+import { useFundVault, useRevoke, useSpawnChild, useTreasury, useWithdraw, type ActionState } from "../lib/mandate";
 import type { ChainNode } from "../lib/tree";
 import { shortId, usdc6 } from "../lib/format";
 
@@ -161,6 +161,93 @@ export function SpawnDialog({ open, onClose, parent, owner }: { open: boolean; o
           </Field>
         </div>
       )}
+    </Modal>
+  );
+}
+
+/** Base units as a plain decimal an input can hold, without a float in between. */
+function plainUsdc(amount6: bigint): string {
+  const whole = amount6 / 1_000_000n;
+  const fraction = (amount6 % 1_000_000n).toString().padStart(6, "0").replace(/0+$/, "");
+  return fraction ? `${whole}.${fraction}` : String(whole);
+}
+
+export function WithdrawDialog({ open, onClose, root, owner }: { open: boolean; onClose: () => void; root: ChainNode; owner: string }) {
+  const { state, withdraw } = useWithdraw(owner);
+  const treasury = useTreasury(open ? root.node : null);
+  const [amount, setAmount] = useState("");
+  const working = state.status === "working";
+  const held = treasury.state === "read" ? treasury.amount6 : null;
+  const value = usdc6(amount);
+  const tooMuch = held !== null && value > held;
+
+  useEffect(() => {
+    if (!open) setAmount("");
+    else if (held !== null && amount === "") setAmount(plainUsdc(held));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, held]);
+
+  useOutcome(state, "withdraw", { title: "Withdrawn", body: "The USDC is back in your wallet." }, "Not withdrawn", () => {
+    onClose();
+    reloadSoon();
+  });
+
+  return (
+    <Modal
+      open={open}
+      onClose={working ? () => undefined : onClose}
+      title="Withdraw from the vault"
+      description={
+        root.revoked
+          ? "This tree is revoked, so nothing draws from it any more. Withdraw what it holds, then fund the mandate that replaces it."
+          : "Agents under this tree draw from what is left. Take everything out and their next purchase is refused for vault balance."
+      }
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={working}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            loading={working}
+            disabled={working || held === null || value <= 0n || tooMuch}
+            onClick={() => void withdraw(root.node, value)}
+          >
+            {state.status === "working" ? state.step : `Withdraw ${formatUsdc(value)}`}
+          </Button>
+        </>
+      }
+    >
+      <div className="form-stack">
+        <p className="small muted">
+          In the vault for {shortId(root.node)}:{" "}
+          <span className="num strong">
+            {treasury.state === "read" ? formatUsdc(treasury.amount6) : treasury.state === "failed" ? "could not read" : "reading…"}
+          </span>{" "}
+          <span className="mono">· TreeVault.treasury6(root)</span>
+        </p>
+        <Field
+          label="Amount"
+          hint={`Sent to ${shortId(owner, 6, 4)}, the wallet you are signed in with.`}
+          error={tooMuch ? "More than the vault holds for this tree." : treasury.state === "failed" ? treasury.why : undefined}
+        >
+          <TextField
+            type="number"
+            min="0"
+            step="0.000001"
+            value={amount}
+            suffix="USDC"
+            autoFocus
+            onChange={(event) => setAmount(event.target.value)}
+          />
+        </Field>
+        {held !== null && held > 0n && value !== held ? (
+          <Button variant="ghost" onClick={() => setAmount(plainUsdc(held))}>
+            Withdraw everything
+          </Button>
+        ) : null}
+      </div>
     </Modal>
   );
 }

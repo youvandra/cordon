@@ -5,7 +5,7 @@ import { formatUsdc } from "@cordon/fixtures";
 import { useTitle } from "../parts/Shell";
 import { Meter, PageHeader, PageSkeleton, Panel, ReadFailed } from "../parts/Page";
 import { NodeDetail } from "../parts/NodeDetail";
-import { RevokeDialog, SpawnDialog } from "../parts/OwnerDialogs";
+import { RevokeDialog, SpawnDialog, WithdrawDialog } from "../parts/OwnerDialogs";
 import { TreeGraph, type GraphNode } from "../parts/TreeGraph";
 import { useConsoleTree } from "../lib/useConsoleTree";
 import { cutLookup, isHeld, share, shortId } from "../lib/format";
@@ -22,6 +22,7 @@ export default function Agents() {
   const [query, setQuery] = useState("");
   const [spawnParent, setSpawnParent] = useState<ChainNode | null>(null);
   const [revoking, setRevoking] = useState<ChainNode | null>(null);
+  const [withdrawing, setWithdrawing] = useState<ChainNode | null>(null);
 
   const selectedId = params.get("node");
   const select = (id: string | null) => {
@@ -194,19 +195,34 @@ export default function Agents() {
         title="Agent"
         description={selected ? shortId(selected.node, 10, 8) : undefined}
         footer={
-          mine && selected && !isCut(selected.node) ? (
+          /* A revoked root keeps its footer: its vault can still be emptied,
+             and that is the one thing left to do with it. */
+          mine && selected && (!isCut(selected.node) || selected.parent === null) ? (
             <div className="sheet-actions">
-              <Button
-                variant="secondary"
-                iconStart="plus"
-                disabled={selected.depth + 1 > selected.maxDepth}
-                onClick={() => setSpawnParent(selected)}
-              >
-                {selected.depth + 1 > selected.maxDepth ? "At max depth" : "Spawn under this agent"}
-              </Button>
-              <Button variant="danger" onClick={() => setRevoking(selected)}>
-                Revoke
-              </Button>
+              {isCut(selected.node) ? (
+                <span />
+              ) : (
+                <Button
+                  variant="secondary"
+                  iconStart="plus"
+                  disabled={selected.depth + 1 > selected.maxDepth}
+                  onClick={() => setSpawnParent(selected)}
+                >
+                  {selected.depth + 1 > selected.maxDepth ? "At max depth" : "Spawn under this agent"}
+                </Button>
+              )}
+              <span className="sheet-actions__end">
+                {selected.parent === null ? (
+                  <Button variant="secondary" onClick={() => setWithdrawing(selected)}>
+                    Withdraw
+                  </Button>
+                ) : null}
+                {isCut(selected.node) ? null : (
+                  <Button variant="danger" onClick={() => setRevoking(selected)}>
+                    Revoke
+                  </Button>
+                )}
+              </span>
             </div>
           ) : undefined
         }
@@ -217,6 +233,7 @@ export default function Agents() {
       {mine && root ? (
         <>
           <SpawnDialog open={Boolean(spawnParent)} onClose={() => setSpawnParent(null)} parent={spawnParent ?? root} owner={owner} />
+          <WithdrawDialog open={Boolean(withdrawing)} onClose={() => setWithdrawing(null)} root={withdrawing ?? root} owner={owner} />
           <RevokeDialog node={revoking} affected={revoking ? subtree(revoking) : 0} onClose={() => setRevoking(null)} owner={owner} />
         </>
       ) : null}

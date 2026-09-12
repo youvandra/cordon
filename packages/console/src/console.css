@@ -594,6 +594,11 @@ html.entrance-done .cordon-card {
   width: 100%;
 }
 
+.sheet-actions__end {
+  display: flex;
+  gap: 8px;
+}
+
 /* ---- composing a mandate -------------------------------------------------- */
 
 .compose {

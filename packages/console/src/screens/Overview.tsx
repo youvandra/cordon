@@ -4,7 +4,7 @@ import { Button, EmptyState, Skeleton, Tag } from "cordon-ui";
 import { ENFORCED_BY, formatUsdc } from "@cordon/fixtures";
 import { useTitle } from "../parts/Shell";
 import { Meter, PageHeader, PageSkeleton, Panel, ReadFailed } from "../parts/Page";
-import { FundDialog, SpawnDialog } from "../parts/OwnerDialogs";
+import { FundDialog, SpawnDialog, WithdrawDialog } from "../parts/OwnerDialogs";
 import { useConsoleTree } from "../lib/useConsoleTree";
 import { useChainRefusals } from "../lib/refusals";
 import { cutLookup, isHeld, share, shortId, windowLabel } from "../lib/format";
@@ -46,7 +46,7 @@ export default function Overview() {
     nodes.map((node) => node.node),
     root?.node ?? null,
   );
-  const [asking, setAsking] = useState<"fund" | "spawn" | null>(null);
+  const [asking, setAsking] = useState<"fund" | "spawn" | "withdraw" | null>(null);
 
   if (!ready || chain.state === "looking") return <PageSkeleton />;
   if (chain.state === "unconfigured") return <ReadFailed title="No deployment configured" why="This build has no contract addresses to read." />;
@@ -96,6 +96,9 @@ export default function Overview() {
             <>
               <Button variant="secondary" iconStart="plus" onClick={() => setAsking("spawn")} disabled={root.revoked}>
                 Spawn agent
+              </Button>
+              <Button variant="secondary" onClick={() => setAsking("withdraw")}>
+                Withdraw
               </Button>
               <Button variant="primary" onClick={() => setAsking("fund")} disabled={root.revoked}>
                 Fund vault
@@ -213,6 +216,7 @@ export default function Overview() {
         <>
           <FundDialog open={asking === "fund"} onClose={() => setAsking(null)} root={root} owner={owner} />
           <SpawnDialog open={asking === "spawn"} onClose={() => setAsking(null)} parent={root} owner={owner} />
+          <WithdrawDialog open={asking === "withdraw"} onClose={() => setAsking(null)} root={root} owner={owner} />
         </>
       ) : null}
     </div>

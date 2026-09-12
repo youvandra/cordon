@@ -23,7 +23,7 @@ import {
   type Hex,
 } from "viem";
 import { useWallets } from "@privy-io/react-auth";
-import { ARC, DEPLOYMENT } from "@cordon/fixtures";
+import { ARC, DEPLOYMENT, formatUsdc } from "@cordon/fixtures";
 import { parseAbi } from "viem";
 import { MandateRegistryAbi } from "../../../daemon/src/abi.gen.ts";
 
@@ -280,6 +280,7 @@ const ERC20 = parseAbi([
 
 const VAULT = parseAbi([
   "function fund(bytes32 root, uint128 amount6)",
+  "function withdraw(bytes32 root, address to, uint128 amount6)",
   "function treasury6(bytes32 root) view returns (uint128)",
   "function release(uint256 refusalId)",
 ]);
@@ -394,6 +395,94 @@ export function useFundVault(expected: string | null) {
   );
 
   return { state, fund };
+}
+
+/** What a tree's vault holds, read from `TreeVault.treasury6`. */
+export type Treasury =
+  | { state: "idle" }
+  | { state: "looking" }
+  | { state: "read"; amount6: bigint }
+  | { state: "failed"; why: string };
+
+export function useTreasury(root: Hex | null): Treasury {
+  const [treasury, setTreasury] = useState<Treasury>({ state: "idle" });
+
+  useEffect(() => {
+    if (!root || !DEPLOYED) {
+      setTreasury({ state: "idle" });
+      return;
+    }
+    let live = true;
+    setTreasury({ state: "looking" });
+    const client = createPublicClient({ chain: arc, transport: http(ARC.rpc) });
+    client
+      .readContract({ address: DEPLOYED.vault, abi: VAULT, functionName: "treasury6", args: [root] })
+      .then((amount6) => {
+        if (live) setTreasury({ state: "read", amount6: amount6 as bigint });
+      })
+      .catch((error) => {
+        if (live) setTreasury({ state: "failed", why: why(error) });
+      });
+    return () => {
+      live = false;
+    };
+  }, [root]);
+
+  return treasury;
+}
+
+/**
+ * Take a tree's money back out of the vault.
+ *
+ * `withdraw` is the owner's alone and does not care whether the tree is
+ * revoked, which is what makes a mandate replaceable: revoke the old root,
+ * withdraw what it held, open the new one and fund it. The money goes to the
+ * wallet that signs — the contract would send it anywhere the owner named, and
+ * a console that offered that would be a transfer form with extra steps.
+ */
+export function useWithdraw(expected: string | null) {
+  const { wallets } = useWallets();
+  const [state, setState] = useState<ActionState>({ status: "idle" });
+
+  const withdraw = useCallback(
+    async (root: Hex, amount6: bigint) => {
+      if (!DEPLOYED || !expected) {
+        setState({ status: "failed", why: "no deployment, or no wallet" });
+        return;
+      }
+      try {
+        const { account, wallet, reader } = await signerFor(wallets, expected);
+
+        /* Read again at the moment of signing. The dialog's figure can be
+           minutes old, and agents draw from the same treasury meanwhile. */
+        const held = (await reader.readContract({
+          address: DEPLOYED.vault, abi: VAULT, functionName: "treasury6", args: [root],
+        })) as bigint;
+        if (held < amount6) {
+          setState({
+            status: "failed",
+            why: `the vault holds ${formatUsdc(held)} for this tree and ${formatUsdc(amount6)} was asked for`,
+          });
+          return;
+        }
+
+        setState({ status: "working", step: "withdrawing from the vault" });
+        const call = {
+          address: DEPLOYED.vault, abi: VAULT, functionName: "withdraw" as const,
+          args: [root, account, amount6] as const, account,
+        };
+        await reader.simulateContract(call);
+        const hash = await wallet.writeContract(call);
+        await reader.waitForTransactionReceipt({ hash });
+        setState({ status: "done", hash });
+      } catch (error) {
+        setState({ status: "failed", why: why(error) });
+      }
+    },
+    [wallets, expected],
+  );
+
+  return { state, withdraw };
 }
 
 /**

@@ -197,9 +197,15 @@ export function Console() {
         What the tree may still spend, at a glance: spent this window, spent in
         total, what can be drawn right now, and how many agents there are. Below
         that, the agents most worth a look — those held down by an ancestor
-        first — the latest refusals, and the terms you signed. <b>Fund vault</b>{" "}
-        and <b>Spawn agent</b> sit in the top right. Funding asks for two
-        signatures: approve, then fund.
+        first — the latest refusals, and the terms you signed. <b>Fund vault</b>,{" "}
+        <b>Withdraw</b> and <b>Spawn agent</b> sit in the top right. Funding asks
+        for two signatures: approve, then fund. Withdrawing asks for one, and
+        sends the USDC back to the wallet you are signed in with.
+      </P>
+      <P>
+        A mandate cannot be edited. To change its terms, revoke the root, withdraw
+        what its vault holds, open a new mandate with fresh operator keys and fund
+        it. The old tree's record stays with the old tree.
       </P>
 
       <H2 id="agents">Agents</H2>
@@ -207,8 +213,10 @@ export function Console() {
         Every agent under the mandate, as a list or as the drawn tree. Filter to
         live, held or revoked agents, or search by node or operator. Selecting one
         opens a side panel with every field the registry and the vault hold for
-        it, and why it can draw no more than it can. <b>Revoke agent</b> is at the
-        foot of that panel, and it asks before it signs.
+        it, and why it can draw no more than it can. <b>Spawn under this agent</b>{" "}
+        and <b>Revoke</b> are at the foot of that panel, and both ask before they
+        sign. A root's panel adds <b>Withdraw</b>, which stays after the root is
+        revoked.
       </P>
 
       <H2 id="refusals">Refusals</H2>

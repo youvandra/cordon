@@ -29,10 +29,12 @@ One bar, three destinations, and who is signed in. No sidebar and no gate: a
 reader without a wallet lands on the public tree with a one-line read-only
 notice, and connecting is a button in the corner.
 
-Actions sit where the decision is made. **Fund vault** and **Spawn agent** are
-page actions in the top right. Revoking and releasing live in the side panel of
-the agent or refusal they act on, because both are decisions about one thing
-and should be taken while looking at it.
+Actions sit where the decision is made. **Fund vault**, **Withdraw** and
+**Spawn agent** are page actions in the top right. Revoking and releasing live
+in the side panel of the agent or refusal they act on, because both are
+decisions about one thing and should be taken while looking at it. A root's
+panel also has **Withdraw**, and keeps it after the root is revoked: emptying
+the old vault is how a mandate is replaced, since none can be edited.
 
 Colour and type are the `@cordon/ui` tokens and nothing else. `console.css`
 defines layout — the bar, the page column, panels, tables, the sheet — and no
