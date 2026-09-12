@@ -38,7 +38,7 @@ export interface GraphNode {
    in the demo tree truncated, and a truncated name is a node you cannot tell
    from its sibling. */
 const NODE_W = 240;
-const NODE_H = 116;
+const NODE_H = 128;
 const GAP_X = 28;
 const GAP_Y = 56;
 
@@ -176,6 +176,11 @@ export function TreeGraph({
                 data-root={node.parent === null ? "" : undefined}
                 data-bound={held ? "" : undefined}
                 data-short={short ? "" : undefined}
+                /* A node with nothing left is not an exception, it is a node
+                   that has spent what it was given. It reads as settled rather
+                   than as an alarm — colour on this drawing means the
+                   delegation bound, and eleven red nodes mean nothing. */
+                data-empty={!node.revoked && node.available6 === 0n ? "" : undefined}
                 data-depth={Math.min(node.depth, 3)}
                 data-selected={selected === node.id ? "" : undefined}
                 style={{ left: node.x, top: node.y, width: NODE_W, height: NODE_H }}
@@ -194,16 +199,24 @@ export function TreeGraph({
                     that is the figure an owner is looking for. Its own window
                     is the bar underneath, and the tick on the bar is where an
                     ancestor cuts the window short. */}
+                {/* The headline, then one short phrase for what kind of
+                    figure it is. It used to carry the capping ancestor's id
+                    inline — "left · capped by 0x4d0…" — which wrapped onto a
+                    second line on most nodes and pushed the bar into the
+                    caption. The id belongs beside the window it is capping, so
+                    it sits at the end of the spend line instead. */}
                 <span className="graph__foot">
                   <span className="graph__draw num">{formatUsdc(node.available6)}</span>
                   <span className="graph__note">
                     {node.revoked
-                      ? "cut"
-                      : held
-                        ? `left · capped by ${node.heldBy}`
-                        : short
-                          ? "left · less than this window allows"
-                          : "left to draw"}
+                      ? "cut — draws nothing"
+                      : node.available6 === 0n
+                        ? "nothing left to draw"
+                        : held
+                          ? "left · held by an ancestor"
+                          : short
+                            ? "left · less than its window allows"
+                            : "left to draw"}
                   </span>
                 </span>
 
@@ -219,8 +232,13 @@ export function TreeGraph({
                     ) : null}
                   </span>
                   <span className="graph__spent mono">
-                    {formatUsdc(node.spent6)} <span className="graph__of">of</span>{" "}
-                    {formatUsdc(node.budget6)}
+                    <span>
+                      {formatUsdc(node.spent6)} <span className="graph__of">of</span>{" "}
+                      {formatUsdc(node.budget6)}
+                    </span>
+                    {held ? (
+                      <span className="graph__heldby">{node.heldBy}</span>
+                    ) : null}
                   </span>
                 </span>
 

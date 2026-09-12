@@ -898,8 +898,8 @@ body {
   display: grid;
   grid-template-rows: auto 1fr auto;
   align-content: space-between;
-  gap: 8px;
-  padding: 11px 14px 11px 18px;
+  gap: 9px;
+  padding: 10px 14px 11px 19px;
   border: 1px solid var(--cordon-hairline);
   border-radius: var(--cordon-radius-3);
   background: var(--cordon-paper-raised);
@@ -963,51 +963,102 @@ body {
 }
 .graph__node[data-selected] {
   border-color: var(--cordon-accent);
-  box-shadow: var(--cordon-shadow-lift);
+  box-shadow: var(--cordon-shadow-lift), 0 0 0 3px var(--cordon-accent-line);
 }
-.graph__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+
+/* A node that has spent what it was given. It is not an exception and must not
+   read as one: the figure goes quiet, the card stays legible, and the eye is
+   left free for the nodes that can still draw. */
+.graph__node[data-empty] .graph__draw { color: var(--cordon-copy-dim); }
+.graph__node[data-empty] .graph__fill { opacity: 0.45; }
+/* Identity, then a hairline. The card is a small ledger entry: who this is,
+   and under the rule, what it may do. Without the rule the four blocks floated
+   at even spacing and the id read as one more figure. */
+.graph__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--cordon-hairline);
+}
 .graph__label {
   overflow: hidden;
-  color: var(--cordon-copy);
+  color: var(--cordon-ink-strong);
   font-size: 12px;
   letter-spacing: -0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The depth, which is context rather than identity: the id is what tells two
+   nodes apart, so the id carries the weight and this sits back. */
 .graph__role {
   flex: 0 0 auto;
   color: var(--cordon-copy-dim);
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  opacity: 0.75;
   text-transform: uppercase;
 }
 
 /* The headline. What this node may still draw, which is the figure an owner
    came to the screen for — and which is smaller than its own window whenever
    something above it is tighter. */
-.graph__foot { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+/* The figure, then the phrase under it. Side by side the phrase had whatever
+   width the figure left it — which on a node reading $0.013 was not enough for
+   four words, and the sentence ran into the edge of the card. */
+.graph__foot { display: grid; gap: 3px; }
 .graph__draw {
   color: var(--cordon-ink-strong);
-  font-size: 21px;
+  font-size: 23px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   line-height: 1;
 }
-.graph__note { color: var(--cordon-copy-dim); font-size: 10.5px; }
-/* A node held by an ancestor is the case worth seeing across the drawing. */
-.graph__node[data-bound] .graph__note,
-.graph__node[data-short] .graph__note { color: var(--cordon-accent); }
+.graph__note {
+  overflow: hidden;
+  color: var(--cordon-copy-dim);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* A node held by an ancestor is the case worth seeing across the drawing, and
+   the only one that gets colour. `data-short` was in this rule too, and in a
+   real tree nearly every node is short of its own window for some reason of
+   its own — so nearly every node was red, and the one case worth finding
+   looked like all the others. */
+.graph__node[data-bound] .graph__note { color: var(--cordon-accent); }
 .graph__node[data-revoked] .graph__draw { color: var(--cordon-copy-dim); }
 
-.graph__meter { display: grid; gap: 4px; }
-.graph__spent { color: var(--cordon-copy-dim); font-size: 10.5px; }
+.graph__meter { display: grid; gap: 5px; }
+.graph__spent {
+  display: flex;
+  font-variant-numeric: tabular-nums;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--cordon-copy-dim);
+  font-size: 10.5px;
+}
+/* The ancestor that holds this node down, beside the window it is holding
+   down. Inline in the note above, it wrapped the phrase onto a second line on
+   every bound node and pushed the bar into the caption. */
+.graph__heldby {
+  overflow: hidden;
+  max-width: 45%;
+  color: var(--cordon-accent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .graph__of { opacity: 0.55; }
 .graph__bar {
   position: relative;
   display: block;
-  height: 5px;
+  height: 6px;
   border-radius: 3px;
   background: rgba(34, 34, 34, 0.09);
+  box-shadow: inset 0 0 0 1px rgba(34, 34, 34, 0.04);
 }
 .graph__fill {
   display: block;
@@ -1043,13 +1094,19 @@ body {
     var(--cordon-accent-line) 0 2px,
     transparent 2px 5px
   );
+  /* A whole window nobody can spend fills the bar with this, and at full
+     strength a node that is simply empty reads as an alarm. */
+  opacity: 0.7;
   /* The bar clips it, so the remainder ends where the window does. */
   clip-path: inset(0);
 }
 .graph__bar { overflow: hidden; }
-/* A node held by an ancestor is the case worth seeing across the drawing. */
-.graph__node[data-bound] .graph__note,
-.graph__node[data-short] .graph__note { color: var(--cordon-accent); }
+/* A node held by an ancestor is the case worth seeing across the drawing, and
+   the only one that gets colour. `data-short` was in this rule too, and in a
+   real tree nearly every node is short of its own window for some reason of
+   its own — so nearly every node was red, and the one case worth finding
+   looked like all the others. */
+.graph__node[data-bound] .graph__note { color: var(--cordon-accent); }
 
 .graph__flags { position: absolute; top: -9px; right: 10px; display: flex; gap: 6px; }
 .graph__refusals {
