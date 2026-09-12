@@ -144,6 +144,26 @@ test("cordon_spawn never hands the agent a key", async () => {
   assert.match(shown, /cannot be widened later/);
 });
 
+test("cordon_spawn states what the child is for, and says it is not a bound", async () => {
+  let handed: string | undefined;
+  const client = await connect(
+    stubGate({
+      spawn: async (_parent: Hex, params: { purpose?: string }) => {
+        handed = params.purpose;
+        return { node: ("0x" + "33".repeat(32)) as Hex, txHash: ("0x" + "44".repeat(32)) as Hex, purposePublished: true };
+      },
+    }),
+  );
+  const result = await client.callTool({
+    name: "cordon_spawn",
+    arguments: { label: "buys weather data", budgetUsdc: "1.00" },
+  });
+  const shown = (result.content as { text: string }[])[0].text;
+
+  assert.equal(handed, "buys weather data");
+  assert.match(shown, /purpose    on its ERC-8004 identity — stated, not enforced/);
+});
+
 test("USDC amounts are parsed as strings, so no float ever touches money", () => {
   assert.equal(toBase6("25.00"), 25_000_000n);
   assert.equal(toBase6("0.008"), 8_000n);

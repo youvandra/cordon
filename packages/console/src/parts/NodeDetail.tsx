@@ -3,6 +3,7 @@ import { Tag } from "cordon-ui";
 import { ARC, ENFORCED_BY, formatUsdc } from "@cordon/fixtures";
 import type { ChainNode } from "../lib/tree";
 import { share, shortId, windowLabel } from "../lib/format";
+import { usePurpose } from "../lib/purpose";
 
 function Row({ label, value, fn }: { label: string; value: ReactNode; fn?: string }) {
   return (
@@ -31,6 +32,7 @@ export function NodeDetail({ node, all, cut }: { node: ChainNode; all: ChainNode
   const heldElsewhere = node.boundBy.toLowerCase() !== node.node.toLowerCase();
   const windowLeft = node.budget6 - node.windowSpent6;
   const lifetimeLeft = node.lifetimeCap6 - node.lifetimeSpent6;
+  const purpose = usePurpose(node.node);
 
   const limit = cut
     ? "cut"
@@ -63,6 +65,23 @@ export function NodeDetail({ node, all, cut }: { node: ChainNode; all: ChainNode
       </div>
 
       <dl className="detail__list">
+        <Row
+          label="Purpose"
+          value={
+            purpose.state === "read" ? (
+              <span className="cell-stack">
+                <span>{purpose.text}</span>
+                <span className="small muted">
+                  Stated at spawn on identity #{purpose.agentId.toString()}. A description, not a bound.
+                </span>
+              </span>
+            ) : (
+              <span className="muted">
+                {purpose.state === "looking" ? "Reading…" : purpose.state === "failed" ? "Could not read its identity" : "None stated"}
+              </span>
+            )
+          }
+        />
         <Row
           label="This window"
           fn={ENFORCED_BY.budget}

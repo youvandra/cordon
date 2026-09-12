@@ -10,7 +10,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { generatePrivateKey } from "viem/accounts";
-import type { KeyFile } from "../../daemon/src/keyfile.ts";
+import { cleanPurpose, type KeyFile } from "../../daemon/src/keyfile.ts";
 import type { Address, Hex } from "viem";
 import { Gate } from "../../daemon/src/gate.ts";
 import { cordonFetch, httpTransport, type Transport } from "../../daemon/src/fetch.ts";
@@ -92,7 +92,12 @@ export function createMcpServer(deps: McpDeps): McpServer {
         "only ever be narrower than its parent; the contract refuses a wider one " +
         "whoever asks. The key for the child is held here, not by any agent.",
       inputSchema: {
-        label: z.string().describe("What this sub-agent is for. For the record."),
+        label: z
+          .string()
+          .describe(
+            "What this sub-agent is for, in one line. Written beside its key and onto its " +
+              "ERC-8004 identity as a stated purpose. A description, not a bound.",
+          ),
         budgetUsdc: z.string().describe('Window budget in USDC, e.g. "25.00".'),
         trancheUsdc: z.string().optional().describe("Per-draw cap. Defaults to the parent's."),
         concentrationPct: z.number().optional().describe("Percent of the window one counterparty may take."),
@@ -110,16 +115,19 @@ export function createMcpServer(deps: McpDeps): McpServer {
          operator's key file before the spawn is sent — the mandate names this
          address for good, and a key kept only in memory is a child nobody can
          sign for once this process restarts. */
+      /* Refused before a key exists, so a bad purpose leaves nothing behind. */
+      const purpose = cleanPurpose(label);
       const key = newKey();
       const operator = deps.gate.addOperator(key);
-      const keyLabel = deps.keyFile?.remember(key, operator);
+      const keyLabel = deps.keyFile?.remember(key, operator, purpose);
 
-      const { node, txHash } = await deps.gate.spawn(deps.node, {
+      const { node, txHash, purposePublished } = await deps.gate.spawn(deps.node, {
         operator,
         budget6: toBase6(budgetUsdc),
         trancheCap6: trancheUsdc ? toBase6(trancheUsdc) : parent.trancheCap6,
         concentrationBps:
           concentrationPct !== undefined ? Math.round(concentrationPct * 100) : parent.concentrationBps,
+        purpose,
       });
 
       let nodeIdSaved = false;
@@ -138,6 +146,11 @@ export function createMcpServer(deps: McpDeps): McpServer {
           `  node       ${node}`,
           `  operator   ${operator}`,
           `  budget     ${budgetUsdc} USDC`,
+          purpose
+            ? purposePublished
+              ? "  purpose    on its ERC-8004 identity — stated, not enforced"
+              : "  purpose    kept beside its key; not published to its identity"
+            : "",
           keyLabel
             ? nodeIdSaved
               ? `  key        saved under ${keyLabel} in the operator's key file`

@@ -16,7 +16,8 @@
  * a recorder that is broken, unfunded or misconfigured costs the record its
  * completeness and costs the enforcement nothing.
  */
-import type { Address, Chain, Hex, PublicClient, WalletClient } from "viem";
+import { stringToHex, type Address, type Chain, type Hex, type PublicClient, type WalletClient } from "viem";
+import { ERC8004 } from "../../fixtures/src/index.ts";
 import { ConductRecordAbi } from "./abi.gen.ts";
 
 /** The ERC-8004 Identity Registry, as much of it as a daemon needs. */
@@ -27,6 +28,17 @@ const IDENTITY_ABI = [
     stateMutability: "nonpayable",
     inputs: [{ name: "agentURI", type: "string" }],
     outputs: [{ name: "agentId", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "setMetadata",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "metadataKey", type: "string" },
+      { name: "metadataValue", type: "bytes" },
+    ],
+    outputs: [],
   },
 ] as const;
 
@@ -114,6 +126,41 @@ export class Recorder {
   }
 
   /**
+   * Write what a node is for onto its own identity.
+   *
+   * Signed with the node's operator key, because the registry lets only an
+   * identity's holder set its metadata. It is a statement by whoever spawned
+   * the node and nothing reads it back as a bound: the contract has never seen
+   * it, and a surface that shows it says so.
+   *
+   * Returns the transaction, or null when the node has no identity to write to.
+   */
+  async describe(node: Hex, purpose: string): Promise<Hex | null> {
+    const record = this.deps.record;
+    if (!record) return null;
+
+    const agentId = (await this.deps.publicClient.readContract({
+      address: record,
+      abi: ConductRecordAbi,
+      functionName: "agentIdOf",
+      args: [node],
+    })) as bigint;
+    if (agentId === 0n) return null;
+
+    const wallet = this.walletFor(node);
+    const hash = await wallet.writeContract({
+      address: this.deps.identity,
+      abi: IDENTITY_ABI,
+      functionName: "setMetadata",
+      args: [agentId, ERC8004.purposeKey, stringToHex(purpose)],
+      chain: this.deps.chain,
+      account: wallet.account!,
+    });
+    await this.deps.publicClient.waitForTransactionReceipt({ hash });
+    return hash;
+  }
+
+  /**
    * Publish one refusal.
    *
    * `attest` takes an id and nothing else: the amount, the node, the reason and
@@ -178,6 +225,9 @@ export const NO_RECORDER = {
   async attest(): Promise<null> {
     return null;
   },
+  async describe(): Promise<null> {
+    return null;
+  },
 };
 
-export type AnyRecorder = Pick<Recorder, "enabled" | "enrol" | "attest"> | typeof NO_RECORDER;
+export type AnyRecorder = Pick<Recorder, "enabled" | "enrol" | "attest" | "describe"> | typeof NO_RECORDER;

@@ -19,7 +19,7 @@ import type { Gate } from "./gate.ts";
 import type { Settler } from "./settle.ts";
 import { cordonFetch, httpTransport, type Transport } from "./fetch.ts";
 import type { Acceptable } from "./challenge.ts";
-import type { KeyFile } from "./keyfile.ts";
+import { cleanPurpose, type KeyFile } from "./keyfile.ts";
 
 export interface ServerDeps {
   gate: Gate;
@@ -110,13 +110,21 @@ export function createDaemon(deps: ServerDeps) {
             why: "a node this daemon holds no key for can be funded from outside the tree",
           });
         }
+        /* Checked before a key exists, so a purpose that is refused leaves
+           nothing behind. */
+        let purpose: string | undefined;
+        try {
+          purpose = cleanPurpose(body.purpose);
+        } catch (error) {
+          return json(res, 400, { error: (error as Error).message });
+        }
         const secret = newKey();
         const operator = deps.gate.addOperator(secret);
         /* Written down before the registry is asked. The mandate will name this
            address as its operator for good, and a key that exists only in this
            process is a child nobody can sign for after a restart. If this write
            fails, nothing has been sent. */
-        const label = deps.keyFile?.remember(secret, operator);
+        const label = deps.keyFile?.remember(secret, operator, purpose);
         const spawned = await deps.gate.spawn(body.node as Hex, {
           operator,
           budget6: BigInt(String(body.budget6 ?? "0")),
@@ -125,6 +133,7 @@ export function createDaemon(deps: ServerDeps) {
           lifetimeCap6: body.lifetimeCap6 === undefined ? undefined : BigInt(String(body.lifetimeCap6)),
           trancheCap6: BigInt(String(body.trancheCap6 ?? "0")),
           concentrationBps: Number(body.concentrationBps ?? 0),
+          purpose,
         });
         /* The node id beside the key it belongs to. A failure here leaves the
            key safe and the id missing, which is recoverable, so it is reported
@@ -140,7 +149,12 @@ export function createDaemon(deps: ServerDeps) {
         }
         /* The address is public; the key it came from is never returned or
            logged, and is written only to the key file. */
-        return json(res, 200, { ...spawned, operator, ...(label ? { label, nodeIdSaved } : {}) });
+        return json(res, 200, {
+          ...spawned,
+          operator,
+          ...(purpose ? { purpose } : {}),
+          ...(label ? { label, nodeIdSaved } : {}),
+        });
       }
 
       return json(res, 404, {

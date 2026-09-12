@@ -16,11 +16,12 @@
 import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Address, Hex } from "viem";
+import { ERC8004 } from "../../fixtures/src/index.ts";
 
 export interface KeyFile {
   readonly path: string;
   /** Write the key under a fresh label with an empty node id. Call before the spawn. */
-  remember(secret: Hex, operator: Address): string;
+  remember(secret: Hex, operator: Address, purpose?: string): string;
   /** Fill that label's node id once the registry has assigned one. */
   bind(label: string, node: Hex): void;
 }
@@ -30,11 +31,31 @@ export function labelForOperator(operator: Address): string {
   return `CHILD_${operator.slice(2, 10).toUpperCase()}`;
 }
 
+/**
+ * What a spawned agent is for, as one clean line, or undefined when none was given.
+ *
+ * One line is not a style rule. The purpose is written into the key file, and
+ * a newline in it would start a line of its own — `CORDON_KEY_ROOT=…` smuggled
+ * in as a description is a key the next `load` believes. So control characters
+ * are refused rather than stripped: a caller who sent one should hear about it.
+ */
+export function cleanPurpose(raw: unknown): string | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (typeof raw !== "string") throw new Error("purpose must be a string");
+  const purpose = raw.trim();
+  if (purpose === "") return undefined;
+  if (/[\u0000-\u001f\u007f]/.test(purpose)) throw new Error("purpose must be a single line");
+  if (purpose.length > ERC8004.purposeMaxLength) {
+    throw new Error(`purpose is ${purpose.length} characters; the most is ${ERC8004.purposeMaxLength}`);
+  }
+  return purpose;
+}
+
 export function keyFileAt(path: string): KeyFile {
   return {
     path,
 
-    remember(secret, operator) {
+    remember(secret, operator, purpose) {
       const label = labelForOperator(operator);
       mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
 
@@ -48,6 +69,7 @@ export function keyFileAt(path: string): KeyFile {
       appendFileSync(
         path,
         `${lead}\n# Spawned ${new Date().toISOString()} for operator ${operator}.\n` +
+          (purpose ? `# Purpose: ${cleanPurpose(purpose)}\n` : "") +
           `# Private key: never commit this file, never paste its contents.\n` +
           `CORDON_KEY_${label}=${secret}\n` +
           `CORDON_NODE_${label}=\n`,

@@ -175,7 +175,11 @@ export function Daemon() {
         rows={[
           [<C key="s">GET /status</C>, "", "every node this daemon can act for, with its headroom"],
           [<C key="f">POST /fetch</C>, <span key="fb" className="mono">{`{ node, url, method?, headers?, body? }`}</span>, "the seller's response, or a refusal"],
-          [<C key="p">POST /spawn</C>, <span key="pb" className="mono">{`{ node, operator, budget6, trancheCap6, concentrationBps }`}</span>, "the child mandate the registry created"],
+          [
+            <C key="p">POST /spawn</C>,
+            <span key="pb" className="mono">{`{ node, budget6, trancheCap6, concentrationBps, lifetimeCap6?, purpose? }`}</span>,
+            "the child mandate, its operator address and its key-file label. The key is generated here and never returned; an operator in the body is refused. A purpose is one line, kept beside the key and written to the child's ERC-8004 identity — a description, not a bound",
+          ],
         ]}
       />
       <Note tone="warn" title="There is no transfer endpoint">

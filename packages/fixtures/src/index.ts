@@ -128,6 +128,12 @@ export const ERC8004 = {
   liveSince: "2026-01-29",
   chains: 40,
   registeredAgents: 173_441,
+  /** The identity metadata key a spawned agent's stated purpose is written
+   *  under. The spawner's description of the agent, never a bound: the
+   *  contract reads nothing from it. */
+  purposeKey: "cordon.purpose",
+  /** One line, long enough to say what an agent is for and short enough to show. */
+  purposeMaxLength: 140,
 } as const;
 
 /** Published ecosystem baseline. arxiv 2606.26028. We are the exception to it. */

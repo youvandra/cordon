@@ -9,10 +9,11 @@
  */
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import type { Address, Hex } from "viem";
+import { hexToString, type Address, type Hex } from "viem";
 import { load } from "../src/config.ts";
 import { Gate } from "../src/gate.ts";
 import { ConductRecordAbi, TreeVaultAbi } from "../src/abi.gen.ts";
+import { ERC8004 } from "../../fixtures/src/index.ts";
 import { startHarness, type Harness, OP_CHILD_KEY, SELLER_PAYOUT, PRICE, TRANCHE } from "./harness.ts";
 
 let h: Harness;
@@ -69,6 +70,34 @@ test("a node's identity is its operator's, registered with the operator's own ke
      shape of the thing being replaced. */
   const again = await gate.enrol(h.child);
   assert.equal(again, agentId, "enrolment is idempotent, so a restart does not mint a second identity");
+});
+
+test("a stated purpose is written to the node's own identity, and nowhere without one", async () => {
+  const gate = gateWith(h.record);
+  const agentId = await gate.enrol(h.child);
+  assert.ok(agentId, "the node has an identity to describe");
+
+  assert.equal(await gate.describe(h.child, "buys weather data"), true);
+  const stored = (await h.publicClient.readContract({
+    address: h.identity,
+    abi: [
+      {
+        type: "function",
+        name: "getMetadata",
+        stateMutability: "view",
+        inputs: [
+          { name: "agentId", type: "uint256" },
+          { name: "metadataKey", type: "string" },
+        ],
+        outputs: [{ name: "", type: "bytes" }],
+      },
+    ] as const,
+    functionName: "getMetadata",
+    args: [agentId, ERC8004.purposeKey],
+  })) as Hex;
+  assert.equal(hexToString(stored), "buys weather data");
+
+  assert.equal(await gateWith().describe(h.child, "anything"), false, "without a seat there is nothing to describe");
 });
 
 test("every refusal is published, without anyone asking for it", async () => {

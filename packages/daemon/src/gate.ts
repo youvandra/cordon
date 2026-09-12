@@ -226,8 +226,11 @@ export class Gate {
       lifetimeCap6?: bigint;
       trancheCap6: bigint;
       concentrationBps: number;
+      /** One line saying what the child is for. Published to its identity,
+       *  never read as a bound. */
+      purpose?: string;
     },
-  ): Promise<{ node: Hex; txHash: Hex }> {
+  ): Promise<{ node: Hex; txHash: Hex; purposePublished?: boolean }> {
     return this.inTurn(parent, () => this.spawnInTurn(parent, params));
   }
 
@@ -239,8 +242,11 @@ export class Gate {
       budget6: bigint;
       trancheCap6: bigint;
       concentrationBps: number;
+      /** One line saying what the child is for. Published to its identity,
+       *  never read as a bound. */
+      purpose?: string;
     },
-  ): Promise<{ node: Hex; txHash: Hex }> {
+  ): Promise<{ node: Hex; txHash: Hex; purposePublished?: boolean }> {
     const wallet = this.walletFor(parent);
     const inherited = (await this.mandate(parent)) as {
       lifetimeCap6: bigint;
@@ -289,8 +295,11 @@ export class Gate {
                can be published — `attest` will not file conduct against a node
                with no ERC-8004 identity, and it should not. */
             await this.enrol(node);
+            if (params.purpose) {
+              return { node, txHash, purposePublished: await this.describe(node, params.purpose) };
+            }
           }
-          return { node, txHash };
+          return { node, txHash, ...(params.purpose ? { purposePublished: false } : {}) };
         }
       } catch {
         continue;
@@ -349,6 +358,20 @@ export class Gate {
     }
 
     return outcome;
+  }
+
+  /**
+   * Write a node's stated purpose onto its identity. Best-effort, like `enrol`:
+   * a purpose that fails to publish costs a description and no control.
+   */
+  async describe(node: Hex, purpose: string): Promise<boolean> {
+    if (!this.recorder.enabled) return false;
+    try {
+      return (await this.recorder.describe(node, purpose)) !== null;
+    } catch (error) {
+      console.error(`${node}'s purpose stays unpublished: ${(error as Error).message}`);
+      return false;
+    }
   }
 
   /**

@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 /**
- * ERC-8004 stand-ins, faithful in the two ways the record depends on.
+ * ERC-8004 stand-ins, faithful in the ways the record depends on.
  *
  * These are not deployed anywhere. The real registries are already live on Arc
  * at deterministic addresses and Cordon writes into those; these exist so the
@@ -14,22 +14,38 @@ pragma solidity 0.8.28;
  * - Feedback is filed **under the address that wrote it**. That is what makes
  *   a record from the seat unforgeable by anyone else: they may write whatever
  *   they like, but never under our address.
- * - Nothing is gated. Anyone may register, anyone may give feedback. The
+ * - Registering and giving feedback are not gated. Anyone may do either. The
  *   registry is permissionless, and a test that pretended otherwise would be
  *   proving a property the real one does not have.
+ * - Metadata is the exception: only an identity's holder may set it. The live
+ *   registry on Arc refuses anyone else with "Not authorized" (probed with an
+ *   eth_call on 13 September 2026), and the message is copied from it.
  */
 contract MockIdentityRegistry {
     uint256 private _next = 1;
     mapping(uint256 => address) private _owner;
     mapping(uint256 => string) public agentUri;
 
+    mapping(uint256 => mapping(string => bytes)) private _metadata;
+
     event Registered(uint256 indexed agentId, string agentURI, address indexed owner);
+    event MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, bytes metadataValue);
 
     function register(string calldata agentURI) external returns (uint256 agentId) {
         agentId = _next++;
         _owner[agentId] = msg.sender;
         agentUri[agentId] = agentURI;
         emit Registered(agentId, agentURI, msg.sender);
+    }
+
+    function setMetadata(uint256 agentId, string calldata metadataKey, bytes calldata metadataValue) external {
+        require(_owner[agentId] == msg.sender, "Not authorized");
+        _metadata[agentId][metadataKey] = metadataValue;
+        emit MetadataSet(agentId, metadataKey, metadataKey, metadataValue);
+    }
+
+    function getMetadata(uint256 agentId, string calldata metadataKey) external view returns (bytes memory) {
+        return _metadata[agentId][metadataKey];
     }
 
     function ownerOf(uint256 agentId) external view returns (address) {
