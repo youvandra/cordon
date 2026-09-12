@@ -30,7 +30,7 @@ of them can see — and no agent in the tree holds a key.
 [Overview](#overview) · [The solution](#the-solution) ·
 [Why this is not a smaller wallet](#why-this-is-not-a-smaller-wallet) ·
 [Architecture](#architecture) · [The mandate](#the-mandate) ·
-[The five bounds](#the-five-bounds) · [What is deployed](#what-is-deployed) ·
+[The bounds](#the-bounds-and-what-a-refusal-says) · [What is deployed](#what-is-deployed) ·
 [Quick start](#quick-start) · [Integration paths](#integration-paths) ·
 [HTTP API](#http-api) · [Settlement and the rail](#settlement-and-the-rail) ·
 [The record](#the-record) · [Evidence and gates](#evidence-and-gates) ·
@@ -258,7 +258,15 @@ thing no per-agent wallet can express.
 
 ---
 
-## The five bounds
+## The bounds, and what a refusal says
+
+Four bounds are checked against a node, and the fifth is that all four are
+checked against **every** node on the path rather than only the one that asked.
+That fifth one is ancestor debit, it has no reason code of its own, and it is
+the only one of the five that does not already exist somewhere else.
+
+A refusal names which check stopped it, plus the two conditions that are not
+bounds at all — a branch that was cut, and a treasury with nothing in it:
 
 | Reason | What it means | When it fires |
 |---|---|---|
@@ -344,17 +352,127 @@ than typed.
 no tool that could use one. Where the keyring holds several nodes,
 `CORDON_MCP_NODE` names which one this server speaks for.
 
-### The whole path, from an empty wallet
+### From nothing to a refusal
 
-1. **Sign one mandate** at [`/console/setup`](https://getcordon.xyz/console/setup) — six questions, one signature.
-2. **Fund the vault** from the root window tile. Two signatures: approve, then fund.
-3. **Make operator keys** with `npm run init --prefix packages/daemon -- --nodes 4`.
-4. **Spawn a child** from the agents tile, naming one of those addresses.
-5. **Run the daemon**, which is the only thing that ever holds a key.
-6. **Ask for something priced**, then ask for something too large.
+Ten steps. Two cost a signature, one costs a cent, and the rest are reading.
+Everything is testnet.
 
-The long version, with what to check on the chain after each step:
-<https://getcordon.xyz/docs/walkthrough>.
+**0 — what you need.** A wallet, and test USDC in it from
+<https://faucet.circle.com>. On Arc that one balance is both the gas and the
+money. Node 23.6+ and a clone of this repository.
+
+```bash
+git clone https://github.com/youvandra/cordon.git && cd cordon
+npm ci --prefix packages/daemon
+```
+
+**1 — make the operator keys, before you sign anything.** A mandate names its
+operator at `open` and it cannot be repointed afterwards, so the keys come
+first.
+
+```bash
+npm run init --prefix packages/daemon -- --nodes 4
+```
+
+Writes `~/.cordon/cordon.env` at `0600` and prints **addresses only**. Send a
+little gas to each: an operator that holds a tranche and no gas cannot send the
+draw that would earn it.
+
+**2 — sign one mandate.** <https://getcordon.xyz/console/setup>, connect your
+wallet, six questions: the budget and its window, the total for the life of the
+mandate, the most a single purchase may be, the share of a window any one
+seller may take, and how deep the tree may go. The operator is one of the
+addresses from step 1 — **not** your own wallet, and the form refuses that.
+
+One signature. It cannot be edited afterwards: a mandate narrows, it never
+widens.
+
+> **Check:** the tree screen stops saying "THE PUBLIC TREE" and your root
+> appears, read from `MandateRegistry` rather than from a server.
+
+**3 — fund the vault.** On the tree screen, the root window tile carries the
+control. **Two signatures** — approve the vault to move your USDC, then move it.
+
+> **Check:** `TreeVault.treasury6(root)` rose by exactly what you funded. The
+> money is in the vault, not in any agent, which is the difference between this
+> and topping up an agent's wallet.
+
+**4 — spawn a child.** The agents tile. Name a second operator address from
+step 1 and a share of the parent. The contract refuses a child wider than its
+parent whoever asks — you included.
+
+> **Check:** `GET https://getcordon.xyz/api/tree/<root>` shows one more node,
+> and its bounds are inside its parent's.
+
+**5 — run the daemon.** The only thing in this system that ever holds a key.
+It reads the addresses from one file and the keys from another, so the file
+with the keys in it is the only one that is ever `0600`:
+
+```bash
+cat > packages/daemon/.env.live <<'ENV'
+CORDON_VAULT=<TreeVault, from the table above>
+CORDON_REGISTRY=<MandateRegistry, from the same table>
+CORDON_RECORD=<ConductRecord — without it, refusals are enforced and never published>
+CORDON_RPC=https://rpc.testnet.arc.io
+CORDON_PORT=8402
+ENV
+
+node --env-file=packages/daemon/.env.live \
+     --env-file=~/.cordon/cordon.env \
+     packages/daemon/src/main.ts
+```
+
+It prints the nodes it holds keys for, and refuses to start misconfigured — a
+daemon that starts anyway is one that discovers a missing address halfway
+through a payment, holding a key while it does.
+
+> **Check:** `curl -s localhost:8402/status` lists your node with its headroom
+> and its mandate — and `TreeVault.headroom` may report an **ancestor** as the
+> thing bounding it, which is the whole point.
+
+**6 — point an agent at it.** Whichever suits what you run:
+
+| | |
+|---|---|
+| an MCP client | the config block above, plus `CORDON_MCP_NODE` if the keyring holds several |
+| a program you cannot edit | `node packages/proxy/src/run.ts --node 0x… -- python agent.py` |
+| anything else | `POST /fetch` |
+
+**7 — buy something.** This project sells a reading for a cent, so there is
+always something priced to point at:
+
+```bash
+curl -s -X POST localhost:8402/fetch \
+  -H 'content-type: application/json' \
+  -d '{"node":"0x…","url":"https://attest.getcordon.xyz/attest/894124"}'
+```
+
+The seller answers `402` with its own price and payee, the vault is asked for
+exactly that, every node from this one to the root is charged, and the body
+comes back.
+
+> **Check:** the draw transaction on <https://testnet.arcscan.app>, and the
+> parent's figure moving on the tree screen. A grandchild's purchase moves its
+> grandparent's bar.
+
+**8 — be refused.** Ask from a node whose tranche cap is smaller than the
+price, or keep going until the window is spent.
+
+```json
+{ "paid": false, "refusal": { "reason": "tranche-cap", "refusalId": "9",
+  "txHash": "0x974e2ca6…" } }
+```
+
+> **Check:** `https://getcordon.xyz/refusal/<id>`. The decision is a
+> transaction anyone can open, and the page names the record it was published
+> under in a registry nobody here controls.
+
+**9 — decide what to do about it.** Both are yours and neither is ours:
+**release** one refusal from the console, which pays that single purchase past
+the bound and leaves both on the record; or **cut the branch**, after which
+that node and everything under it draws nothing.
+
+The same walk with more prose: <https://getcordon.xyz/docs/walkthrough>.
 
 ---
 
@@ -674,7 +792,7 @@ npm test --prefix packages/eval              # G7
 npm test --prefix packages/fixtures          # the figures themselves
 ```
 
-Measured on 12 September 2026: **96** contract tests, **46** daemon, **39**
+Measured on 13 September 2026: **96** contract tests, **46** daemon, **39**
 meter, **34** attest, **18** proxy, **14** mcp, **10** eval, **3** fixtures.
 
 `CORDON_G4_VARIANTS=3` runs the adversarial search coarse while iterating; the
