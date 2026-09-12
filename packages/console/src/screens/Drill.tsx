@@ -185,7 +185,7 @@ export default function Drill() {
                   </Tag>
                   {gate.tests === null ? null : (
                     <Text variant="micro" tone="dim" as="span">
-                      {gate.tests} tests
+                      {gate.tests} {gate.tests === 1 ? "test" : "tests"}
                     </Text>
                   )}
                 </span>
