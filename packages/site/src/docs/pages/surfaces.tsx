@@ -207,11 +207,20 @@ export function Daemon() {
       </P>
 
       <H2 id="starting">Starting it</H2>
-      <Code lang="bash">{`CORDON_VAULT=0x… \\
-CORDON_REGISTRY=0x… \\
-CORDON_NODE_ME=0x… \\
-CORDON_KEY_ME=0x… \\
-  node src/main.ts`}</Code>
+      <Code lang="bash">{`node --env-file=.env.live \\
+     --env-file="$HOME/.cordon/cordon.env" \\
+     src/main.ts`}</Code>
+      <P>
+        Two files, never a key on the command line. <C>.env.live</C> carries the
+        addresses; <C>cordon.env</C> is the file <C>init</C> wrote at{" "}
+        <C>0600</C>, holding each key beside the node id it operates. A key
+        typed as <C>CORDON_KEY_…=0x…</C> in front of a command lands in shell
+        history, which is a second copy nobody decided to keep.
+      </P>
+      <P>
+        <C>$HOME</C> and not <C>~</C>: node does not expand a tilde, and neither
+        bash nor zsh expands one that follows <C>=</C> inside an argument.
+      </P>
       <P>
         A misconfigured daemon refuses to start. It holds a key, so discovering
         a missing address halfway through a payment is not an option.
@@ -374,7 +383,7 @@ curl -H "X-PAYMENT: $(cordon-pay …)" https://attest.getcordon.xyz/attest/7
       </Note>
 
       <H2 id="starting">Starting it</H2>
-      <Code lang="bash">{`CORDON_ATTEST_KEY=0x… node src/main.ts --chain 5042002`}</Code>
+      <Code lang="bash">{`node --env-file="$HOME/cordon/.env.attest" src/main.ts --chain 5042002`}</Code>
       <P>
         It refuses to start when the token it would be paid in cannot verify the
         signature it would publish a domain for. The check is one call, and it

@@ -2,7 +2,10 @@
 /**
  * The attestation endpoint, as a process.
  *
- *     CORDON_ATTEST_KEY=0x… node src/main.ts --chain 5042002
+ *     node --env-file="$HOME/cordon/.env.attest" src/main.ts --chain 5042002
+ *
+ * The key comes from that file, never from the command line, where it would
+ * land in shell history.
  *
  * It indexes Arc with the meter's own reducer rather than a second copy of
  * one, because two indexers drift the same way two copies of a figure do.

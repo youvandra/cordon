@@ -89,7 +89,10 @@ curl -sI --compressed https://getcordon.xyz/console/ | grep -i content-encoding
 ## The services, after the deploy exists
 
 ```bash
-printf 'CORDON_ATTEST_KEY=0x…\n' > ~/cordon/.env.attest && chmod 600 ~/cordon/.env.attest
+# Written in an editor, not with printf: a key typed into a command lands in
+# shell history. umask first, so the file is 0600 from the moment it exists
+# rather than after a chmod that follows it.
+umask 077 && ${EDITOR:-nano} ~/cordon/.env.attest    # CORDON_ATTEST_KEY=0x…
 sudo cp ops/systemd/cordon-*.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now cordon-meter cordon-attest

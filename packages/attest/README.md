@@ -5,8 +5,11 @@ seller asks before it serves an agent: does this buyer hold a live mandate, and
 what did the contract refuse it?
 
 ```bash
-CORDON_ATTEST_KEY=0x… node src/main.ts --chain 5042002
+node --env-file="$HOME/cordon/.env.attest" src/main.ts --chain 5042002
 ```
+
+The key comes from a `0600` file, never from the command line — a key typed as
+`CORDON_ATTEST_KEY=0x…` in front of a command lands in shell history.
 
 Live at **<https://attest.getcordon.xyz>**, behind nginx on the box that also
 serves the site.

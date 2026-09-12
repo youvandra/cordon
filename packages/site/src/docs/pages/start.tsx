@@ -131,15 +131,18 @@ export function Quickstart() {
 
       <H2 id="one-configure-the-client">1. Configure the client</H2>
       <P>
-        Add Cordon to <C>claude_desktop_config.json</C>. The addresses come from
-        the deployment file, and the node and key come from the mandate you
-        created.
+        Add Cordon to <C>claude_desktop_config.json</C>. The block points the
+        server at two files: <C>.env.live</C> with this deployment's addresses,
+        and the key file <C>init</C> wrote, with each key beside the node id it
+        operates. Replace <C>/Users/&lt;you&gt;</C> with your own home directory.
       </P>
       <Code lang="json">{MCP_CONFIG}</Code>
-      <Note tone="warn" title="The key lives here, not in the agent">
-        <C>CORDON_KEY_ME</C> is held by the server process. The model never sees
-        it and has no tool that would let it use one. That is the arrangement
-        the whole design rests on.
+      <Note tone="warn" title="The key stays in its file, not in the agent">
+        The server process reads the key from <C>cordon.env</C>; it never enters
+        the config, and the model never sees it or has a tool that could use
+        one. That is the arrangement the whole design rests on. The paths are
+        absolute because the client starts the server with no shell, so{" "}
+        <C>~</C> and <C>$HOME</C> mean nothing there.
       </Note>
 
       <H2 id="two-ask-it-to-buy-something">2. Ask it to buy something</H2>
