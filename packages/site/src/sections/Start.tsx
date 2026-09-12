@@ -36,8 +36,11 @@ export function Start() {
             <p className="panel__label">claude_desktop_config.json</p>
             <pre className="code mono">{CONFIG}</pre>
             <p className="panel__note">
-              Everything else the daemon can do, and how to put it in front of a
-              script instead, is in <Link to="/docs">the docs</Link>.
+              The path is a checkout of this repository: the package is not on
+              npm yet, and a block telling a reader to <span className="mono">npx</span>{" "}
+              something that 404s is worse than one more line here. Everything
+              else the daemon can do, and how to put it in front of a script
+              instead, is in <Link to="/docs">the docs</Link>.
             </p>
           </Surface>
         </Reveal>

@@ -98,8 +98,22 @@ function configBlock(): string {
   }
   env.CORDON_RPC = ARC.rpc;
 
+  /* `npx -y @cordon/mcp` is the shape this takes once the package is
+     published, and it is not published: a reader who copied that got a 404
+     from the registry on the one block the whole site invites them to copy.
+     What works today is the checkout they already have, so that is what the
+     block says. It goes back to npx on the day `npm publish` runs, and not a
+     day earlier. */
   return JSON.stringify(
-    { mcpServers: { cordon: { command: "npx", args: ["-y", "@cordon/mcp"], env } } },
+    {
+      mcpServers: {
+        cordon: {
+          command: "node",
+          args: ["/path/to/cordon/packages/mcp/src/main.ts"],
+          env,
+        },
+      },
+    },
     null,
     2,
   );

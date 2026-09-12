@@ -12,6 +12,12 @@ export function Mcp() {
       </Lead>
 
       <H2 id="install">Install</H2>
+      <P>
+        Clone the repository and point the client at the entry point.{" "}
+        <C>@cordon/mcp</C> is not published to npm yet, so a config block saying{" "}
+        <C>npx -y @cordon/mcp</C> would send a reader to a 404 on the one thing
+        the site asks them to copy.
+      </P>
       <Code lang="json">{MCP_CONFIG}</Code>
       <P>
         Every variable in that block is one the daemon actually reads. See{" "}

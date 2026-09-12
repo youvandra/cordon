@@ -32,7 +32,7 @@ export const ABSENT_TOOLS = [
 
 /** The block to paste into an MCP client. Its environment is the one the
  *  daemon actually reads — see ENV in packages/daemon/src/config.ts. */
-export const MCP_CONFIG = "{\n  \"mcpServers\": {\n    \"cordon\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"@cordon/mcp\"\n      ],\n      \"env\": {\n        \"CORDON_VAULT\": \"0x00ab57acd260c594a661b6101bdf7e92267af135\",\n        \"CORDON_REGISTRY\": \"0xf86de085e63b00c9fba300b19807c883deb961e9\",\n        \"CORDON_NODE_ME\": \"0x…\",\n        \"CORDON_KEY_ME\": \"…\",\n        \"CORDON_RPC\": \"https://rpc.testnet.arc.io\"\n      }\n    }\n  }\n}";
+export const MCP_CONFIG = "{\n  \"mcpServers\": {\n    \"cordon\": {\n      \"command\": \"node\",\n      \"args\": [\n        \"/path/to/cordon/packages/mcp/src/main.ts\"\n      ],\n      \"env\": {\n        \"CORDON_VAULT\": \"0x00ab57acd260c594a661b6101bdf7e92267af135\",\n        \"CORDON_REGISTRY\": \"0xf86de085e63b00c9fba300b19807c883deb961e9\",\n        \"CORDON_NODE_ME\": \"0x…\",\n        \"CORDON_KEY_ME\": \"…\",\n        \"CORDON_RPC\": \"https://rpc.testnet.arc.io\"\n      }\n    }\n  }\n}";
 
 export const MCP_ENV = {
   "required": {
