@@ -407,3 +407,44 @@ test("a cursor that is not a refusal id is refused rather than guessed at", asyn
   const answer = await ask(ledger, "/refusals?before=yesterday");
   assert.match(String(answer.error), /refusal id/);
 });
+
+/**
+ * A release and an attestation name a refusal id and nothing else, so both
+ * have to find it. Both did that with a linear scan, which makes a sync over a
+ * busy range quadratic in the refusals it holds — not slow yet, and slower
+ * every time the tree refuses something, on a process meant to run as long as
+ * the contracts do.
+ *
+ * The search rests on an invariant rather than an index: the vault assigns
+ * refusal ids in order, `reduce` requires its input ordered, and rows are only
+ * appended. The first assertion is that invariant, because a binary search
+ * over an unsorted array finds nothing and says so silently.
+ */
+test("refusals stay ascending by id, which is what lets one be found without a scan", () => {
+  const ledger = reduce(emptyLedger(5042002), manyRefusals(40));
+  const ids = ledger.refusals.map((r) => r.id);
+  assert.deepEqual(ids, [...ids].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)));
+});
+
+test("a release finds its refusal wherever in the range it sits", () => {
+  /* First, last and middle: an off-by-one in a binary search misses exactly
+     the ends, and a scan would have found all three. */
+  for (const id of [1n, 20n, 40n]) {
+    const ledger = reduce(emptyLedger(5042002), [
+      ...manyRefusals(40),
+      at({ kind: "Released", refusalId: id, by: OWNER, counterparty: AISA, amount6: 500n } as const),
+    ]);
+    const row = ledger.refusals.find((r) => r.id === id)!;
+    assert.ok(row.released, `refusal ${id} was not found`);
+    assert.equal(ledger.releasedUnattributed6, 0n, `refusal ${id} was counted as unattributable`);
+  }
+});
+
+test("a release for a refusal outside the range is still reported rather than mis-attached", () => {
+  const ledger = reduce(emptyLedger(5042002), [
+    ...manyRefusals(40),
+    at({ kind: "Released", refusalId: 999n, by: OWNER, counterparty: AISA, amount6: 500n } as const),
+  ]);
+  assert.equal(ledger.refusals.filter((r) => r.released).length, 0, "nothing was attached to the wrong row");
+  assert.equal(ledger.releasedUnattributed6, 500n);
+});

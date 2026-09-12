@@ -183,6 +183,34 @@ function node(ledger: Ledger, id: Hex): NodeRow | undefined {
   return ledger.nodes[id.toLowerCase() as Hex];
 }
 
+/**
+ * The refusal an event is about, by id.
+ *
+ * `Released` and `Attested` name a refusal and nothing else, so both have to
+ * find it — and both did it with a linear scan, which makes a sync over a busy
+ * range quadratic in the number of refusals it holds. It is not slow yet; it
+ * gets slower every time the tree refuses something, on a process meant to run
+ * for as long as the contracts do.
+ *
+ * A binary search rather than an index, because the invariant is already
+ * there and an index is a second copy to keep true: the vault assigns refusal
+ * ids in order, `reduce` requires its input ordered by block and log index,
+ * and rows are only ever appended — so `refusals` is ascending by id. A range
+ * that begins mid-sequence is fine; this searches, it does not subtract.
+ */
+function refusalById(ledger: Ledger, id: bigint): RefusalRow | undefined {
+  let low = 0;
+  let high = ledger.refusals.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const row = ledger.refusals[mid]!;
+    if (row.id === id) return row;
+    if (row.id < id) low = mid + 1;
+    else high = mid - 1;
+  }
+  return undefined;
+}
+
 function apply(ledger: Ledger, event: Event): void {
   switch (event.kind) {
     case "MandateOpened": {
@@ -277,7 +305,7 @@ function apply(ledger: Ledger, event: Event): void {
     }
 
     case "Released": {
-      const refusal = ledger.refusals.find((r) => r.id === event.refusalId);
+      const refusal = refusalById(ledger, event.refusalId);
       ledger.released6 += event.amount6;
 
       /* `release` tops up the same Gateway balance `draw` does, so the money
@@ -302,7 +330,7 @@ function apply(ledger: Ledger, event: Event): void {
     }
 
     case "Attested": {
-      const refusal = ledger.refusals.find((r) => r.id === event.refusalId);
+      const refusal = refusalById(ledger, event.refusalId);
       if (refusal) {
         refusal.attested = { agentId: event.agentId, recordHash: event.recordHash, site: site(event) };
       }
