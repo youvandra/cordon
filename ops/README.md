@@ -134,6 +134,49 @@ is committed. The alternates are listed at
 ten thousand blocks, and QuickNode's keyless host was already rate limiting
 this address when it was tried.
 
+## The console's wallet gate
+
+The console signs through Privy, and the app id is a **build-time** value:
+`packages/console/.env.local` on the box, read by Vite when `cordon-publish.sh`
+rebuilds the bundle.
+
+```bash
+printf 'VITE_PRIVY_APP_ID=<the app id>\n' > ~/cordon/packages/console/.env.local
+```
+
+Without it the gate falls back to the preview that touches no key, every
+surface says so out loud, and **Connect wallet stops being able to sign** —
+which is the one failure on this box that looks like nothing is wrong. An app
+id is public, so the file is not a secret; it is simply not in the repository,
+because it names an account rather than a deployment.
+
+Check the published bundle rather than the page:
+
+```bash
+curl -s https://getcordon.xyz/console/ | grep -o 'assets/index-[^"]*\.js' |
+  head -1 | xargs -I{} curl -s --compressed "https://getcordon.xyz/console/{}" |
+  grep -c 'auth.privy.io'
+```
+
+## What this box does not run
+
+**No daemon.** `cordon-meter` and `cordon-attest` are the only Cordon units
+here, and neither holds an operator key — the meter reads and the attest
+endpoint sells a reading. Nothing on this box can draw from the vault or pay a
+seller.
+
+That is deliberate: an operator key on a web-facing box is a key on a
+web-facing box. The daemon runs where its keys are, which today is the author's
+own machine:
+
+```bash
+node --env-file=.env.live --env-file=~/.cordon/cordon.env \
+  packages/daemon/src/main.ts
+```
+
+So a purchase, a refusal and a published record all happen off this box, and
+what the box does is show them afterwards.
+
 ## Redeploy
 
 ```bash
@@ -188,8 +231,12 @@ Build the site with `VITE_METER_URL` set to wherever the meter answers, and
 illustration keeps working beside real records. Unset, the site behaves exactly
 as it did.
 
+`cordon-publish.sh` sets it to **`/api`** — the meter on this box's own origin,
+proxied by nginx — so a redeploy needs nothing passed. `CORDON_METER_URL`
+overrides it for a meter somewhere else:
+
 ```bash
-VITE_METER_URL=https://meter.getcordon.xyz npm run build --prefix packages/site
+CORDON_METER_URL=https://meter.example.com ./ops/bin/cordon-publish.sh
 ```
 
 The meter already sends `access-control-allow-origin: *` — a record only its
