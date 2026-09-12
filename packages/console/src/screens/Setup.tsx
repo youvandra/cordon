@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Button,
   Card,
@@ -406,15 +406,18 @@ export default function Setup() {
     <>
       <ScreenHead
         actions={
+          /* One thing to do next, and it is the tree.
+
+             There were two buttons here and both navigated to the same screen,
+             which made "Revoke a branch" a promise the destination does not
+             keep on arrival: revoking is per node, so it lives on the node. A
+             destructive verb sitting as the grey equal of a neutral one is
+             also the wrong weight for a console where colour means exception.
+             The revoke is a link in the sentence that explains it, below. */
           stage === "done" ? (
-            <Stack direction="row" gap="sm">
-              <Button variant="secondary" size="sm" onClick={() => navigate("/console/tree")}>
-                Open the tree
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/console/tree")}>
-                Revoke a branch
-              </Button>
-            </Stack>
+            <Button variant="primary" size="sm" onClick={() => navigate("/console/tree")}>
+              Open the tree
+            </Button>
           ) : undefined
         }
         title={stage === "done" ? "One mandate, signed." : "Sign one mandate. Fund the vault once."}
@@ -436,9 +439,9 @@ export default function Setup() {
            something that is already the subject. A mandate cannot be edited,
            so there is nothing else on this screen to compare them against. */
         <>
-          /* Five bounds, one row where there is room. Three columns left one
-             stranded on a second row, which reads as an afterthought rather
-             than as the last of a set. */
+          {/* Five bounds, one row where there is room. Three columns left one
+              stranded on a second row, which reads as an afterthought rather
+              than as the last of a set. */}
           <Grid columns={5} min={178} gap="md">
             {signed.map((figure, index) => (
               <MetricCard
@@ -464,7 +467,15 @@ export default function Setup() {
           <Text variant="micro" tone="dim" as="p" className="setup__after">
             A mandate cannot be edited. It narrows: a parent spawns a child
             inside its own bounds through <span className="mono">cordon_spawn</span>,
-            and the owner can cut any branch at any time.
+            and the owner can{" "}
+            {live ? (
+              <Link className="setup__cut" to="/console/tree#nodes">
+                cut any branch
+              </Link>
+            ) : (
+              "cut any branch"
+            )}{" "}
+            at any time.
           </Text>
         </>
       ) : (

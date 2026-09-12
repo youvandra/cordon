@@ -1122,6 +1122,22 @@ body {
    mandate that cannot be edited. */
 .setup__after { margin: var(--cordon-space-5) 0 0; max-width: 62ch; }
 
+/* Cutting a branch is not a next step and does not get a button beside one.
+   It is the exception this sentence already describes, so it is offered where
+   it is explained — underlined rather than coloured, because the colour in
+   this console is reserved for a bound that fired. */
+.setup__cut {
+  color: var(--cordon-copy);
+  text-decoration: underline;
+  text-decoration-color: var(--cordon-hairline);
+  text-underline-offset: 3px;
+}
+.setup__cut:hover,
+.setup__cut:focus-visible {
+  color: var(--cordon-critical);
+  text-decoration-color: currentColor;
+}
+
 /* A release into a branch that has been cut. The colour is the one every other
    exception in this system uses, because a reader should not have to learn a
    new signal to notice that this one is different. */

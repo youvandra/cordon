@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
@@ -249,6 +249,9 @@ function ChainTree({
         <TreePlayground nodes={nodes} />
       </Section>
 
+      {/* Named, because the setup screen's "cut any branch" lands here: the
+          revoke is per node and this is where the nodes are. */}
+      <div id="nodes">
       <Section title="every node, as figures">
         <DataTable
           rows={nodes}
@@ -331,6 +334,7 @@ function ChainTree({
           ]}
         />
       </Section>
+      </div>
 
       <Modal
         open={Boolean(cutting)}
@@ -739,6 +743,25 @@ export default function Tree() {
   const owner = real ? address : DEMO.owner;
   const chain = useChainTree(owner);
   const mine = real && Boolean(address);
+
+  /* Arriving at the node table from somewhere that named it.
+   *
+   * The setup screen's "cut any branch" points here, and a router that changes
+   * the path without moving the page leaves a reader at the top of a screen
+   * whose first two thirds are tiles. It waits for the read, because the table
+   * does not exist until the chain has answered, and it runs once per arrival
+   * so a re-render does not drag the page back down under somebody who has
+   * scrolled away. */
+  const { hash } = useLocation();
+  const arrived = useRef<string | null>(null);
+  useEffect(() => {
+    if (hash !== "#nodes" || chain.state !== "read") return;
+    if (arrived.current === hash) return;
+    const target = document.getElementById("nodes");
+    if (!target) return;
+    arrived.current = hash;
+    target.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [hash, chain.state]);
 
   /* Privy restores its session asynchronously. Deciding whose tree to draw
      before it has finished shows an owner the public one and then swaps it. */
