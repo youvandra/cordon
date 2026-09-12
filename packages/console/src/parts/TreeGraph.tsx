@@ -125,8 +125,16 @@ export function TreeGraph({
         </svg>
 
         {placed.map((node) => {
-          const share =
-            node.budget6 > 0n ? Number((node.spent6 * 100n) / node.budget6) : 0;
+          const pct = (value: bigint) =>
+            node.budget6 > 0n ? Math.min(100, Number((value * 1000n) / node.budget6) / 10) : 0;
+          const spent = pct(node.spent6);
+          /* Where this node's own window stops being spendable. Below 100 it
+             is an ancestor that stops it, and the gap between this mark and
+             the end of the bar is authority the node holds on paper and cannot
+             use — which is the one thing no per-agent wallet can draw. */
+          const ceiling = pct(node.spent6 + node.available6);
+          const held = ceiling < 99.5 && !node.revoked;
+
           return (
             <Fragment key={node.id}>
               <button
@@ -134,40 +142,46 @@ export function TreeGraph({
                 className="graph__node"
                 data-revoked={node.revoked ? "" : undefined}
                 data-root={node.parent === null ? "" : undefined}
-                data-bound={node.heldBy ? "" : undefined}
+                data-bound={held ? "" : undefined}
+                data-depth={Math.min(node.depth, 3)}
                 data-selected={selected === node.id ? "" : undefined}
                 style={{ left: node.x, top: node.y, width: NODE_W, height: NODE_H }}
                 onClick={onSelect ? () => onSelect(node.id) : undefined}
               >
+                <span className="graph__rail" aria-hidden="true" />
+
                 <span className="graph__head">
-                  <span className="graph__label">{node.label}</span>
-                  {node.parent === null ? (
-                    <span className="graph__role">root</span>
-                  ) : null}
-                </span>
-
-                {/* Two numbers, and the distance between them is the argument.
-                    The bar is this node's own window; the figure under it is
-                    what it may actually draw, which is smaller whenever
-                    something above it is tighter. */}
-                <span className="graph__meter">
-                  <span className="graph__spent mono">
-                    {formatUsdc(node.spent6)} <span className="graph__of">of</span>{" "}
-                    {formatUsdc(node.budget6)}
-                  </span>
-                  <span className="graph__bar" aria-hidden="true">
-                    <span
-                      className="graph__fill"
-                      style={{ width: `${Math.min(100, share)}%` }}
-                      data-hot={share >= 95 ? "" : undefined}
-                    />
+                  <span className="graph__label mono">{node.label}</span>
+                  <span className="graph__role">
+                    {node.parent === null ? "root" : `depth ${node.depth}`}
                   </span>
                 </span>
 
+                {/* The headline is what this node may actually draw, because
+                    that is the figure an owner is looking for. Its own window
+                    is the bar underneath, and the tick on the bar is where an
+                    ancestor cuts the window short. */}
                 <span className="graph__foot">
                   <span className="graph__draw num">{formatUsdc(node.available6)}</span>
                   <span className="graph__note">
-                    {node.heldBy ? `left — held by ${node.heldBy}` : "left to draw"}
+                    {node.revoked ? "cut" : held ? `left · capped by ${node.heldBy ?? "an ancestor"}` : "left to draw"}
+                  </span>
+                </span>
+
+                <span className="graph__meter">
+                  <span className="graph__bar" aria-hidden="true">
+                    <span
+                      className="graph__fill"
+                      style={{ width: `${spent}%` }}
+                      data-hot={spent >= 95 ? "" : undefined}
+                    />
+                    {held ? (
+                      <span className="graph__ceiling" style={{ left: `${ceiling}%` }} />
+                    ) : null}
+                  </span>
+                  <span className="graph__spent mono">
+                    {formatUsdc(node.spent6)} <span className="graph__of">of</span>{" "}
+                    {formatUsdc(node.budget6)}
                   </span>
                 </span>
 
