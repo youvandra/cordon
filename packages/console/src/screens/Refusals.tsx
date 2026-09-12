@@ -420,7 +420,15 @@ export default function Refusals() {
               ? "Every one of these is a decision the contract made about your own tree, read from the events it emitted. A refusal is not an error and it costs no budget; the money simply did not move."
               : "Every one of these is a decision the contract made about the tree Cordon runs on Arc, read from the events it emitted. Releasing one takes the owner's own signature, so there is nothing here to press: this is the record, not the console for it."
           }
-          note={mine ? `read from ${ARC.name}` : `the public tree · read from ${ARC.name}`}
+          note={
+            /* A chain read that stopped at its window cap holds part of the
+               record, and the badge is where this screen says which part. */
+            live.from
+              ? `from block ${String(live.from)} · read from ${ARC.name}`
+              : mine
+                ? `read from ${ARC.name}`
+                : `the public tree · read from ${ARC.name}`
+          }
           live
         />
         {/* The meter caps what one answer carries. A screen that draws a page
