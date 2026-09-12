@@ -590,12 +590,47 @@ Being explicit about the edge of the guarantee is the point, so:
 | Reads | a Node indexer over Arc events | rebuildable from the chain, never the authority |
 | Surfaces | React 18, Vite, framer-motion, Privy | Privy holds the key, Cordon holds the bound |
 
+### What of Circle's, Arc's and Privy's is actually used
+
+Named, because "built on Circle" can mean anything and this is a checkable
+list.
+
+| Circle | Where |
+|---|---|
+| **Arc** testnet, chain 5042002 | every contract, every transaction |
+| **USDC** — native 18-decimal gas *and* the 6-decimal ERC-20 view at `0x3600…0000` | the money and the fee are the same asset |
+| **EIP-3009 `transferWithAuthorization`** | the authorisation the seller collects; the payer spends no gas |
+| **Circle Gateway** — `GatewayWallet.depositFor`, `GatewayMinter` | `TreeVault` deposits a tranche straight into the operator's own balance |
+| **Gateway burn intent**, EIP-712 signed, submitted to `gateway-api-testnet.circle.com` | settlement, with no API credential |
+| **x402**, scheme `exact` | the seller's challenge, and the endpoint Cordon sells |
+| **x402 discovery** — `api.circle.com/v2/x402/discovery/resources` | the catalogue figures on the landing page |
+
+| Arc | Where |
+|---|---|
+| **USDC as the gas token** | an operator needs gas and money and holds one asset |
+| **Sub-second deterministic finality** | a draw per purchase is affordable; `CORDON_POLL_MS` is 250 rather than viem's 4,000 |
+| **arcscan** | every transaction this project prints is a link |
+
+| Privy | Where |
+|---|---|
+| **`@privy-io/react-auth`** | the console's wallet gate |
+| **Embedded wallets**, `createOnLogin: "users-without-wallets"` | an owner who arrives without a wallet still signs their own mandate |
+| **`defaultChain` / `supportedChains`** with a viem-defined Arc | Arc is nobody's default chain |
+| **`useWallets()`** as the signer | open, fund, spawn, revoke and release, each simulated before it is sent |
+
 ### Standards
 
 **x402** for the payment challenge · **EIP-3009** for the authorisation the
-seller collects · **EIP-712** for Circle's burn intent · **ERC-8004** for
-identity and reputation · **CAIP-2** for naming the network a payment settles
-on · **MCP** for the agent's surface.
+seller collects · **EIP-712** for Circle's burn intent and the Gateway domain ·
+**ERC-8004** for identity and reputation · **CAIP-2** for naming the network a
+payment settles on · **MCP** for the agent's surface · **HTTP_PROXY** and an
+ephemeral CA for the programs that cannot be changed.
+
+### What is not used
+
+`CCTP`, Circle Wallets, Circle Mint, Paymaster and the Compliance Engine. The
+rail is Gateway, x402 and EIP-3009, and naming the parts that are not here is
+cheaper than being asked.
 
 ---
 
