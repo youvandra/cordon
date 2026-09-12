@@ -263,10 +263,36 @@
 /* --------------------------------------------------------------------------
    Reset — scoped, so Cordon can drop into an existing page without a fight.
    -------------------------------------------------------------------------- */
+/* The layers below are portals: React mounts them at the end of `body`, not
+   inside `.cordon-root`, so a reset scoped to the root reached none of them.
+   Every input in every modal was therefore `width: 100%` of its slot **plus**
+   34px of padding and 2px of border — a form in a dialog overflowed its own
+   body and grew a horizontal scrollbar, which is what this was found as.
+   A portal is still Cordon's own markup and the reset has to follow it. */
 .cordon-root,
 .cordon-root *,
 .cordon-root *::before,
-.cordon-root *::after {
+.cordon-root *::after,
+.cordon-modal-layer,
+.cordon-modal-layer *,
+.cordon-modal-layer *::before,
+.cordon-modal-layer *::after,
+.cordon-sheet-layer,
+.cordon-sheet-layer *,
+.cordon-sheet-layer *::before,
+.cordon-sheet-layer *::after,
+.cordon-command-layer,
+.cordon-command-layer *,
+.cordon-command-layer *::before,
+.cordon-command-layer *::after,
+.cordon-drawer-layer,
+.cordon-drawer-layer *,
+.cordon-drawer-layer *::before,
+.cordon-drawer-layer *::after,
+.cordon-toasts,
+.cordon-toasts *,
+.cordon-toasts *::before,
+.cordon-toasts *::after {
   box-sizing: border-box;
 }
 
