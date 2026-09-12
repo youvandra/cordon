@@ -148,9 +148,9 @@ stretched to twice the glyph width and runs into the line below.
 framer-motion drives on requestAnimationFrame, which does not run in a hidden
 document. `src/lib/entrance.ts` therefore animates only when the tab was
 visible at mount, with a 1.6s failsafe that forces everything into view. This
-is the root `CLAUDE.md` rule: animation may not gate visibility.
+is this project's own rule: animation may not gate visibility.
 
-## The two rules it inherits from the root `CLAUDE.md`
+## The two rules every surface here is written against
 
 - **Every figure comes from `@cordon/fixtures`.** `src/lib/data.ts` is the one
   exception and says so at the top: it is a shaped sample of what the indexer

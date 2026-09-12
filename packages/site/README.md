@@ -17,7 +17,7 @@ site meant five loads and four summaries of things not yet read. The nav now
 scrolls. `/mechanism`, `/arc`, `/record` and `/start` still resolve, as
 redirects to the section, so links already in the brief do not 404.
 
-Two rules it inherits from the root `CLAUDE.md`:
+Two rules every surface in this repository is written against:
 
 - **Every figure comes from `@cordon/fixtures`.** Nothing here hardcodes a cap,
   a window, a price or a count.

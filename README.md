@@ -324,8 +324,8 @@ point in a checkout rather than an `npx` that would 404:
       "command": "node",
       "args": ["/path/to/cordon/packages/mcp/src/main.ts"],
       "env": {
-        "CORDON_VAULT": "0x00ab57acd260c594a661b6101bdf7e92267af135",
-        "CORDON_REGISTRY": "0xf86de085e63b00c9fba300b19807c883deb961e9",
+        "CORDON_VAULT": "<TreeVault, from the table above>",
+        "CORDON_REGISTRY": "<MandateRegistry, from the same table>",
         "CORDON_NODE_ME": "0x…",
         "CORDON_KEY_ME": "…",
         "CORDON_RPC": "https://rpc.testnet.arc.io"
@@ -334,6 +334,11 @@ point in a checkout rather than an `npx` that would 404:
   }
 }
 ```
+
+The two addresses are the deployed ones and this file has exactly one copy of
+them — the table `deploy.sh` writes. The block with them filled in is at
+<https://getcordon.xyz/docs/mcp>, generated from the deployment file rather
+than typed.
 
 `CORDON_KEY_ME` is held by the server process. The model never sees it and has
 no tool that could use one. Where the keyring holds several nodes,
@@ -746,5 +751,6 @@ by hand.
 
 ## Licence
 
-Every Solidity source carries an `SPDX-License-Identifier: MIT` header. A
-repository-level licence file has not been added yet.
+MIT — [LICENSE](LICENSE). Every Solidity source carries the matching
+`SPDX-License-Identifier: MIT` header, which is what the licence file now says
+out loud for the whole repository.
