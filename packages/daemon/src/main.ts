@@ -5,12 +5,14 @@ import { load } from "./config.ts";
 import { Gate } from "./gate.ts";
 import { CircleSettler } from "./settle.ts";
 import { createDaemon } from "./server.ts";
+import { keyFileAt } from "./keyfile.ts";
 
 const config = load(process.env);
 const gate = new Gate(config);
 
 const server = createDaemon({
   gate,
+  keyFile: keyFileAt(config.keyFile),
   settler: new CircleSettler({
     publicClient: gate.publicClientForSettlement,
     walletFor: (node) => gate.signerFor(node),

@@ -133,6 +133,10 @@ export function Configuration() {
             <C key="mcpnode">CORDON_MCP_NODE</C>,
             "unset, and then the MCP server speaks for whichever key parsed first. Read only by the MCP server, which serves one node",
           ],
+          [
+            <C key="keyfile">CORDON_KEY_FILE</C>,
+            "~/.cordon/cordon.env. Where a key minted at run time by a spawn is written — before the spawn is sent, so a restart cannot lose it",
+          ],
         ]}
       />
       <Note tone="warn" title="Keys are named, never inlined">

@@ -18,6 +18,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { load } from "../../daemon/src/config.ts";
 import { Gate } from "../../daemon/src/gate.ts";
 import { CircleSettler } from "../../daemon/src/settle.ts";
+import { keyFileAt } from "../../daemon/src/keyfile.ts";
 import { ARC } from "../../fixtures/src/index.ts";
 import { createMcpServer } from "./server.ts";
 
@@ -41,6 +42,7 @@ if (!node) {
 
 const server = createMcpServer({
   gate,
+  keyFile: keyFileAt(config.keyFile),
   settler: new CircleSettler({
     publicClient: gate.publicClientForSettlement,
     walletFor: (node) => gate.signerFor(node),

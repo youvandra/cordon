@@ -8,6 +8,8 @@
 /* A relative path rather than an alias: this package runs under plain node,
    where a tsconfig `paths` entry does not exist and a bundler is not involved.
    One import, resolved the same way at build time and at run time. */
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { ARC, ERC8004 } from "../../fixtures/src/index.ts";
 
 export interface NodeKey {
@@ -41,6 +43,8 @@ export interface Config {
    */
   pollMs: number;
   keys: NodeKey[];
+  /** Where a key minted at run time by a spawn is written, before the spawn is sent. */
+  keyFile: string;
 }
 
 class ConfigError extends Error {}
@@ -71,6 +75,7 @@ export const ENV = {
     CORDON_ASSETS: "assets it will pay in",
     CORDON_PORT: "defaults to 8402",
     CORDON_POLL_MS: "receipt polling interval; defaults to 250, matched to Arc's finality rather than to viem's 4,000",
+    CORDON_KEY_FILE: "where a spawned child's key is written, before the spawn is sent; defaults to ~/.cordon/cordon.env",
   },
 } as const;
 
@@ -119,5 +124,6 @@ export function load(env = process.env): Config {
     port: Number(env.CORDON_PORT ?? 8402),
     pollMs: Number(env.CORDON_POLL_MS ?? 250),
     keys,
+    keyFile: env.CORDON_KEY_FILE ?? join(homedir(), ".cordon", "cordon.env"),
   };
 }

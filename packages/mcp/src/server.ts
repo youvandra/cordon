@@ -10,6 +10,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { generatePrivateKey } from "viem/accounts";
+import type { KeyFile } from "../../daemon/src/keyfile.ts";
 import type { Address, Hex } from "viem";
 import { Gate } from "../../daemon/src/gate.ts";
 import { cordonFetch, httpTransport, type Transport } from "../../daemon/src/fetch.ts";
@@ -26,8 +27,10 @@ export interface McpDeps {
   node: Hex;
   explorer?: string;
   transport?: Transport;
-  /** Injected in tests. Real runs generate one and keep it in memory. */
+  /** Injected in tests. Real runs generate one. */
   newOperatorKey?: () => Hex;
+  /** Where a spawned child's key is written before the spawn is sent. */
+  keyFile?: KeyFile;
 }
 
 const text = (s: string) => ({ content: [{ type: "text" as const, text: s }] });
@@ -101,11 +104,15 @@ export function createMcpServer(deps: McpDeps): McpServer {
         concentrationBps: number;
       };
 
-      /* The child's key is generated here and never leaves. It is not returned
-         to the agent, not logged, and not written down: the agent holds no key
-         is the claim, and a key it could read is a key it holds. */
+      /* The child's key is generated here and never reaches the agent: it is
+         not returned and not logged, because the agent holds no key is the
+         claim and a key it could read is a key it holds. It is written to the
+         operator's key file before the spawn is sent — the mandate names this
+         address for good, and a key kept only in memory is a child nobody can
+         sign for once this process restarts. */
       const key = newKey();
       const operator = deps.gate.addOperator(key);
+      const keyLabel = deps.keyFile?.remember(key, operator);
 
       const { node, txHash } = await deps.gate.spawn(deps.node, {
         operator,
@@ -115,12 +122,27 @@ export function createMcpServer(deps: McpDeps): McpServer {
           concentrationPct !== undefined ? Math.round(concentrationPct * 100) : parent.concentrationBps,
       });
 
+      let nodeIdSaved = false;
+      if (deps.keyFile && keyLabel) {
+        try {
+          deps.keyFile.bind(keyLabel, node);
+          nodeIdSaved = true;
+        } catch {
+          nodeIdSaved = false;
+        }
+      }
+
       return text(
         [
           `Spawned "${label}".`,
           `  node       ${node}`,
           `  operator   ${operator}`,
           `  budget     ${budgetUsdc} USDC`,
+          keyLabel
+            ? nodeIdSaved
+              ? `  key        saved under ${keyLabel} in the operator's key file`
+              : `  key        saved under ${keyLabel}; its node id could not be written beside it`
+            : "  key        held in memory only — lost if this server restarts",
           txHash ? `  tx         ${txHash}` : "",
           "",
           "Every draw this child makes also debits this mandate and every one",
