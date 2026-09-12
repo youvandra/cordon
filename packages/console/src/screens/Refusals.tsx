@@ -215,16 +215,25 @@ function ChainRefusalCard({
         <Text variant="micro" tone="dim" as="span" className="eyebrow">
           refusal {String(refusal.id)} · block {String(refusal.blockNumber)}
         </Text>
-        <Tag tone={refusal.released ? "neutral" : "positive"} size="sm" dot>
+        {/* A refusal that stands is what this screen is full of, and colour
+            here means the exception — so the tag that gets it is the one where
+            somebody signed money past a bound. */}
+        <Tag tone={refusal.released ? "caution" : "neutral"} size="sm" dot>
           {refusal.released ? "signed out later" : "still standing"}
         </Tag>
       </CardHeader>
 
       <CardBody>
         <Stack direction="column" gap="sm" align="start">
-          <Text variant="lead" tone="ink" as="p">
-            {formatUsdc(refusal.amount6)} to <span className="mono">{short}</span>
-          </Text>
+          {/* What was not paid, and to whom. It was a line of body text with
+              the amount inside it, which is the one figure a reader is
+              scanning a page of these for. */}
+          <p className="refusal__figure">
+            <span className="refusal__amount num">{formatUsdc(refusal.amount6)}</span>
+            <span className="refusal__to">
+              to <span className="mono">{short}</span>
+            </span>
+          </p>
           <Text variant="body" tone="copy" as="p">
             {REASON_MEANING[refusal.reason] ?? refusal.reason}.
           </Text>
@@ -243,33 +252,31 @@ function ChainRefusalCard({
         </Stack>
       </CardBody>
 
-      <CardFooter>
-        <div className="refusal__actions">
-          <Stack direction="row" gap="sm" align="center" wrap>
-            {owner ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  disabled={refusal.released || state.status === "working"}
-                  onClick={() => setConfirming(true)}
-                >
-                  {state.status === "working" ? state.step : "Sign to release"}
-                </Button>
-                <Text variant="micro" tone="dim" as="span" className={cut ? "refusal__warn" : undefined}>
-                  {cut
-                    ? "this branch is cut — releasing still pays its operator, because the vault checks the owner and not the revocation"
-                    : "one transaction from your own key, and it does not move the bound"}
-                </Text>
-              </>
-            ) : (
-              <Text variant="micro" tone="dim" as="span">
-                Releasing takes the owner's own signature. This is their tree, not yours.
+      {/* A visitor got this footer too, carrying one sentence about whose
+          signature a release takes — on every card, nine times down a screen
+          whose own lede says it once. There is nothing for them to do here, so
+          there is nothing here. */}
+      {owner ? (
+        <CardFooter>
+          <div className="refusal__actions">
+            <Stack direction="row" gap="sm" align="center" wrap>
+              <Button
+                size="sm"
+                variant="danger"
+                disabled={refusal.released || state.status === "working"}
+                onClick={() => setConfirming(true)}
+              >
+                {state.status === "working" ? state.step : "Sign to release"}
+              </Button>
+              <Text variant="micro" tone="dim" as="span" className={cut ? "refusal__warn" : undefined}>
+                {cut
+                  ? "this branch is cut — releasing still pays its operator, because the vault checks the owner and not the revocation"
+                  : "one transaction from your own key, and it does not move the bound"}
               </Text>
-            )}
-          </Stack>
-        </div>
-      </CardFooter>
+            </Stack>
+          </div>
+        </CardFooter>
+      ) : null}
 
       <Modal
         open={confirming}
@@ -411,7 +418,7 @@ export default function Refusals() {
           lede={
             mine
               ? "Every one of these is a decision the contract made about your own tree, read from the events it emitted. A refusal is not an error and it costs no budget; the money simply did not move."
-              : "Every one of these is a decision the contract made about the tree Cordon runs on Arc, read from the events it emitted. Releasing one takes the owner's own signature, which is why the buttons below are theirs and not yours."
+              : "Every one of these is a decision the contract made about the tree Cordon runs on Arc, read from the events it emitted. Releasing one takes the owner's own signature, so there is nothing here to press: this is the record, not the console for it."
           }
           note={mine ? `read from ${ARC.name}` : `the public tree · read from ${ARC.name}`}
           live

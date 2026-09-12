@@ -1143,6 +1143,40 @@ body {
    new signal to notice that this one is different. */
 .refusal__warn { color: var(--cordon-critical); }
 
+/* The refused amount, given the weight of a figure rather than of a sentence.
+   A reader scanning a page of these is looking for how much did not leave, and
+   for whom wanted it — in that order. */
+.refusal__figure {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  flex-wrap: wrap;
+}
+.refusal__amount {
+  color: var(--cordon-ink-strong);
+  font-size: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.refusal__to { color: var(--cordon-copy-dim); font-size: 12.5px; }
+
+/* The identity of the decision sits above a rule, the same way a node in the
+   drawing carries its id — one card vocabulary across the console. Which id
+   and what became of it belong on one line: stacked, the status read as a
+   second heading for a card that has one. */
+.refusal .cordon-card__header {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--cordon-space-4);
+  padding-bottom: var(--cordon-space-3);
+  border-bottom: 1px solid var(--cordon-hairline);
+  flex-wrap: wrap;
+}
+
 /* ---- the tree's shape, on the count tile ---------------------------------- */
 
 /* One row of dots per level. A count says how many agents there are and
