@@ -9,7 +9,6 @@ import {
   Enforced,
   Field,
   Grid,
-  Icon,
   MetricCard,
   Modal,
   Select,
@@ -17,7 +16,6 @@ import {
   StepProgress,
   Text,
   TextField,
-  Tooltip,
   useNotify,
 } from "cordon-ui";
 import { ARC, ENFORCED_BY, MANDATE, isAddress } from "@cordon/fixtures";
@@ -54,19 +52,6 @@ const WINDOWS = [
  * screen. The explanation is still one keystroke away and is still read by a
  * screen reader — it is just no longer in the way of the answer.
  */
-function Ask({ label, help }: { label: string; help: string }) {
-  return (
-    <span className="ask">
-      {label}
-      <Tooltip content={help} placement="bottom">
-        <button type="button" className="ask__more" aria-label={`What is ${label}?`}>
-          <Icon name="info" />
-        </button>
-      </Tooltip>
-    </span>
-  );
-}
-
 type Stage = "asking" | "review" | "done";
 
 export default function Setup() {
@@ -116,7 +101,8 @@ export default function Setup() {
       field: (
         <Stack direction="row" gap="md" wrap>
           <Field
-            label={<Ask label="Budget" help="What every agent under this mandate may draw between them, per window. Not a balance — a limit the contract checks on every purchase." />}
+            label="Budget"
+            info="What every agent under this mandate may draw between them, per window. Not a balance — a limit the contract checks on every purchase."
           >
             <TextField
               type="number"
@@ -127,7 +113,8 @@ export default function Setup() {
             />
           </Field>
           <Field
-            label={<Ask label="Window" help="How often the budget refills. It rolls in whole steps, and a child's window must be the same length as its parent's." />}
+            label="Window"
+            info="How often the budget refills. It rolls in whole steps, and a child's window must be the same length as its parent's."
           >
             <Select
               value={windowS}
@@ -145,7 +132,8 @@ export default function Setup() {
       complete: usdc6(lifetime) > 0n,
       field: (
         <Field
-          label={<Ask label="Lifetime cap" help="The window refills; this never does. Without it a budget is a rate, and a tree left running for a week authorises seven windows of it." />}
+          label="Lifetime cap"
+            info="The window refills; this never does. Without it a budget is a rate, and a tree left running for a week authorises seven windows of it."
         >
           <TextField
             type="number"
@@ -163,7 +151,8 @@ export default function Setup() {
       complete: usdc6(tranche) > 0n,
       field: (
         <Field
-          label={<Ask label="Tranche cap" help="No single draw may exceed this. It is what stops one plausible-looking call from costing two hundred dollars." />}
+          label="Tranche cap"
+            info="No single draw may exceed this. It is what stops one plausible-looking call from costing two hundred dollars."
         >
           <TextField
             type="number"
@@ -181,7 +170,8 @@ export default function Setup() {
       complete: Number(concentration) > 0 && Number(concentration) <= 100,
       field: (
         <Field
-          label={<Ask label="Concentration" help="A share of one window to a single payee. It catches ten thousand small purchases from the same seller, each comfortably under the tranche cap. The payee is the one the daemon declares, so this bound is declared rather than proven." />}
+          label="Concentration"
+            info="A share of one window to a single payee. It catches ten thousand small purchases from the same seller, each comfortably under the tranche cap. The payee is the one the daemon declares, so this bound is declared rather than proven."
         >
           <TextField
             type="number"
@@ -199,7 +189,8 @@ export default function Setup() {
       complete: Number(depth) > 0,
       field: (
         <Field
-          label={<Ask label="Maximum depth" help="How many times an agent may spawn an agent. Every child is narrower than its parent, so depth costs nothing in authority — it bounds how far a mistake can be delegated." />}
+          label="Maximum depth"
+            info="How many times an agent may spawn an agent. Every child is narrower than its parent, so depth costs nothing in authority — it bounds how far a mistake can be delegated."
         >
           <TextField
             type="number"
@@ -216,7 +207,8 @@ export default function Setup() {
       complete: isAddress(operator),
       field: (
         <Field
-          label={<Ask label="Operator address" help="The address that does the spending — made by `cordon init` and held by the daemon. Not your wallet, and not the agent's: you sign the limit, this spends inside it." />}
+          label="Operator address"
+            info="The address that does the spending — made by `cordon init` and held by the daemon. Not your wallet, and not the agent's: you sign the limit, this spends inside it."
         >
           <TextField
             value={operator}

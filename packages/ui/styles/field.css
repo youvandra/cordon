@@ -24,6 +24,41 @@
 
 .cordon-field__required { color: var(--cordon-accent); }
 
+/* The label and its information icon share a row, so the icon sits with the
+   thing it explains rather than under the control where a hint would go. */
+.cordon-field__labelrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Quiet until it is wanted. It carries the explanation as its accessible
+   name, so a reader who cannot see the bubble is read the sentence and not
+   the word "info". */
+.cordon-field__info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--cordon-copy-dim);
+  cursor: help;
+  transition:
+    color var(--cordon-dur-fast) var(--cordon-ease-settle),
+    background-color var(--cordon-dur-fast) var(--cordon-ease-settle);
+}
+.cordon-field__info svg { width: 15px; height: 15px; }
+.cordon-field__info:hover,
+.cordon-field__info:focus-visible {
+  color: var(--cordon-ink);
+  background: var(--cordon-hairline-soft);
+}
+
 .cordon-field__message {
   display: flex;
   align-items: center;
@@ -134,4 +169,19 @@
 .cordon-search__clear:focus-visible {
   outline: var(--cordon-focus-ring) solid var(--cordon-focus-on-paper);
   outline-offset: 2px;
+}
+
+/* A field's explanation opens rightwards from its icon rather than centring on
+   it. The bubble is 240–340px and the icon is 18px, so centred it hangs more
+   than a hundred pixels each side — and a label sits at the left edge of the
+   card it is in, which is where that bubble goes off the card. `Tooltip` has
+   no collision handling to fall back on, so the anchor is the fix.
+
+   Left-aligned text for the same reason `Ask` was: these are sentences, and a
+   centred three-line sentence is read word by word. */
+.cordon-field__labelrow .cordon-tooltip__bubble--bottom {
+  left: -8px;
+  max-width: 288px;
+  transform: none;
+  text-align: left;
 }
