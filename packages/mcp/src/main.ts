@@ -21,9 +21,18 @@ import { createMcpServer } from "./server.ts";
 const config = load(process.env);
 const gate = new Gate(config);
 
-const node = gate.nodes()[0];
+/* One MCP server speaks for one node, and a keyring holding several has no
+   natural first. Naming it beats the order the environment happened to parse
+   in, which is not a thing anybody can see. */
+const configured = gate.nodes();
+const asked = process.env.CORDON_MCP_NODE?.toLowerCase();
+const node = asked ? configured.find((n) => n.toLowerCase() === asked) : configured[0];
 if (!node) {
-  console.error("cordon: no node configured; set CORDON_NODE_<label> and CORDON_KEY_<label>");
+  console.error(
+    asked
+      ? `cordon: CORDON_MCP_NODE is ${asked} and this process holds no key for it. It holds: ${configured.join(", ") || "none"}`
+      : "cordon: no node configured; set CORDON_NODE_<label> and CORDON_KEY_<label>",
+  );
   process.exit(1);
 }
 
