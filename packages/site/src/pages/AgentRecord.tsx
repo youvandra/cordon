@@ -142,10 +142,17 @@ function LiveAgentRecord({ data }: { data: LiveConduct }) {
     { value: String(data.breaches), label: "refusals this node's own bound caused" },
     { value: formatUsdc(BigInt(data.drawn6)), label: "drawn" },
     { value: formatUsdc(BigInt(data.refused6)), label: "asked for and refused" },
-    {
-      value: `${Math.round(data.linkage * 100)}%`,
-      label: "refusals naming their transaction",
-    },
+    /* A share of refusals, and there is no share of nothing: this printed
+       100% for a node that has never been refused anything, which is true of
+       the arithmetic and says nothing about the agent. */
+    ...(data.refusals > 0
+      ? [
+          {
+            value: `${Math.round(data.linkage * 100)}%`,
+            label: "refusals naming their transaction",
+          },
+        ]
+      : []),
   ];
 
   return (

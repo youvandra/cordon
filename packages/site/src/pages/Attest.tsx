@@ -210,27 +210,54 @@ export default function Attest() {
             <Text variant="micro" tone="dim" as="h2" id="the-answer" className="eyebrow visually-hidden">
               What the endpoint answers
             </Text>
-            <MetricCard
-              animate={animate}
-              title={
-                <>
-                  Refusals naming their transaction
-                  <br />
-                  In this record, and in the registry
-                </>
-              }
-              value={`${linkagePct}`}
-              unit="%"
-              progress={body.conduct.linkage}
-              caption={
-                <>
-                  {REGISTRY_BASELINE.noLinkageLow}–{REGISTRY_BASELINE.noLinkageHigh}% of
-                  <br />
-                  existing feedback carries none
-                </>
-              }
-              glaze="rose"
-            />
+            {/* A share of refusals, and a share of nothing is not 100%.
+                This read 100% on a record with no refusals in it — the
+                arithmetic is vacuously true and the tile was the loudest
+                figure on the page, which is the combination this project has
+                a rule against. */}
+            {body.conduct.refusals === 0 ? (
+              <Card>
+                <CardBody>
+                  <Stack direction="column" gap="sm" align="start">
+                    <Text variant="micro" tone="dim" as="span" className="eyebrow">
+                      refusals naming their transaction
+                    </Text>
+                    <Text variant="lead" tone="ink" as="p">
+                      Nothing has been refused in this range.
+                    </Text>
+                    <Text variant="body" tone="copy" as="p">
+                      The figure is a share of refusals, so it appears with the
+                      first one. Existing feedback in the registry carries no
+                      payment behind it {REGISTRY_BASELINE.noLinkageLow}–
+                      {REGISTRY_BASELINE.noLinkageHigh}% of the time, whether or
+                      not this agent has been refused anything.
+                    </Text>
+                  </Stack>
+                </CardBody>
+              </Card>
+            ) : (
+              <MetricCard
+                animate={animate}
+                title={
+                  <>
+                    Refusals naming their transaction
+                    <br />
+                    In this record, and in the registry
+                  </>
+                }
+                value={`${linkagePct}`}
+                unit="%"
+                progress={body.conduct.linkage}
+                caption={
+                  <>
+                    {REGISTRY_BASELINE.noLinkageLow}–{REGISTRY_BASELINE.noLinkageHigh}% of
+                    <br />
+                    existing feedback carries none
+                  </>
+                }
+                glaze="rose"
+              />
+            )}
 
             <Card>
               <CardBody>
@@ -257,11 +284,21 @@ export default function Attest() {
                       ? "."
                       : " — and this answer's range starts after that, so the total is a floor, not the figure."}
                   </Text>
-                  <Text variant="body" tone="copy" as="p">
-                    {body.conduct.attested} of them are published in the
-                    reputation registry. The rest were signed off by a named
-                    human, and the answer says which.
-                  </Text>
+                  {/* Only where there are refusals to publish. With none, this
+                      read "0 of them are published… the rest were signed off by
+                      a named human" — a sentence about an empty set, and one
+                      that called every unpublished refusal a released one,
+                      which is a different thing entirely. */}
+                  {body.conduct.refusals > 0 ? (
+                    <Text variant="body" tone="copy" as="p">
+                      {body.conduct.attested} of{" "}
+                      {plural(body.conduct.refusals, "refusal")} reached the
+                      reputation registry. The rest are on chain and were never
+                      published, which a daemon running without{" "}
+                      <span className="mono">CORDON_RECORD</span> is enough to
+                      cause.
+                    </Text>
+                  ) : null}
                   <Enforced>{ENFORCED_BY.record}</Enforced>
                 </Stack>
               </CardBody>
