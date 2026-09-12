@@ -323,8 +323,8 @@ export function Attest() {
         of refusals.
       </P>
       <P>
-        The price sits under the catalogue median of ${MARKETPLACE.priceMedian},
-        inside the band where {MARKETPLACE.offersAtOrBelowOneCent} of{" "}
+        The price is the catalogue median, ${MARKETPLACE.priceMedian}, and sits
+        inside the band where {MARKETPLACE.offersAtOrBelowOneCent.toLocaleString("en-US")} of{" "}
         {MARKETPLACE.offersTotal.toLocaleString("en-US")} live offers already are. A check that costs
         more than the call it guards is a check nobody makes.
       </P>

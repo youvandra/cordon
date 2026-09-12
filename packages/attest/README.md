@@ -31,7 +31,7 @@ balance is refused for `required 0.0135`. The other rail,
 `GatewayWallet.withdraw`, takes fourteen days.
 
 So a tenth of a cent cannot settle here at all, and a cent is the smallest
-price that pays for its own release. It also lands under the catalogue median
+price that pays for its own release. It is also the catalogue median
 and inside the band where most live offers already are, which is the other half
 of the answer: a check that costs more than the call it guards is a check
 nobody makes.

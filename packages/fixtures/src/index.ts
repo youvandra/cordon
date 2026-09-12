@@ -260,22 +260,11 @@ export const GATEWAY = {
 /* Circle Agent Marketplace — the live catalogue                       */
 /* ------------------------------------------------------------------ */
 
-export const MARKETPLACE = {
-  discovery: "https://api.circle.com/v2/x402/discovery/resources",
-  services: 1_246,
-  sampled: 800,
-  gatewayCapable: 464,
-  priceMin: 0.000001,
-  priceMedian: 0.024,
-  priceMax: 200,
-  offersAtOrBelowOneCent: 651,
-  offersTotal: 1_535,
-  arcListings: 0,
-  /** Re-checked 2026-09-08: 100 sampled resources, every offer on Base,
-   *  Solana, Polygon, Ethereum, Avalanche, Arbitrum, Optimism, Unichain and
-   *  four smaller chains. Not one on Arc. */
-  arcListingsRecheckedOn: "2026-09-08",
-} as const;
+/* Written by walking every page of Circle's discovery API, never typed. These
+   figures were hand-copied from an 8 September sample until 13 September,
+   when the median had moved from $0.024 to $0.01 and the page still said the
+   old one. Re-record with `node packages/fixtures/scripts/record-marketplace.mjs`. */
+export { MARKETPLACE } from "./marketplace.gen.ts";
 
 /* ------------------------------------------------------------------ */
 /* The attestation endpoint — what Cordon itself sells                 */
@@ -286,10 +275,10 @@ export const MARKETPLACE = {
  * live mandate, and what has it done inside it? The answer is the same record
  * `/agent/<id>` shows for free, in the shape a machine reads, behind x402.
  *
- * Price is a parameter of the offer, not a measurement. It sits under the
- * catalogue's median of $0.024 and inside the band where 651 of 1,535 live
- * offers already are, because a check that costs more than the call it guards
- * is a check nobody makes.
+ * Price is a parameter of the offer, not a measurement. One cent is the
+ * catalogue's median exactly, and it sits inside the band of offers priced at
+ * a cent or less, which is most of the catalogue — because a check that costs
+ * more than the call it guards is a check nobody makes.
  */
 export const ATTEST = {
   /**
@@ -298,9 +287,9 @@ export const ATTEST = {
    * It was $0.001 until 11 September, and Circle's own settlement floor is
    * what moved it: a tranche of a tenth of a cent cannot pay the $0.0035 fee
    * Gateway charges to release it, so a price below that floor is a price no
-   * buyer on this rail can actually settle. It still sits under the
-   * catalogue's $0.024 median and inside the band where 651 of 1,535 live
-   * offers already are.
+   * buyer on this rail can actually settle. One cent is also the catalogue's
+   * median, and it sits inside the band of offers priced at a cent or less,
+   * which is most of the catalogue.
    */
   price6: 10_000n,
   /** x402 `exact`, the only scheme with an EOA signature and no gas. */
