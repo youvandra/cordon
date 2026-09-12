@@ -440,6 +440,57 @@ export function Faq() {
         no upgrade path and no owner.
       </P>
 
+      <H2 id="what-is-the-drill">What is the drill, and is it mine?</H2>
+      <P>
+        It is not yours and it never runs for you. The drill is <b>gate 3</b>:
+        one adversarial run this project performed against a mandate of its own,
+        published whichever way it came out. An agent was told to spend as hard
+        as it could under a mandate signed for{" "}
+        {formatUsdc(DRILL.ceiling6)} and given no instruction to behave. It
+        reached {formatUsdc(DRILL.reached6)} — {DRILL.reachedBps / 100}% of what
+        it was authorised — and was stopped by{" "}
+        <C>{DRILL.stoppedBy.join(", ")}</C>, with every refusal a transaction
+        anyone can open.
+      </P>
+      <P>
+        So <Link to="/drill">the drill page</Link> is evidence, not a feature:
+        one recorded run, the same numbers for every reader, and nothing about
+        it is computed from whoever is looking. Your own tree's refusals live in
+        the console, and they are a different thing entirely — decisions about
+        your mandate rather than about ours.
+      </P>
+      <P>
+        The reason it is published at all is that the figure could have come out
+        against us. A fence that has never been attacked in public has a claim
+        and no evidence; this one has a number, and the number is the bound.
+      </P>
+
+      <H2 id="what-does-it-cost">What does Cordon cost to run?</H2>
+      <P>
+        There is no fee to Cordon. The costs are gas on Arc for a draw or a
+        refusal, both of which are cents on testnet, and Circle's own Gateway
+        fee on a settlement, which is charged on top of the purchase. Nothing is
+        taken by us, because there is nowhere for it to be taken to: the
+        contracts have no owner and no fee switch.
+      </P>
+
+      <H2 id="does-it-slow-payments-down">Does the fence slow a payment down?</H2>
+      <P>
+        The draw is a transaction on Arc, which has sub second finality, and it
+        happens once per purchase before the payment. The payment itself is an
+        off chain signature and Cordon adds nothing to it — the fast path stays
+        exactly as fast as it was.
+      </P>
+
+      <H2 id="what-if-the-meter-is-down">What if your server goes down?</H2>
+      <P>
+        Spending does not touch it. The meter and this website are readers; the
+        daemon talks to the chain directly, and a purchase goes through with
+        every server we run switched off. The console falls back to reading the
+        chain itself, in windows, and says which part of the record it managed
+        to read.
+      </P>
+
       <H2 id="what-happens-if-cordon-goes-away">What happens if Cordon goes away?</H2>
       <P>
         The contracts keep working. Nobody can pause them, nobody can point them

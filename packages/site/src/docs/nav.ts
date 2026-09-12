@@ -37,6 +37,16 @@ export const DOC_GROUPS: DocGroup[] = [
         title: "How it works",
         summary: "The path a single purchase takes, from the agent to the seller.",
       },
+      {
+        slug: "walkthrough",
+        title: "Step by step",
+        summary: "From an empty wallet to an agent that has bought and been refused.",
+      },
+      {
+        slug: "integrate",
+        title: "Integrate with your agent",
+        summary: "MCP, a proxy or plain HTTP, the skill file, and handling a refusal.",
+      },
     ],
   },
   {
