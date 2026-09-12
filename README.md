@@ -354,7 +354,7 @@ no tool that could use one. Where the keyring holds several nodes,
 
 ### From nothing to a refusal
 
-Ten steps. Two cost a signature, one costs a cent, and the rest are reading.
+Eleven steps. Two cost a signature, one costs a cent, and the rest are reading.
 Everything is testnet.
 
 **0 — what you need.** A wallet, and test USDC in it from
@@ -397,9 +397,24 @@ control. **Two signatures** — approve the vault to move your USDC, then move i
 > money is in the vault, not in any agent, which is the difference between this
 > and topping up an agent's wallet.
 
+**3b — put each node id into the key file.** The step people miss, and the
+daemon will not start without it. `init --nodes 4` wrote four empty lines —
+`CORDON_NODE_ROOT=`, `CORDON_NODE_WORKER1=`, `CORDON_NODE_WORKER2=`,
+`CORDON_NODE_WORKER3=` — one per key, in the order it printed the addresses.
+Those lines hold ids and never keys, so listing them is safe; read no other line:
+
+```bash
+grep '^CORDON_NODE_' ~/.cordon/cordon.env
+sed -i '' 's/^CORDON_NODE_ROOT=$/CORDON_NODE_ROOT=0x<node id>/' ~/.cordon/cordon.env   # Linux: sed -i
+grep '^CORDON_NODE_ROOT=' ~/.cordon/cordon.env    # confirm it took
+```
+
+Always run the confirming `grep`: `sed` exits successfully when nothing matches,
+so a mistyped label changes nothing and the daemon still refuses to start.
+
 **4 — spawn a child.** The agents tile. Name a second operator address from
 step 1 and a share of the parent. The contract refuses a child wider than its
-parent whoever asks — you included.
+parent whoever asks — you included. Then repeat 3b for that worker's label.
 
 > **Check:** `GET https://getcordon.xyz/api/tree/<root>` shows one more node,
 > and its bounds are inside its parent's.
@@ -429,6 +444,11 @@ through a payment, holding a key while it does.
 > **Check:** `curl -s localhost:8402/status` lists your node with its headroom
 > and its mandate — and `TreeVault.headroom` may report an **ancestor** as the
 > thing bounding it, which is the whole point.
+>
+> **Then check the operators.** The daemon starts with a node id filed under a
+> key that is not that node's operator, and fails only at the first purchase —
+> so compare each node's `mandate.operator` in `/status` with the address `init`
+> printed for its label.
 
 **6 — point an agent at it.** Whichever suits what you run:
 

@@ -214,115 +214,192 @@ export function Walkthrough() {
   return (
     <>
       <Lead>
-        Six steps, from an empty wallet to an agent that has bought something
-        and been refused something. Two of them cost a signature; the rest are
-        reading.
+        From an empty wallet to an agent that has bought something and been
+        refused something. The order matters, and the one step people miss is
+        marked. Two steps cost a signature; the rest are yours to check.
       </Lead>
 
       <Note tone="info" title="What you need first">
-        A wallet on Arc testnet holding test USDC — it is both the gas and the
-        money — and a machine that can run Node 22.
+        A wallet on Arc testnet holding test USDC from{" "}
+        <a href="https://faucet.circle.com">faucet.circle.com</a> — it is both
+        the gas and the money — Node 23.6 or newer, and a clone of the
+        repository.
       </Note>
 
-      <H2 id="one">1. Sign one mandate</H2>
+      <Note tone="warn" title="Keys before the mandate">
+        A mandate names its operator when it is opened, and the operator cannot
+        be changed afterwards. So the keys come first, and the mandate second.
+      </Note>
+
+      <H2 id="one">1. Make the operator keys</H2>
+      <Code lang="bash">{`git clone https://github.com/youvandra/cordon.git && cd cordon
+npm ci --prefix packages/daemon
+npm run init --prefix packages/daemon -- --nodes 4`}</Code>
       <P>
-        Open <a href="/console/setup">the console</a>, connect your wallet, and
-        answer six questions: the budget and its window, the total for the life
-        of the mandate, the most any single purchase may be, the share of a
-        window any one seller may take, and how deep the tree may go.
+        This writes <C>~/.cordon/cordon.env</C> at <C>0600</C> and prints{" "}
+        <b>addresses only</b> — never a key. A second run refuses rather than
+        overwrite a file whose keys may already operate a live mandate. It also
+        prints a console link with the first address already filled in.
       </P>
       <P>
-        That signature creates the <b>root</b>. It cannot be edited afterwards —
-        a mandate narrows, it never widens — so the figure you sign is the
-        ceiling for everything below it, for good.
+        Send a little gas to each address. An operator holding a tranche and no
+        gas cannot send the draw that would earn it.
       </P>
 
-      <H2 id="two">2. Fund the vault</H2>
+      <H2 id="two">2. Sign one mandate</H2>
       <P>
-        Nothing can be drawn from an empty vault. On the tree screen, the root
-        window tile carries the funding control. It asks for{" "}
-        <b>two signatures</b>: one approving the vault to move your USDC, one
-        moving it.
+        Open the link <C>init</C> printed, or{" "}
+        <a href="/console/setup">the console</a>, connect your wallet, and answer
+        six questions: the budget and its window, the total for the life of the
+        mandate, the most a single purchase may be, the share of a window any one
+        seller may take, and how deep the tree may go. The operator is an
+        address from step 1 — <b>not your own wallet</b>, and the form refuses
+        it.
       </P>
       <P>
-        The money sits in the vault, not in any agent. That is the difference
-        between this and topping up an agent's wallet: the vault only lets go of
-        it one purchase at a time, and only when the contract says so.
+        That signature creates the <b>root</b>. It cannot be edited afterwards:
+        a mandate narrows, it never widens.
+      </P>
+      <Note tone="good" title="Check">
+        <C>GET https://getcordon.xyz/api/tree/&lt;root&gt;</C> returns your root.
+      </Note>
+
+      <H2 id="three">3. Fund the vault</H2>
+      <P>
+        On the tree screen, the root window tile carries the funding control.{" "}
+        <b>Two signatures</b>: one approving the vault to move your USDC, one
+        moving it. The money sits in the vault, not in any agent, and leaves one
+        purchase at a time.
+      </P>
+      <Note tone="good" title="Check">
+        <C>funded6</C> in <C>/api/tree/&lt;root&gt;</C> rose by exactly that.
+      </Note>
+
+      <H2 id="three-b">3b. Put each node id into the key file</H2>
+      <Note tone="warn" title="The step people miss">
+        The daemon will not start without it, and nothing earlier warns you.
+      </Note>
+      <P>
+        <C>init --nodes 4</C> wrote four empty lines — <C>CORDON_NODE_ROOT=</C>,{" "}
+        <C>CORDON_NODE_WORKER1=</C>, <C>CORDON_NODE_WORKER2=</C>,{" "}
+        <C>CORDON_NODE_WORKER3=</C> — one per key, in the order it printed the
+        addresses. Each needs the id of the mandate that label's address
+        operates: <C>ROOT</C> now, a worker's after step 4.
+      </P>
+      <P>
+        Those lines hold ids, never keys, so listing them is safe. Read no other
+        line of that file.
+      </P>
+      <Code lang="bash">{`grep '^CORDON_NODE_' ~/.cordon/cordon.env
+
+# macOS; on Linux drop the '' after -i
+sed -i '' 's/^CORDON_NODE_ROOT=$/CORDON_NODE_ROOT=0x<node id>/' ~/.cordon/cordon.env
+
+grep '^CORDON_NODE_ROOT=' ~/.cordon/cordon.env   # confirm it took`}</Code>
+      <P>
+        Always run the confirming <C>grep</C>. <C>sed</C> exits successfully when
+        its pattern matches nothing, so a mistyped label changes nothing, prints
+        nothing, and the daemon still refuses to start.
       </P>
 
-      <H2 id="three">3. Give an agent a key</H2>
+      <H2 id="four">4. Spawn a child</H2>
       <P>
-        Every node has an <b>operator</b> — the address that signs on its
-        behalf. It must not be your own wallet, and it is never the agent: it is
-        a key held by a daemon process.
-      </P>
-      <Code lang="bash">{`# a key nobody has used, for one node
-openssl rand -hex 32`}</Code>
-      <P>
-        Put the address in the <b>spawn</b> dialog, on the agents tile, and the
-        key in the daemon's environment. The child is narrower than the parent
-        on every axis, and the contract refuses a wider one whoever asks — you
-        included.
+        The agents tile. Name a second address from step 1 and a share of the
+        parent. The child is narrower than its parent on every axis, and the
+        contract refuses a wider one whoever asks — you included. Then repeat
+        step 3b for that worker's label.
       </P>
 
-      <H2 id="four">4. Run the daemon</H2>
+      <H2 id="five">5. Run the daemon</H2>
       <P>
-        This is the process that holds keys. It reads the addresses from its
-        environment and the keys from a file beside it, never from the repo.
+        The only process that holds a key. Addresses go in one file and keys in
+        another, so the file with keys in it is the only one that is ever{" "}
+        <C>0600</C>.
       </P>
-      <Code lang="bash">{`node --env-file=.env.live --env-file=~/.cordon/keys.env \\
-  packages/daemon/src/main.ts`}</Code>
+      <Code lang="bash">{`cat > packages/daemon/.env.live <<'ENV'
+CORDON_VAULT=<TreeVault address>
+CORDON_REGISTRY=<MandateRegistry address>
+CORDON_RECORD=<ConductRecord address>
+CORDON_RPC=https://rpc.testnet.arc.io
+CORDON_PORT=8402
+ENV
+
+node --env-file=packages/daemon/.env.live \\
+     --env-file=~/.cordon/cordon.env \\
+     packages/daemon/src/main.ts`}</Code>
       <P>
-        It prints the nodes it holds keys for, and it refuses to start
-        misconfigured — a daemon that starts anyway is one that discovers a
-        missing address halfway through a payment.
+        The addresses are on <Link to="/docs/contracts">Contracts</Link>. It
+        refuses to start misconfigured — a daemon that starts anyway discovers a
+        missing value halfway through a payment.
+      </P>
+      <Note tone="warn" title="Started is not the same as able to draw">
+        The daemon starts happily with a node id filed under a key that is not
+        that node's operator; the failure only arrives at the first purchase.
+        Compare each node's operator against the address <C>init</C> printed for
+        its label.
+      </Note>
+      <Code lang="bash">{`curl -s localhost:8402/status | python3 -c "
+import json,sys
+for n in json.load(sys.stdin)['nodes']:
+    print(n['node'][:12], 'operator', n['mandate']['operator'])"`}</Code>
+
+      <H2 id="six">6. Point your agent at it</H2>
+      <P>
+        The MCP config block, the proxy entry point, or a plain HTTP call —{" "}
+        <Link to="/docs/integrate">Integrate with your agent</Link> has all
+        three. Where the key file holds several nodes, <C>CORDON_MCP_NODE</C>{" "}
+        names which one an MCP server speaks for.
       </P>
 
-      <H2 id="five">5. Point your agent at it</H2>
-      <P>
-        The config block, the proxy command, or the HTTP call — whichever suits
-        what you are running. <Link to="/docs/integrate">Integrate with your
-        agent</Link> has all three.
-      </P>
-      <P>Then ask it for something that costs money:</P>
-      <Code>{`Fetch https://attest.getcordon.xyz/attest/894124 and tell me
-what it says about that agent.`}</Code>
+      <H2 id="seven">7. Buy something</H2>
+      <P>Cordon sells a reading for a cent, so there is always something priced:</P>
+      <Code lang="bash">{`curl -s -X POST localhost:8402/fetch \\
+  -H 'content-type: application/json' \\
+  -d '{"node":"0x…","url":"https://attest.getcordon.xyz/attest/894124"}'`}</Code>
       <OL>
-        <li>The seller answers with a challenge naming its price and its address.</li>
+        <li>The seller answers with a challenge naming its own price and address.</li>
         <li>The daemon asks the vault for exactly that, for exactly that payee.</li>
         <li>The contract charges this node and every node above it, or refuses.</li>
         <li>The daemon signs the payment and the seller returns the body.</li>
       </OL>
+      <Note tone="good" title="Check">
+        <C>paid: true</C> with the body, and the draw transaction on arcscan.
+      </Note>
 
-      <H2 id="six">6. Watch it refuse</H2>
+      <H2 id="eight">8. Watch it refuse</H2>
       <P>
-        Ask for something larger than the per purchase cap, or keep going until
-        the window is spent. The tool returns a refusal with the reason and the
-        transaction that produced it. Open that transaction: the decision is on
-        chain, made by a contract, not a message from our server.
+        Ask from a node whose per-purchase cap is below the price, or keep going
+        until the window is spent. It comes back <C>paid: false</C> with the
+        reason and the transaction — and like a purchase, it is HTTP 200: a
+        refusal is an answer, not a failure for a retry loop to hammer.
       </P>
+      <Note tone="good" title="Check">
+        <C>https://getcordon.xyz/refusal/&lt;id&gt;</C> shows the decision and
+        the record it was published under.
+      </Note>
+
+      <H2 id="nine">9. Decide what to do about it</H2>
       <P>
-        The console's refusals screen lists them. As the owner you can{" "}
-        <b>release</b> one — a signature that pays that single purchase past the
-        bound, with both the refusal and the release left side by side on the
-        record — or <b>cut the branch</b>, which stops that node and everything
-        under it from drawing again.
+        Both are yours. <b>Release</b> one refusal from the console — a
+        signature that pays that single purchase past the bound, with the
+        refusal and the release side by side on the record. Or <b>cut the
+        branch</b>, after which that node and everything under it draws nothing.
       </P>
 
       <H2 id="after">After that</H2>
       <Defs
         items={[
           {
+            term: <Link to="/docs/troubleshooting">Troubleshooting</Link>,
+            def: "The errors this walk produces when a step is skipped, quoted as they arrive.",
+          },
+          {
             term: <Link to="/docs/draws-and-bounds">Draws and bounds</Link>,
-            def: "What each of the five bounds actually checks, and in what order.",
+            def: "What each of the five bounds checks, and in what order.",
           },
           {
             term: <Link to="/docs/refusals">Refusals, release, revocation</Link>,
             def: "The ways out, and what each one leaves behind.",
-          },
-          {
-            term: <Link to="/docs/meter">Meter</Link>,
-            def: "Reading the whole tree back out without trusting our server.",
           },
         ]}
       />
