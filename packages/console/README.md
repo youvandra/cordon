@@ -12,7 +12,9 @@ npm run build
 
 ## What is here
 
-Four screens behind the wallet gate, and three pages in front of it.
+Four screens behind the wallet gate, and four pages in front of it. The public
+pages are where the chain sends people: `ConductRecord` writes
+`getcordon.xyz/refusal/<id>` into every record it publishes.
 
 | Route | |
 |---|---|
@@ -21,6 +23,7 @@ Four screens behind the wallet gate, and three pages in front of it.
 | `/console/refusals` | which node, how much, which bound |
 | `/console/drill` | G3's number, and the gate register |
 | `/agent/:id` | the public conduct record |
+| `/refusal/:id` | one refusal, and where it was published — the URL the chain itself writes |
 | `/drill` | the hostile drill, in public |
 | `/attest/:id` | the x402 endpoint, as a page |
 
@@ -112,10 +115,12 @@ the cells under it, which is the whole reason a table is a table.
   owner signed; leaving it standing costs nothing. So the safe choice is the
   plain one and the release carries the weight. `primary` on the release button
   was inviting the irreversible click.
-- **A destructive action does not sit beside a routine one.** Draw is in the
-  row; revoking a subtree is behind the kebab, which is the glyph for actions
-  on a single row. Two same-size targets eight pixels apart, one of which kills
-  a branch, is a misclick waiting.
+- **A destructive action does not sit beside a routine one.** On the sample
+  tree, draw is in the row and revoking a subtree is behind the kebab, which is
+  the glyph for actions on a single row: two same-size targets eight pixels
+  apart, one of which kills a branch, is a misclick waiting. The chain table has
+  no routine action to sit beside — so the revoke is the row's one control, and
+  it asks before it signs.
 - **One truth, one place.** Setup's right column used to repeat the five values
   the form beside it already held.
 - **The result appears where the eye is.** Signing swaps the column's lead card
@@ -158,18 +163,43 @@ is this project's own rule: animation may not gate visibility.
 - **No figure appears without the contract function that enforces it.** That is
   the `.enforced` mark, and it is not decoration.
 
-## What is honest about it, and what is not
+## Two paths, and the console says which one you are on
 
-The wallet gate is a mock: `connect()` writes the owner address from fixtures
-into `sessionStorage` and nothing is signed. That is stated on the gate itself
-and on every screen that depends on it, because the gate's argument is real
-even while its implementation is not — creating a mandate and releasing a
-refusal both need the owner's own key, and neither our server nor the agent
-can produce one.
+**With a wallet.** `VITE_PRIVY_APP_ID` turns the gate real: Privy holds the
+key, the owner logs in, and the address on screen is one that can sign on Arc.
+Opening a mandate, funding the vault, spawning a child, revoking a branch and
+releasing a refusal are then transactions from that key — each simulated first,
+so an owner who is not the owner of a node is told before a wallet asks them to
+sign anything. The tree and its figures are read from the registry and the
+vault directly, with no indexer in between, because node ids are derived and
+every node under an owner is reachable from that owner's address.
 
-Draws and revocations on the tree screen are local state. They do demonstrate
-the one thing worth demonstrating: draw on a grandchild and its grandparent's
-figure moves, because a draw debits every ancestor up to the root.
+Privy holds the key; Cordon holds the bound. They answer different questions —
+who may sign, and what may be signed for — and a policy inside the service that
+holds a key is an off-chain control, which this project calls `declared`.
+
+**Without one.** The gate falls back to a preview that touches no key:
+`sessionStorage`, no signature, and every surface that depends on it says so.
+The tree it shows is still the live one on Arc — it is not a tree of invented
+agents — and what it does not have is any control that would fail at a wallet
+nobody connected.
+
+The one screen that is genuinely a drawing is the **sample tree**, shown when
+no root has been opened: its `Draw $1` button and its revocations are local
+state. They demonstrate the single thing worth demonstrating, which is that a
+draw on a grandchild moves its grandparent's figure.
+
+On the chain path there is **no draw control at all**. A draw is the daemon's
+to make, and a button that pretended to make one from a table would be the
+surface lying about what it can do. Revoking is different: it is the owner's
+own transaction, and it is in the row.
+
+## Two environment variables
+
+| | |
+|---|---|
+| `VITE_PRIVY_APP_ID` | build-time. Unset, the wallet gate is the preview above — which looks like nothing is wrong |
+| `VITE_METER_URL` | where `/refusal/:id` and the refusals list read from. Unset, the console reads the chain in windows and says how far back it got |
 
 The drill gauge reads what G3 reached: 35.0% of the signed ceiling,
 $0.007000 of $0.020000, stopped by `concentration` while the window still had

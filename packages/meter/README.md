@@ -44,12 +44,23 @@ Not here, on purpose:
 ## Reading it
 
 ```
-GET /health          the range, the node count, the refusal count
-GET /tree/:root      every node under one root, with its counters
-GET /node/:node      one node's conduct, and its refusals
-GET /agent/:agentId  the same, addressed by ERC-8004 identity
-GET /refusal/:id     one refusal, and the transaction it happened in
+GET /health                              the range, the node count, the refusal count
+GET /tree/:root                          every node under one root, with its counters
+GET /node/:node                          one node's conduct, and its refusals
+GET /agent/:agentId                      the same, addressed by ERC-8004 identity
+GET /refusals?root=&limit=&before=       refusals across a root, newest first, paged
+GET /refusal/:id                         one refusal: the transaction it happened in,
+                                         and the one that published it to the registry
+GET /reconcile                           every operator's Gateway balance against what
+                                         the vault released to it
 ```
+
+Live at **<https://getcordon.xyz/api/>** — the process binds `127.0.0.1:8404`
+and nginx proxies it, so it shares the origin the chain itself points at.
+
+`/refusals` is paged because the answer is a page of a record and never the
+whole of one: it carries `total` beside the rows, and a caller that does not
+name a `limit` is a caller that will not notice the day the cap starts biting.
 
 Read-only, and the process holds no key. `access-control-allow-origin: *`
 because the record is meant to be read by people who are not the owner —
@@ -73,6 +84,25 @@ actually paid — needs Circle's `search-x402transfers`, and whether a buyer can
 read their own transfers is unresolved. It reports `unavailable` rather than
 approximating, because a reconciliation that quietly compares nothing always
 passes.
+
+## Pacing the backfill
+
+Arc's public RPC limits `eth_getLogs` twice over — a range it refuses and a
+count it cuts off — so the walk is chunked and paced rather than asked in one
+call:
+
+| Variable | Default | |
+|---|---|---|
+| `CORDON_METER_PORT` | `8404` | loopback only; nginx is the door |
+| `CORDON_METER_CHUNK` | `1000` | blocks per `eth_getLogs` |
+| `CORDON_METER_MAX_BLOCKS` | `20000` | blocks per pass, so a backfill resumes rather than stalls |
+| `CORDON_METER_PACE_MS` | `150` | between chunks |
+| `CORDON_METER_INTERVAL_MS` | `5000` | between passes, once caught up |
+
+`ops/README.md` carries the values this deployment uses and the endpoint it
+reads, which is not the public one — one backfill through that door exhausts
+the quota for the address and every later request fails, including the narrow
+ones.
 
 ## Addresses
 
