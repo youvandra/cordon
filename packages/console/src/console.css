@@ -1335,3 +1335,33 @@ body {
 
 .detail__foot { padding-top: var(--cordon-space-2); }
 .detail__link { color: var(--cordon-accent); font-size: var(--cordon-size-micro); }
+
+
+/* ---- the tree screen's top: figures beside the rows ----------------------- */
+
+/* The two tiles summarise the table, so they sit next to it rather than above
+   a drawing above it. The tiles keep their own proportions and take the width
+   they need; the table takes the rest, and below 1100px the two stack, because
+   a five-column table in half of a laptop is a row of ellipses. */
+.tree__top {
+  display: grid;
+  gap: var(--cordon-space-5);
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .tree__top {
+    grid-template-columns: minmax(360px, 0.82fr) minmax(0, 1.18fr);
+    gap: var(--cordon-space-6, 28px);
+  }
+}
+
+/* Two tiles, close together: they are one figure each of the same tree, and a
+   wide gutter between them reads as two unrelated cards. */
+.tree__tiles { --cordon-grid-min: 200px; }
+.tree__nodes { min-width: 0; }
+
+/* An address is one token and wrapping it in the middle makes two lines that
+   are neither an address. Beside the tiles the table is narrower than it was,
+   and a wrapped operator was costing a column's worth of width on every row. */
+.tree__nodes .cordon-table .mono { white-space: nowrap; }

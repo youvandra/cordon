@@ -184,7 +184,13 @@ function ChainTree({
 
   return (
     <>
-      <Grid columns={2} min={360} gap="lg" align="start">
+      {/* The two figures and the rows they summarise, side by side.
+
+          The table used to sit under a drawing under the tiles, so reading a
+          node's line meant scrolling past both. The tiles are the summary of
+          this table; a summary belongs beside what it summarises. */}
+      <div className="tree__top">
+      <Grid columns={2} min={200} gap="md" align="start" className="tree__tiles">
         <MetricCard
           title={
             <>
@@ -241,18 +247,23 @@ function ChainTree({
         />
       </Grid>
 
-      {/* The drawing used to be here, 2,388 pixels of it inside a card 684
-          wide — the thing the product is about, arriving as a strip you
-          scrolled sideways through three nodes at a time. It is a surface of
-          its own now, and this is the door to it. */}
-      <Section title="delegation tree" aside={<Enforced>{ENFORCED_BY.treeBar}</Enforced>}>
-        <TreePlayground nodes={nodes} />
-      </Section>
-
       {/* Named, because the setup screen's "cut any branch" lands here: the
-          revoke is per node and this is where the nodes are. */}
-      <div id="nodes">
-      <Section title="every node, as figures">
+          revoke is per node and this is where the nodes are.
+
+          The drawing had a section of its own — a card carrying a paragraph, a
+          count of nodes, a count of levels and a count of cuts, all of which
+          the table below was printing already. What was left worth keeping is
+          the door, and a door belongs on the thing it opens. */}
+      <div id="nodes" className="tree__nodes">
+      <Section
+        title="every node, as figures"
+        aside={
+          <Stack direction="row" gap="md" align="center" wrap>
+            <Enforced>{ENFORCED_BY.treeBar}</Enforced>
+            <TreePlayground nodes={nodes} />
+          </Stack>
+        }
+      >
         <DataTable
           rows={nodes}
           rowKey={(node) => node.node}
@@ -274,11 +285,17 @@ function ChainTree({
               ),
             },
             {
-              id: "operator",
-              header: "Operator",
+              id: "headroom",
+              header: "Can still draw",
+              numeric: true,
               cell: (node) => (
-                <span className="mono">
-                  {node.operator.slice(0, 8)}…{node.operator.slice(-4)}
+                <span className="headroom">
+                  <b className="num">{formatUsdc(node.available6)}</b>
+                  {node.boundBy.toLowerCase() === node.node.toLowerCase() ? null : (
+                    <span className="headroom__bound mono">
+                      held by {node.boundBy.slice(0, 8)}…
+                    </span>
+                  )}
                 </span>
               ),
             },
@@ -295,17 +312,11 @@ function ChainTree({
               cell: (node) => formatUsdc(node.lifetimeSpent6),
             },
             {
-              id: "headroom",
-              header: "Can still draw",
-              numeric: true,
+              id: "operator",
+              header: "Operator",
               cell: (node) => (
-                <span className="headroom">
-                  <b className="num">{formatUsdc(node.available6)}</b>
-                  {node.boundBy.toLowerCase() === node.node.toLowerCase() ? null : (
-                    <span className="headroom__bound mono">
-                      held by {node.boundBy.slice(0, 8)}…
-                    </span>
-                  )}
+                <span className="mono">
+                  {node.operator.slice(0, 8)}…{node.operator.slice(-4)}
                 </span>
               ),
             },
@@ -334,6 +345,7 @@ function ChainTree({
           ]}
         />
       </Section>
+      </div>
       </div>
 
       <Modal

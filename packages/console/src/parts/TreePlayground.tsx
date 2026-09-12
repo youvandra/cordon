@@ -194,36 +194,14 @@ export function TreePlayground({ nodes }: { nodes: ChainNode[] }) {
     revoked: node.revoked,
   }));
 
-  const cut = nodes.filter((node) => node.revoked).length;
-  const deepest = nodes.reduce((most, node) => Math.max(most, node.depth), 0);
-
+  /* One control, at the head of the section it opens. It used to be a card of
+     its own with a paragraph and three counts in it — all of which the table
+     under it was already printing, in the rows themselves. */
   return (
     <>
-      <div className="playground__pitch">
-        <Text variant="body" tone="copy" as="p">
-          Every node from the root down, with the draw each one has made and the
-          bound that would stop the next. Selecting one shows every field the
-          registry and the vault hold for it — which is twelve, and the table
-          below has room for five.
-        </Text>
-        <div className="playground__counts">
-          <span>
-            <strong className="num">{nodes.length}</strong> nodes
-          </span>
-          <span>
-            <strong className="num">{deepest + 1}</strong>{" "}
-            {deepest === 0 ? "level" : "levels"}
-          </span>
-          {cut > 0 ? (
-            <span>
-              <strong className="num">{cut}</strong> cut
-            </span>
-          ) : null}
-        </div>
-        <Button variant="primary" onClick={() => setOpen(true)}>
-          Open the tree
-        </Button>
-      </div>
+      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+        Open the tree
+      </Button>
 
       <Modal
         open={open}
