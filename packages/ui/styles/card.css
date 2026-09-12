@@ -119,7 +119,11 @@
 .cordon-metriccard__value .cordon-dottext__svg { width: auto; height: 100%; }
 
 .cordon-metriccard__unit {
-  margin-left: 1.3%;
+  /* In tile units, not a percentage of the row: the row is the full width of
+     the card and the number is centred in it, so a percentage sets the gap
+     from an edge the gap has nothing to do with. At 1.3% a short value like a
+     node count sat 6px from its unit and read as one word. */
+  margin-left: calc(11 * var(--u));
   font-size: calc(30.46 * var(--u));
   font-weight: var(--cordon-weight-regular);
   line-height: 1;

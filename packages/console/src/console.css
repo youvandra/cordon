@@ -787,35 +787,9 @@ body {
   color: var(--cordon-caution);
 }
 
-/* The explanation folded behind a label, rather than two lines of prose under
-   every field. The button is the size of the text beside it, not a target the
-   eye lands on first. */
-.ask { display: inline-flex; align-items: center; gap: 6px; }
-.ask__more {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--cordon-copy-dim);
-  cursor: help;
-  transition: color 0.16s var(--cordon-ease-settle);
-}
-.ask__more:hover, .ask__more:focus-visible { color: var(--cordon-ink); }
-.ask__more svg { width: 14px; height: 14px; }
-
 /* The help bubble sits under the label and gets room to be one or two lines
    rather than six. Placed above, a long explanation grew out of the card and
    was clipped by it — the reader saw a shadow and no words. */
-.ask .cordon-tooltip__bubble {
-  max-width: 340px;
-  text-align: left;
-}
-
 /* The signature confirmation, as a short receipt of what is about to be
    signed. It was a paragraph, and a paragraph is the wrong shape for five
    numbers somebody is about to commit to permanently. */
@@ -908,13 +882,24 @@ body {
 .graph__edge { fill: none; stroke: var(--cordon-hairline); stroke-width: 1.5; }
 .graph__edge--cut { stroke-dasharray: 4 5; opacity: 0.5; }
 
+/* A node, as an instrument rather than a box.
+ *
+ * Three things had to come through and only one did. What this node may still
+ * draw is the figure an owner is looking for, so it is the headline. Its own
+ * window is the bar under that. And the distance between the two — the tick on
+ * the bar — is where an ancestor cuts the window short, which is the one thing
+ * no per-agent wallet can draw and it was only ever a sentence.
+ *
+ * The rail down the left says the depth without anybody reading an edge, and
+ * the root wears the accent because it is the one node a person signed for.
+ */
 .graph__node {
   position: absolute;
   display: grid;
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto 1fr auto;
   align-content: space-between;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 11px 14px 11px 18px;
   border: 1px solid var(--cordon-hairline);
   border-radius: var(--cordon-radius-3);
   background: var(--cordon-paper-raised);
@@ -926,46 +911,141 @@ body {
     box-shadow 0.16s var(--cordon-ease-settle),
     transform 0.16s var(--cordon-ease-settle);
 }
-.graph__node:hover { box-shadow: var(--cordon-shadow-lift); transform: translateY(-1px); }
-.graph__node[data-selected] { border-color: var(--cordon-accent-line); }
-/* The root is the only node nobody is above, which is worth one hairline of
-   difference and nothing louder. */
-.graph__node[data-root] { border-color: rgba(34, 34, 34, 0.28); }
-.graph__node[data-revoked] { opacity: 0.55; }
 
+/* Depth, at a glance and across the whole drawing. Weight rather than hue:
+   colour in this project means exception, and depth is not one. */
+/* Rounded on its own rather than by clipping the card: the card has to let a
+   flag pill hang over its top edge, and `overflow: hidden` on the card ate it. */
+.graph__rail {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: -1px;
+  width: 4px;
+  border-radius: var(--cordon-radius-3) 0 0 var(--cordon-radius-3);
+  background: var(--cordon-ink);
+  opacity: 0.5;
+}
+.graph__node[data-depth="1"] .graph__rail { opacity: 0.3; }
+.graph__node[data-depth="2"] .graph__rail { opacity: 0.18; }
+.graph__node[data-depth="3"] .graph__rail { opacity: 0.1; }
+
+/* The root is the one node a human signed. */
+.graph__node[data-root] {
+  border-color: rgba(34, 34, 34, 0.28);
+  background:
+    linear-gradient(180deg, rgba(173, 49, 77, 0.05), rgba(173, 49, 77, 0) 58%),
+    var(--cordon-paper-raised);
+}
+.graph__node[data-root] .graph__rail { background: var(--cordon-accent); opacity: 0.85; }
+.graph__node[data-root] .graph__role { color: var(--cordon-accent); }
+
+/* A cut branch. Not hidden and not greyed into illegibility: it happened, and
+   the record keeps it. */
+.graph__node[data-revoked] {
+  opacity: 0.62;
+  background-clip: padding-box;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(34, 34, 34, 0.035) 0 6px,
+      transparent 6px 12px
+    ),
+    var(--cordon-paper);
+  box-shadow: none;
+}
+.graph__node[data-revoked] .graph__rail { background: var(--cordon-critical); opacity: 0.5; }
+.graph__node:hover,
+.graph__node:focus-visible {
+  box-shadow: var(--cordon-shadow-lift);
+  transform: translateY(-2px);
+  border-color: rgba(34, 34, 34, 0.24);
+}
+.graph__node[data-selected] {
+  border-color: var(--cordon-accent);
+  box-shadow: var(--cordon-shadow-lift);
+}
 .graph__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .graph__label {
   overflow: hidden;
-  color: var(--cordon-ink-strong);
-  font-size: 14px;
-  font-weight: 560;
+  color: var(--cordon-copy);
+  font-size: 12px;
+  letter-spacing: -0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .graph__role {
+  flex: 0 0 auto;
   color: var(--cordon-copy-dim);
-  font-size: var(--cordon-size-micro);
-  letter-spacing: 0.08em;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.graph__meter { display: grid; gap: 5px; }
-.graph__spent { color: var(--cordon-copy-dim); font-size: 11.5px; }
-.graph__of { opacity: 0.6; }
-.graph__bar {
-  display: block;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(34, 34, 34, 0.09);
-  overflow: hidden;
+/* The headline. What this node may still draw, which is the figure an owner
+   came to the screen for — and which is smaller than its own window whenever
+   something above it is tighter. */
+.graph__foot { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.graph__draw {
+  color: var(--cordon-ink-strong);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
 }
-.graph__fill { display: block; height: 100%; background: var(--cordon-ink); }
+.graph__note { color: var(--cordon-copy-dim); font-size: 10.5px; }
+/* A node held by an ancestor is the case worth seeing across the drawing. */
+.graph__node[data-bound] .graph__note { color: var(--cordon-accent); }
+.graph__node[data-revoked] .graph__draw { color: var(--cordon-copy-dim); }
+
+.graph__meter { display: grid; gap: 4px; }
+.graph__spent { color: var(--cordon-copy-dim); font-size: 10.5px; }
+.graph__of { opacity: 0.55; }
+.graph__bar {
+  position: relative;
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(34, 34, 34, 0.09);
+}
+.graph__fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--cordon-ink);
+}
 /* Colour means exception here, as everywhere else in this project. */
 .graph__fill[data-hot] { background: var(--cordon-accent); }
 
-.graph__foot { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-.graph__draw { color: var(--cordon-ink-strong); font-size: 15px; font-weight: 580; }
-.graph__note { color: var(--cordon-copy-dim); font-size: var(--cordon-size-micro); }
+/* Where an ancestor stops this node, drawn on this node's own window. The
+   hatched remainder to its right is budget this mandate holds and cannot
+   spend — the delegation bound, which is the claim, made visible instead of
+   described. */
+.graph__ceiling {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--cordon-accent);
+}
+.graph__ceiling::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 2px;
+  right: -1000px;
+  border-radius: 0 3px 3px 0;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--cordon-accent-line) 0 2px,
+    transparent 2px 5px
+  );
+  /* The bar clips it, so the remainder ends where the window does. */
+  clip-path: inset(0);
+}
+.graph__bar { overflow: hidden; }
 /* A node held by an ancestor is the case worth seeing across the drawing. */
 .graph__node[data-bound] .graph__note { color: var(--cordon-accent); }
 
@@ -987,3 +1067,56 @@ body {
    exception in this system uses, because a reader should not have to learn a
    new signal to notice that this one is different. */
 .refusal__warn { color: var(--cordon-critical); }
+
+/* ---- the tree's shape, on the count tile ---------------------------------- */
+
+/* One row of dots per level. A count says how many agents there are and
+   nothing about how they are arranged, and the arrangement is the product.
+   Fixed sizes throughout: no measurement, so it is right on the first frame
+   and in a hidden tab. */
+/* Above the number, not behind it. The figure box on a metric tile is sized
+   for the gauge, which is a ring the number sits inside; a block of dots in
+   the same box lands on top of the digits instead. These take the band
+   between the title and the metric and leave the rest alone. */
+.depths {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding-top: 2%;
+}
+
+.depths__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  max-width: 78%;
+}
+
+.depths__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+/* The root is the one node a person signed for. */
+.depths__dot[data-root] {
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
+}
+
+/* A cut node keeps its place in the shape. A tree that drops what it revoked
+   is a tree that cannot be checked against the chain. */
+.depths__dot[data-cut] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+}

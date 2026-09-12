@@ -82,8 +82,42 @@ function rootOf(nodes: ChainNode[]): ChainNode | undefined {
   return nodes.find((node) => node.parent === null && !node.revoked);
 }
 
+/**
+ * The shape of the tree, as one row of dots per level.
+ *
+ * A count on its own says how many agents there are and nothing about how they
+ * are arranged, and the arrangement is the product: a row of eight at depth
+ * three is a very different tree from eight roots. Drawn from the data with no
+ * measurement — every dot is a fixed size, so it is right on the first frame
+ * and in a hidden tab, which is the rule the rest of this screen follows.
+ */
+function DepthFigure({ nodes }: { nodes: ChainNode[] }) {
+  const levels: ChainNode[][] = [];
+  for (const node of nodes) (levels[node.depth] ??= []).push(node);
+
+  return (
+    <span className="depths" aria-hidden="true">
+      {levels.map((row, depth) => (
+        <span className="depths__row" key={depth}>
+          {row.map((node) => (
+            <span
+              key={node.node}
+              className="depths__dot"
+              data-cut={node.revoked ? "" : undefined}
+              data-root={node.depth === 0 ? "" : undefined}
+            />
+          ))}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function ChainTree({ nodes, owner }: { nodes: ChainNode[]; owner: string | null }) {
   const root = nodes.find((node) => node.parent === null);
+  const cutNodes = nodes.filter((node) => node.revoked).length;
+  const liveNodes = nodes.length - cutNodes;
+  const deepest = nodes.reduce((most, node) => Math.max(most, node.depth), 0);
   const notify = useNotify();
   const { state: cut, revoke } = useRevoke(owner);
   const [cutting, setCutting] = useState<ChainNode | null>(null);
@@ -156,17 +190,31 @@ function ChainTree({ nodes, owner }: { nodes: ChainNode[]; owner: string | null 
           glaze="violet"
         />
 
-        <Section title={`${nodes.length} ${nodes.length === 1 ? "node" : "nodes"} on ${ARC.name}`}>
-          <CardBody>
-            <Text variant="body" tone="copy" as="p">
-              Read from the registry and the vault directly. Every id is derived
-              from {owner ? "your address" : "the owner's address"}, so nobody
-              had to be asked how many agents there are — and nothing between{" "}
-              {owner ? "you" : "this screen"} and the contract could have got
-              the answer wrong.
-            </Text>
-          </CardBody>
-        </Section>
+        {/* A count is a figure, and it was set as a heading over a paragraph.
+            It gets the same tile the window does — the dot face, the caption
+            under it — because a reader scanning this screen is looking for
+            numbers and this is one of the two on it. */}
+        <MetricCard
+          title={
+            <>
+              Agents under this mandate
+              <br />
+              Derived, never counted for you
+            </>
+          }
+          value={String(nodes.length)}
+          unit={nodes.length === 1 ? "node" : "nodes"}
+          figure={<DepthFigure nodes={nodes} />}
+          caption={
+            <>
+              {liveNodes} live{cutNodes > 0 ? `, ${cutNodes} cut` : ""} · {deepest + 1}{" "}
+              {deepest === 0 ? "level" : "levels"} deep
+              <br />
+              every id derived from {owner ? "your address" : "the owner's address"}
+            </>
+          }
+          glaze="ember"
+        />
       </Grid>
 
       <Section title="delegation tree" aside={<Enforced>{ENFORCED_BY.treeBar}</Enforced>}>
@@ -338,6 +386,8 @@ function Operate({
   const [amount, setAmount] = useState(String(root.budget6 / 1_000_000n));
   const [operator, setOperator] = useState("");
   const [share, setShare] = useState("50");
+  /** Which of the two actions the owner has asked for, if either. */
+  const [asking, setAsking] = useState<"fund" | "spawn" | null>(null);
 
   const usdc6 = (dollars: string): bigint => {
     const value = Number(dollars || "0");
@@ -394,66 +444,109 @@ function Operate({
      bound it has to fit inside. */
   const childBudget6 = (root.budget6 * BigInt(Math.round(Number(share || "0")))) / 100n;
 
+  const working = funding.status === "working" || spawning.status === "working";
+
   return (
-    <Grid columns={2} min={320} gap="lg" align="start">
-      <Card>
-        <CardHeader>
-          <Text variant="micro" tone="dim" as="span" className="eyebrow">
-            fund the vault
-          </Text>
-        </CardHeader>
-        <CardBody>
-          <Stack direction="column" gap="md" align="start">
-            <Text variant="body" tone="copy" as="p">
-              Nothing can be drawn from a vault with nothing in it. This is the
-              only funding source the tree has, and the money stays here until a
-              purchase the contract allows.
+    <>
+      {/* Two actions, offered rather than laid out.
+
+          Both of these are transactions the owner signs, and both were open
+          forms sitting under the tree — a number field and an address field on
+          the screen at all times, with nothing between reading the tree and
+          typing into it. An action that costs a signature should be asked for.
+          The card says what the action does and carries one button; the form
+          is what happens after somebody has decided. */}
+      <Grid columns={2} min={320} gap="lg" align="start">
+        <Card>
+          <CardHeader>
+            <Text variant="micro" tone="dim" as="span" className="eyebrow">
+              fund the vault
             </Text>
-            <TextField
-              type="number"
-              value={amount}
-              suffix="USDC"
-              onChange={(event) => setAmount(event.target.value)}
-            />
+          </CardHeader>
+          <CardBody>
+            <Stack direction="column" gap="md" align="start">
+              <Text variant="body" tone="copy" as="p">
+                Nothing can be drawn from a vault with nothing in it. This is the
+                only funding source the tree has, and the money stays here until a
+                purchase the contract allows.
+              </Text>
+              <Button variant="primary" disabled={working} onClick={() => setAsking("fund")}>
+                {funding.status === "working" ? funding.step : "Fund the vault"}
+              </Button>
+            </Stack>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <Text variant="micro" tone="dim" as="span" className="eyebrow">
+              spawn a child
+            </Text>
+          </CardHeader>
+          <CardBody>
+            <Stack direction="column" gap="md" align="start">
+              <Text variant="body" tone="copy" as="p">
+                A child can only be narrower. Normally its parent spawns it while
+                you sleep; these first ones are yours, because no daemon is
+                running yet.
+              </Text>
+              <Button variant="primary" disabled={working} onClick={() => setAsking("spawn")}>
+                {spawning.status === "working" ? spawning.step : "Spawn a child"}
+              </Button>
+            </Stack>
+          </CardBody>
+        </Card>
+      </Grid>
+
+      <Modal
+        open={asking === "fund"}
+        onClose={() => setAsking(null)}
+        title="Fund the vault"
+        description="USDC leaves your wallet for the vault. Only you can take it back out, and only a draw the contract allows can move it anywhere else."
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setAsking(null)}>
+              Cancel
+            </Button>
             <Button
               variant="primary"
               disabled={funding.status === "working" || usdc6(amount) <= 0n}
-              onClick={() => void fund(root.node, usdc6(amount))}
+              onClick={() => {
+                setAsking(null);
+                void fund(root.node, usdc6(amount));
+              }}
             >
-              {funding.status === "working" ? funding.step : "Fund the vault"}
+              {funding.status === "working" ? funding.step : `Fund ${formatUsdc(usdc6(amount))}`}
             </Button>
-          </Stack>
-        </CardBody>
-      </Card>
+          </>
+        }
+      >
+        <Field
+          label="Amount"
+          info="Two transactions: an approval for the vault to take this much, then the funding itself. Your wallet will ask twice."
+        >
+          <TextField
+            type="number"
+            value={amount}
+            suffix="USDC"
+            autoFocus
+            onChange={(event) => setAmount(event.target.value)}
+          />
+        </Field>
+      </Modal>
 
-      <Card>
-        <CardHeader>
-          <Text variant="micro" tone="dim" as="span" className="eyebrow">
-            spawn a child
-          </Text>
-        </CardHeader>
-        <CardBody>
-          <Stack direction="column" gap="md" align="start">
-            <Text variant="body" tone="copy" as="p">
-              A child can only be narrower. Normally its parent spawns it while
-              you sleep; these first ones are yours, because no daemon is
-              running yet.
-            </Text>
-            <Field label="Operator address" hint="another address from `cordon init` — not this one">
-              <TextField
-                value={operator}
-                placeholder="0x…"
-                onChange={(event) => setOperator(event.target.value)}
-              />
-            </Field>
-            <Field label="Share of the parent" hint="its window, lifetime and tranche, as a percentage of the parent's">
-              <TextField
-                type="number"
-                value={share}
-                suffix="%"
-                onChange={(event) => setShare(event.target.value)}
-              />
-            </Field>
+      <Modal
+        open={asking === "spawn"}
+        onClose={() => setAsking(null)}
+        title="Spawn a child"
+        description="A child mandate, narrower than this one on every axis. The contract refuses a wider one no matter who asks, including you."
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setAsking(null)}>
+              Cancel
+            </Button>
             <Button
               variant="primary"
               disabled={
@@ -462,7 +555,8 @@ function Operate({
                 childBudget6 <= 0n ||
                 childBudget6 > root.budget6
               }
-              onClick={() =>
+              onClick={() => {
+                setAsking(null);
                 void spawn(root.node, {
                   operator: operator as `0x${string}`,
                   budget6: childBudget6,
@@ -475,15 +569,43 @@ function Operate({
                   trancheCap6: root.trancheCap6,
                   concentrationBps: root.concentrationBps,
                   maxDepth: root.maxDepth,
-                })
-              }
+                });
+              }}
             >
               {spawning.status === "working" ? spawning.step : "Spawn"}
             </Button>
-          </Stack>
-        </CardBody>
-      </Card>
-    </Grid>
+          </>
+        }
+      >
+        <Stack direction="column" gap="md" align="stretch">
+          <Field
+            label="Operator address"
+            info="The daemon key that will draw for this child — another address from `cordon init`, not the one you are signed in with. The agent above it never holds this key."
+          >
+            <TextField
+              value={operator}
+              placeholder="0x…"
+              autoFocus
+              onChange={(event) => setOperator(event.target.value)}
+            />
+          </Field>
+          <Field
+            label="Share of the parent"
+            info="A share and not an amount: window, lifetime and tranche all scale together, so what you pick cannot be wider than the mandate above it on one axis and narrower on another."
+          >
+            <TextField
+              type="number"
+              value={share}
+              suffix="%"
+              onChange={(event) => setShare(event.target.value)}
+            />
+          </Field>
+          <Text variant="caption" tone="dim" as="p">
+            {formatUsdc(childBudget6)} of {formatUsdc(root.budget6)} per window.
+          </Text>
+        </Stack>
+      </Modal>
+    </>
   );
 }
 
