@@ -20,7 +20,7 @@ export default function Agents() {
   const [filter, setFilter] = useState<Filter>("all");
   const [view, setView] = useState<"list" | "tree">("list");
   const [query, setQuery] = useState("");
-  const [spawning, setSpawning] = useState(false);
+  const [spawnParent, setSpawnParent] = useState<ChainNode | null>(null);
   const [revoking, setRevoking] = useState<ChainNode | null>(null);
 
   const selectedId = params.get("node");
@@ -78,7 +78,7 @@ export default function Agents() {
         subtitle="Every agent under this mandate. Each purchase is charged to the agent and every agent above it."
         actions={
           mine && root && !root.revoked ? (
-            <Button variant="primary" iconStart="plus" onClick={() => setSpawning(true)}>
+            <Button variant="primary" iconStart="plus" onClick={() => setSpawnParent(root)}>
               Spawn agent
             </Button>
           ) : null
@@ -195,9 +195,19 @@ export default function Agents() {
         description={selected ? shortId(selected.node, 10, 8) : undefined}
         footer={
           mine && selected && !isCut(selected.node) ? (
-            <Button variant="danger" onClick={() => setRevoking(selected)}>
-              Revoke agent
-            </Button>
+            <div className="sheet-actions">
+              <Button
+                variant="secondary"
+                iconStart="plus"
+                disabled={selected.depth + 1 > selected.maxDepth}
+                onClick={() => setSpawnParent(selected)}
+              >
+                {selected.depth + 1 > selected.maxDepth ? "At max depth" : "Spawn under this agent"}
+              </Button>
+              <Button variant="danger" onClick={() => setRevoking(selected)}>
+                Revoke
+              </Button>
+            </div>
           ) : undefined
         }
       >
@@ -206,7 +216,7 @@ export default function Agents() {
 
       {mine && root ? (
         <>
-          <SpawnDialog open={spawning} onClose={() => setSpawning(false)} root={root} owner={owner} />
+          <SpawnDialog open={Boolean(spawnParent)} onClose={() => setSpawnParent(null)} parent={spawnParent ?? root} owner={owner} />
           <RevokeDialog node={revoking} affected={revoking ? subtree(revoking) : 0} onClose={() => setRevoking(null)} owner={owner} />
         </>
       ) : null}

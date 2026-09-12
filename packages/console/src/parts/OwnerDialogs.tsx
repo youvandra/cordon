@@ -84,18 +84,20 @@ export function FundDialog({ open, onClose, root, owner }: { open: boolean; onCl
   );
 }
 
-export function SpawnDialog({ open, onClose, root, owner }: { open: boolean; onClose: () => void; root: ChainNode; owner: string }) {
+export function SpawnDialog({ open, onClose, parent, owner }: { open: boolean; onClose: () => void; parent: ChainNode; owner: string }) {
   const { state, spawn } = useSpawnChild(owner);
   const [operator, setOperator] = useState("");
   const [shareText, setShareText] = useState("50");
   const working = state.status === "working";
 
+  const tooDeep = parent.depth + 1 > parent.maxDepth;
   const shareValue = Math.round(Number(shareText || "0"));
   const shareOk = Number.isFinite(shareValue) && shareValue >= 1 && shareValue <= 100;
   const isOwner = isAddress(operator) && operator.toLowerCase() === owner.toLowerCase();
   const operatorError =
     operator === "" ? undefined : !isAddress(operator) ? "Not an address." : isOwner ? "This is your own wallet. Use an operator key from `npm run init`." : undefined;
-  const childBudget6 = shareOk ? (root.budget6 * BigInt(shareValue)) / 100n : 0n;
+  const childBudget6 = shareOk ? (parent.budget6 * BigInt(shareValue)) / 100n : 0n;
+  const underRoot = parent.parent === null;
 
   useOutcome(state, "spawn", { title: "Agent spawned", body: "Narrower than its parent on every axis — the contract checked." }, "Not spawned", () => {
     onClose();
@@ -106,8 +108,12 @@ export function SpawnDialog({ open, onClose, root, owner }: { open: boolean; onC
     <Modal
       open={open}
       onClose={working ? () => undefined : onClose}
-      title="Spawn an agent"
-      description="A child mandate under the root. It can only ever be narrower than its parent, and the contract refuses a wider one whoever asks."
+      title={underRoot ? "Spawn an agent" : `Spawn under ${shortId(parent.node)}`}
+      description={
+        underRoot
+          ? "A child mandate under the root. It can only ever be narrower than its parent, and the contract refuses a wider one whoever asks."
+          : `A child of ${shortId(parent.node)}, at depth ${parent.depth + 1}. It can only ever be narrower than that agent, and every purchase it makes is charged to it and to everything above.`
+      }
       size="sm"
       footer={
         <>
@@ -117,18 +123,18 @@ export function SpawnDialog({ open, onClose, root, owner }: { open: boolean; onC
           <Button
             variant="primary"
             loading={working}
-            disabled={working || !isAddress(operator) || isOwner || !shareOk || childBudget6 <= 0n}
+            disabled={working || tooDeep || !isAddress(operator) || isOwner || !shareOk || childBudget6 <= 0n}
             onClick={() =>
-              void spawn(root.node, {
+              void spawn(parent.node, {
                 operator: operator as `0x${string}`,
                 budget6: childBudget6,
-                lifetimeCap6: (root.lifetimeCap6 * BigInt(shareValue)) / 100n,
+                lifetimeCap6: (parent.lifetimeCap6 * BigInt(shareValue)) / 100n,
                 /* Equal to the parent's, read from the chain: a shorter child
                    window refills faster than the window it debits. */
-                windowSeconds: root.windowSeconds,
-                trancheCap6: root.trancheCap6,
-                concentrationBps: root.concentrationBps,
-                maxDepth: root.maxDepth,
+                windowSeconds: parent.windowSeconds,
+                trancheCap6: parent.trancheCap6,
+                concentrationBps: parent.concentrationBps,
+                maxDepth: parent.maxDepth,
               })
             }
           >
@@ -137,18 +143,24 @@ export function SpawnDialog({ open, onClose, root, owner }: { open: boolean; onC
         </>
       }
     >
-      <div className="form-stack">
-        <Field label="Operator address" hint="An address printed by `npm run init`, not the wallet you are signed in with." error={operatorError}>
-          <TextField value={operator} placeholder="0x…" autoFocus onChange={(event) => setOperator(event.target.value.trim())} />
-        </Field>
-        <Field
-          label="Share of the parent"
-          hint={shareOk ? `${formatUsdc(childBudget6)} of ${formatUsdc(root.budget6)} per window, and the same share of the lifetime cap.` : "A whole number from 1 to 100."}
-          error={shareText !== "" && !shareOk ? "Between 1 and 100." : undefined}
-        >
-          <TextField type="number" min="1" max="100" value={shareText} suffix="%" onChange={(event) => setShareText(event.target.value)} />
-        </Field>
-      </div>
+      {tooDeep ? (
+        <p className="accent-text">
+          This agent is at depth {parent.depth}, the deepest this mandate allows. It cannot have children.
+        </p>
+      ) : (
+        <div className="form-stack">
+          <Field label="Operator address" hint="An address printed by `npm run init`, not the wallet you are signed in with." error={operatorError}>
+            <TextField value={operator} placeholder="0x…" autoFocus onChange={(event) => setOperator(event.target.value.trim())} />
+          </Field>
+          <Field
+            label="Share of the parent"
+            hint={shareOk ? `${formatUsdc(childBudget6)} of ${formatUsdc(parent.budget6)} per window, and the same share of its lifetime cap.` : "A whole number from 1 to 100."}
+            error={shareText !== "" && !shareOk ? "Between 1 and 100." : undefined}
+          >
+            <TextField type="number" min="1" max="100" value={shareText} suffix="%" onChange={(event) => setShareText(event.target.value)} />
+          </Field>
+        </div>
+      )}
     </Modal>
   );
 }

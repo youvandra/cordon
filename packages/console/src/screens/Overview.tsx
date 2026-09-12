@@ -212,7 +212,7 @@ export default function Overview() {
       {mine ? (
         <>
           <FundDialog open={asking === "fund"} onClose={() => setAsking(null)} root={root} owner={owner} />
-          <SpawnDialog open={asking === "spawn"} onClose={() => setAsking(null)} root={root} owner={owner} />
+          <SpawnDialog open={asking === "spawn"} onClose={() => setAsking(null)} parent={root} owner={owner} />
         </>
       ) : null}
     </div>
