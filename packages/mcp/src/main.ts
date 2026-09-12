@@ -29,7 +29,11 @@ if (!node) {
 
 const server = createMcpServer({
   gate,
-  settler: new CircleSettler(),
+  settler: new CircleSettler({
+    publicClient: gate.publicClientForSettlement,
+    walletFor: (node) => gate.signerFor(node),
+    chainId: config.chainId,
+  }),
   acceptable: { networks: config.networks, assets: config.assets },
   node,
   explorer: config.chainId === ARC.chainId ? ARC.explorer : undefined,
