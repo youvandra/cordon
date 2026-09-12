@@ -18,7 +18,7 @@ of them can see — and no agent in the tree holds a key.
 | **The argument** | <https://getcordon.xyz> |
 | **Documentation** | <https://getcordon.xyz/docs> |
 | **Owner's console** | <https://getcordon.xyz/console/> |
-| **Look around, no wallet** | <https://getcordon.xyz/console/tree> |
+| **Look around, no wallet** | <https://getcordon.xyz/console> |
 | **A refusal, on chain and published** | <https://getcordon.xyz/refusal/9> |
 | **The hostile drill, published whichever way it came out** | <https://getcordon.xyz/drill> |
 | **A conduct record, read from the chain** | <https://getcordon.xyz/agent/894130> |
@@ -316,7 +316,7 @@ already there rather than standing up a registry nobody would read.
 
 ### Read it without installing anything
 
-The console runs against the live tree with no wallet: <https://getcordon.xyz/console/tree>.
+The console runs against the live tree with no wallet: <https://getcordon.xyz/console>.
 Every figure on it is read from the contract that enforces it, and the drawing
 opens onto every field the registry and the vault hold for a node.
 
@@ -378,7 +378,7 @@ Writes `~/.cordon/cordon.env` at `0600` and prints **addresses only**. Send a
 little gas to each: an operator that holds a tranche and no gas cannot send the
 draw that would earn it.
 
-**2 — sign one mandate.** <https://getcordon.xyz/console/setup>, connect your
+**2 — sign one mandate.** <https://getcordon.xyz/console/new>, connect your
 wallet, six questions: the budget and its window, the total for the life of the
 mandate, the most a single purchase may be, the share of a window any one
 seller may take, and how deep the tree may go. The operator is one of the
@@ -387,10 +387,10 @@ addresses from step 1 — **not** your own wallet, and the form refuses that.
 One signature. It cannot be edited afterwards: a mandate narrows, it never
 widens.
 
-> **Check:** the tree screen stops saying "THE PUBLIC TREE" and your root
-> appears, read from `MandateRegistry` rather than from a server.
+> **Check:** the read-only notice under the bar disappears and Overview shows your root,
+> read from `MandateRegistry` rather than from a server.
 
-**3 — fund the vault.** On the tree screen, the root window tile carries the
+**3 — fund the vault.** On Overview, **Fund vault** in the top right carries the
 control. **Two signatures** — approve the vault to move your USDC, then move it.
 
 > **Check:** `TreeVault.treasury6(root)` rose by exactly what you funded. The
@@ -412,7 +412,7 @@ grep '^CORDON_NODE_ROOT=' ~/.cordon/cordon.env    # confirm it took
 Always run the confirming `grep`: `sed` exits successfully when nothing matches,
 so a mistyped label changes nothing and the daemon still refuses to start.
 
-**4 — spawn a child.** The agents tile. Name a second operator address from
+**4 — spawn a child.** **Spawn agent** on Overview or Agents. Name a second operator address from
 step 1 and a share of the parent. The contract refuses a child wider than its
 parent whoever asks — you included. Then repeat 3b for that worker's label.
 
@@ -472,7 +472,7 @@ exactly that, every node from this one to the root is charged, and the body
 comes back.
 
 > **Check:** the draw transaction on <https://testnet.arcscan.app>, and the
-> parent's figure moving on the tree screen. A grandchild's purchase moves its
+> parent's figure moving on the Agents screen. A grandchild's purchase moves its
 > grandparent's bar.
 
 **8 — be refused.** Ask from a node whose tranche cap is smaller than the

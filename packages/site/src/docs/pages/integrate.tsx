@@ -267,7 +267,7 @@ npm run init --prefix packages/daemon -- --nodes 4`}</Code>
       <H2 id="two">2. Sign one mandate</H2>
       <P>
         Open the link <C>init</C> printed, or{" "}
-        <a href="/console/setup">the console</a>, connect your wallet, and answer
+        <a href="/console/new">the console</a>, connect your wallet, and answer
         six questions: the budget and its window, the total for the life of the
         mandate, the most a single purchase may be, the share of a window any one
         seller may take, and how deep the tree may go. The operator is an
@@ -284,7 +284,7 @@ npm run init --prefix packages/daemon -- --nodes 4`}</Code>
 
       <H2 id="three">3. Fund the vault</H2>
       <P>
-        On the tree screen, the root window tile carries the funding control.{" "}
+        On Overview, <b>Fund vault</b> in the top right opens the funding dialog.{" "}
         <b>Two signatures</b>: one approving the vault to move your USDC, one
         moving it. The money sits in the vault, not in any agent, and leaves one
         purchase at a time.
@@ -322,7 +322,7 @@ grep '^CORDON_NODE_ROOT=' ~/.cordon/cordon.env   # confirm it took`}</Code>
 
       <H2 id="four">4. Spawn a child</H2>
       <P>
-        The agents tile. Name a second address from step 1 and a share of the
+        <b>Spawn agent</b>, on Overview or Agents. Name a second address from step 1 and a share of the
         parent. The child is narrower than its parent on every axis, and the
         contract refuses a wider one whoever asks — you included. Then repeat
         step 3b for that worker's label.

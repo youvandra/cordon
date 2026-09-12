@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ARC, ATTEST, GATEWAY, MARKETPLACE, SETTLEMENT, formatUsdc } from "@cordon/fixtures";
-import { C, Code, H2, H3, Lead, Note, OL, P, Table, UL } from "../parts";
+import { C, Code, H2, H3, Lead, Note, OL, P, Table } from "../parts";
 
 const tx = (hash: string) => `${ARC.explorer}/tx/${hash}`;
 const short = (hash: string) => `${hash.slice(0, 10)}…${hash.slice(-6)}`;
@@ -171,15 +171,15 @@ export function Console() {
   return (
     <>
       <Lead>
-        The console is the half of Cordon a person uses. It signs nothing on
-        your behalf and holds no key: every control that changes the chain opens
-        your own wallet, and every figure on it is read from the contract that
+        The console is the half of Cordon a person uses. It holds no key and signs
+        nothing on your behalf: every control that changes the chain opens your
+        own wallet, and every figure on it is read from the contract that
         enforces it.
       </Lead>
 
       <H2 id="two-ways-in">Two ways in</H2>
       <Table
-        head={["", "Preview", "Wallet"]}
+        head={["", "Without a wallet", "With a wallet"]}
         rows={[
           ["What it shows", "the public tree Cordon runs on Arc", "your own tree"],
           ["Signs", "nothing", "with your key, one action at a time"],
@@ -187,80 +187,59 @@ export function Console() {
         ]}
       />
       <P>
-        A preview session is not a demo of invented agents — it is the real tree
-        on Arc, read the same way yours is. What it does not have is any control
-        that would fail at a wallet you have not connected.
+        There is no gate. Somebody without a wallet lands straight on the public
+        tree, read the same way yours is, with a one-line notice that it is
+        read-only. Connecting is the button in the top right.
       </P>
 
-      <H2 id="setup">Setup — sign the mandate</H2>
+      <H2 id="overview">Overview</H2>
       <P>
-        Six questions, then one signature. Budget and window, the total for the
-        life of the mandate, the most a single purchase may be, the share of a
-        window any one seller may take, and how deep the tree may go.
+        What the tree may still spend, at a glance: spent this window, spent in
+        total, what can be drawn right now, and how many agents there are. Below
+        that, the agents most worth a look — those held down by an ancestor
+        first — the latest refusals, and the terms you signed. <b>Fund vault</b>{" "}
+        and <b>Spawn agent</b> sit in the top right. Funding asks for two
+        signatures: approve, then fund.
+      </P>
+
+      <H2 id="agents">Agents</H2>
+      <P>
+        Every agent under the mandate, as a list or as the drawn tree. Filter to
+        live, held or revoked agents, or search by node or operator. Selecting one
+        opens a side panel with every field the registry and the vault hold for
+        it, and why it can draw no more than it can. <b>Revoke agent</b> is at the
+        foot of that panel, and it asks before it signs.
+      </P>
+
+      <H2 id="refusals">Refusals</H2>
+      <P>
+        Every decision the contract made, newest first: the amount, the bound that
+        stopped it, the agent, and whether it reached the registry. Selecting one
+        opens its detail, with the transactions and the public record page. As
+        the owner you can <b>release</b> one — a signature that pays that single
+        purchase past the bound. Releasing raises nothing: the same purchase is
+        refused again a second later.
+      </P>
+
+      <H2 id="new-mandate">New mandate</H2>
+      <P>
+        Only there when you have not opened one. One form in three parts —
+        spending, limits, operator — with a summary of exactly what you are
+        signing beside it. The operator is fixed at signing and cannot be your
+        own wallet; the form refuses it, because no contract can.
       </P>
       <Note tone="warn" title="It cannot be edited afterwards">
-        A mandate narrows and never widens. What you sign here is the ceiling
-        for everything that will ever hang under it, and raising it means a new
-        mandate rather than an edit.
+        A mandate narrows and never widens. Raising a limit means a new mandate,
+        not an edit.
       </Note>
-
-      <H2 id="tree">Tree — watch the exposure</H2>
-      <UL>
-        <li>
-          <b>Root window</b>, with the funding control on it. Funding asks for
-          two signatures: one approving the vault to move USDC, one moving it.
-        </li>
-        <li>
-          <b>Agents under this mandate</b>, with the spawn control on it. The
-          operator you name must not be your own wallet.
-        </li>
-        <li>
-          <b>Every node, as figures</b> — what each may still draw, what it has
-          spent this window and in total, and who signs for it. Revoking a node
-          is in that row.
-        </li>
-        <li>
-          <b>Open the tree</b> draws the whole thing, with every field the
-          registry and the vault hold for whichever node you select.
-        </li>
-      </UL>
-      <P>
-        Every id in that table is derived from the owner's address rather than
-        listed by a server, so the console can rebuild your tree from the chain
-        alone. Nothing here is a reduction of events, which is why nothing here
-        can disagree with the contract.
-      </P>
-
-      <H2 id="refusals">Refusals — decide, or leave it</H2>
-      <P>
-        Every decision the contract made, newest first, each naming the amount,
-        the bound that stopped it and the transaction. As the owner you can{" "}
-        <b>release</b> one: a signature that pays that single purchase past the
-        bound, with the refusal and the release left side by side on the record.
-      </P>
-      <P>
-        Releasing does not raise anything. The same purchase is refused again a
-        second later, because the bound never moved.
-      </P>
-
-      <H2 id="drill">Drill — the measured ceiling</H2>
-      <P>
-        Evidence, not a control. One adversarial run of ours, published whichever
-        way it came out, and the same numbers for every reader —{" "}
-        <Link to="/docs/faq#what-is-the-drill">the FAQ says what it is</Link>.
-      </P>
 
       <H2 id="what-it-needs">What the console needs to be up</H2>
       <P>
         Very little. The tree and the mandate are read from the chain directly.
-        The refusals screen prefers the meter, and falls back to reading the
-        chain in windows when the meter is not there — saying which part of the
-        record it managed to read, rather than drawing a short list as a
-        complete one.
-      </P>
-      <P>
-        Spending does not involve the console at all. An agent behind the daemon
-        keeps buying with every server we run switched off.
+        Refusals prefer the meter and fall back to reading the chain in windows,
+        saying which part of the record they reached. Spending does not involve
+        the console at all: an agent behind the daemon keeps buying with every
+        server we run switched off.
       </P>
     </>
   );

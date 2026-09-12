@@ -38,7 +38,7 @@ try {
      from the query and fills the field in; nothing is signed by a link. */
   console.log("open the console with the first one already filled in:");
   console.log("");
-  console.log(`  ${CONSOLE_URL}/setup?operator=${operators[0]!.address}`);
+  console.log(`  ${CONSOLE_URL}/new?operator=${operators[0]!.address}`);
   console.log("");
   console.log(`Each needs gas on ${ARC.name} — ${ARC.faucet} — and holds no USDC`);
   console.log("by design: the vault tops it up one purchase at a time.");
