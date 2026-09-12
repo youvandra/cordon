@@ -304,9 +304,33 @@ async function signerFor(wallets: ReturnType<typeof useWallets>["wallets"], expe
   };
 }
 
-function why(error: unknown): string {
-  const message = (error as Error)?.message ?? String(error);
-  return message.slice(0, 200);
+/**
+ * One sentence a person can act on.
+ *
+ * viem's errors are written for a console: the failure, then the request
+ * arguments, then a docs link and a version, over ten or more lines. Slicing
+ * the first 200 characters off that — which is what this did — produced a
+ * toast that filled a third of the screen and was cut mid-address.
+ *
+ * `shortMessage` is the one line viem writes for exactly this, and the two
+ * cases a person hits most often say what happened rather than what the RPC
+ * called it. The whole error is still in the browser console, where somebody
+ * debugging can read it.
+ */
+export function why(error: unknown): string {
+  const carried = error as { shortMessage?: string; details?: string; message?: string };
+  const raw = (carried?.shortMessage || carried?.details || carried?.message || String(error)).trim();
+
+  if (/user rejected|user denied|rejected the request/i.test(raw)) {
+    return "You declined it in your wallet.";
+  }
+  if (/insufficient funds|exceeds the balance/i.test(raw)) {
+    return "This wallet does not hold enough to send it.";
+  }
+
+  /* The first line, and never the arguments block or the docs link under it. */
+  const first = raw.split("\n").map((line) => line.trim()).find(Boolean) ?? raw;
+  return first.length > 120 ? `${first.slice(0, 117)}…` : first;
 }
 
 /**

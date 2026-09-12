@@ -36,7 +36,7 @@ import { useEffect, useState } from "react";
 import { createPublicClient, http, type Hex } from "viem";
 import { ARC } from "@cordon/fixtures";
 import { MandateRegistryAbi, TreeVaultAbi } from "../../../daemon/src/abi.gen.ts";
-import { DEPLOYED, arc, rootNodeId, childNodeId } from "./mandate";
+import { DEPLOYED, arc, rootNodeId, childNodeId, why } from "./mandate";
 
 export interface ChainNode {
   node: Hex;
@@ -79,13 +79,6 @@ const FAN = 16;
  * the status is what distinguishes "the endpoint asked for less of this" from
  * "the endpoint is gone".
  */
-function why(error: unknown): string {
-  const viem = error as { shortMessage?: string; status?: number; details?: string; message?: string };
-  const head = viem.shortMessage ?? viem.message ?? String(error);
-  const detail = viem.details && viem.details !== head ? ` — ${viem.details}` : "";
-  return `${head}${detail}`.replace(/\s+/g, " ").trim().slice(0, 300);
-}
-
 /** A descent that cannot end is a browser tab that never stops asking. */
 const MAX_LEVELS = 16;
 
