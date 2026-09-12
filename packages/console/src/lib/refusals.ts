@@ -82,6 +82,9 @@ const RELEASED = parseAbiItem(
 
 export interface ChainRefusal {
   id: bigint;
+  /** The transaction that published it, `null` for read and not published, and
+   *  `undefined` where this read cannot say. */
+  attested?: Hex | null;
   node: Hex;
   breachedAt: Hex;
   counterparty: Address;
@@ -126,6 +129,9 @@ interface MeterRefusal {
   reason: string;
   site: { blockNumber: string; transactionHash: Hex };
   released: boolean | null;
+  /** The publication, when the meter has seen one: the identity it was written
+   *  under and the transaction that wrote it. */
+  attested: { agentId: string; recordHash: Hex; site: { transactionHash: Hex } } | null;
 }
 
 /**
@@ -161,6 +167,11 @@ async function fromMeter(root: Hex | null): Promise<{ rows: ChainRefusal[]; tota
       blockNumber: BigInt(row.site.blockNumber),
       transactionHash: row.site.transactionHash,
       released: row.released === true,
+      /* Whether the refusal reached the registry is the owner's question as
+         much as a seller's, and the meter was already answering it. Only the
+         chain fallback cannot say: `Attested` is a separate event and reading
+         it would be two more windows against a public RPC. */
+      attested: row.attested ? row.attested.site.transactionHash : null,
     }));
     return { rows, total: body.total ?? rows.length };
   } catch {
@@ -235,6 +246,10 @@ export function useChainRefusals(nodes: Hex[], root?: Hex | null): ChainRefusals
             blockNumber: log.blockNumber!,
             transactionHash: log.transactionHash!,
             released: releasedIds.has(String(log.args.refusalId)),
+            /* Unknown rather than false: this path reads `Refused` and
+               `Released`, and a page that renders silence as "never
+               published" invents a fact about a registry it did not read. */
+            attested: undefined,
           };
         });
 

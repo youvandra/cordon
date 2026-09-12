@@ -1365,3 +1365,14 @@ body {
    are neither an address. Beside the tiles the table is narrower than it was,
    and a wrapped operator was costing a column's worth of width on every row. */
 .tree__nodes .cordon-table .mono { white-space: nowrap; }
+
+/* The publication, beside the status it belongs to. Quiet: it is a link to a
+   transaction, not a second status. */
+.refusal__published {
+  color: var(--cordon-copy-dim);
+  font-size: 11px;
+  text-decoration: underline;
+  text-decoration-color: var(--cordon-hairline);
+  text-underline-offset: 3px;
+}
+.refusal__published:hover { color: var(--cordon-ink-strong); }

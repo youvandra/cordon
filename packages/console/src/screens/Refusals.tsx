@@ -218,9 +218,28 @@ function ChainRefusalCard({
         {/* A refusal that stands is what this screen is full of, and colour
             here means the exception — so the tag that gets it is the one where
             somebody signed money past a bound. */}
-        <Tag tone={refusal.released ? "caution" : "neutral"} size="sm" dot>
-          {refusal.released ? "signed out later" : "still standing"}
-        </Tag>
+        <Stack direction="row" gap="sm" align="center" wrap>
+          <Tag tone={refusal.released ? "caution" : "neutral"} size="sm" dot>
+            {refusal.released ? "signed out later" : "still standing"}
+          </Tag>
+          {/* Whether it reached the registry, where the read can say. The
+              chain fallback reads two events and not `Attested`, and silence
+              there is not the same as "never published". */}
+          {refusal.attested === undefined ? null : refusal.attested ? (
+            <a
+              className="refusal__published mono"
+              href={`${ARC.explorer}/tx/${refusal.attested}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              published
+            </a>
+          ) : (
+            <Text variant="micro" tone="dim" as="span">
+              not published
+            </Text>
+          )}
+        </Stack>
       </CardHeader>
 
       <CardBody>
