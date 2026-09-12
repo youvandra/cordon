@@ -127,9 +127,26 @@ function NoSuchAgent({ id }: { id: string | undefined }) {
  * shaped by the demo tree, and the meter reduces events rather than modelling
  * the contract's window arithmetic. What is here is counted from logs.
  */
+/**
+ * The share of what this node asked for that the contract refused.
+ *
+ * The denominator is every attempt, not the draws: a refused attempt never
+ * became a draw, so dividing by draws alone gives a rate that can exceed 100%
+ * and did — a node with three refusals and no draws read `300.000%`, because
+ * the zero was clamped to one rather than recognised as an empty denominator.
+ *
+ * `null` when nothing has been asked for at all, which is a different sentence
+ * from a rate of zero.
+ */
+function breachRateOf(refusals: number, draws: number): string | null {
+  const attempts = refusals + draws;
+  if (attempts === 0) return null;
+  return ((refusals / attempts) * 100).toFixed(3);
+}
+
 function LiveAgentRecord({ data }: { data: LiveConduct }) {
   const animate = useEntrance();
-  const rate = ((data.refusals / Math.max(data.draws, 1)) * 100).toFixed(3);
+  const rate = breachRateOf(data.refusals, data.draws);
 
   usePageMeta({
     title: `Agent ${data.agentId} · conduct record · Cordon`,
@@ -179,7 +196,7 @@ function LiveAgentRecord({ data }: { data: LiveConduct }) {
           </Stack>
         </header>
 
-        <Section title={`breach rate ${rate}%`}>
+        <Section title={rate === null ? "nothing asked for yet" : `breach rate ${rate}%`}>
           <Grid columns={3} min={220} gap="md">
             {figures.map((row) => (
               <Card key={row.label}>
@@ -265,9 +282,7 @@ function PreviewAgentRecord({ node }: { node: ReturnType<typeof flatten>[number]
   });
   const animate = useEntrance();
 
-  const breachRate = ((node.refused / Math.max(node.draws, 1)) * 100).toFixed(
-    3,
-  );
+  const breachRate = breachRateOf(node.refused, node.draws) ?? "0.000";
 
   const supporting: {
     value: string;
@@ -383,7 +398,7 @@ function PreviewAgentRecord({ node }: { node: ReturnType<typeof flatten>[number]
                   <>
                     Breach rate
                     <br />
-                    Refusals over authorised draws
+                    Refusals over everything asked for
                   </>
                 }
                 value={breachRate}
@@ -391,7 +406,8 @@ function PreviewAgentRecord({ node }: { node: ReturnType<typeof flatten>[number]
                 progress={Math.min(1, Number(breachRate) / 1)}
                 caption={
                   <>
-                    {node.refused} refused in {node.draws.toLocaleString()},
+                    {node.refused} refused of{" "}
+                    {(node.refused + node.draws).toLocaleString()} asked for,
                     <br />
                     each naming its transaction
                   </>
