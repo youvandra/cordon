@@ -15,7 +15,16 @@ export function Mcp() {
       <Code lang="json">{MCP_CONFIG}</Code>
       <P>
         Every variable in that block is one the daemon actually reads. See{" "}
-        <Link to="/docs/configuration">Configuration</Link> for the full list.
+        <Link to="/docs/configuration">Configuration</Link> for the full list,
+        including <C>CORDON_MCP_NODE</C> — which node this server speaks for,
+        when the keyring it reads holds more than one.
+      </P>
+      <P>
+        The tools say what the agent may call. What a refusal means, and that
+        retrying one is pointless, belongs in the agent's own instructions:{" "}
+        <C>packages/mcp/SKILL.md</C> is generated for that, and{" "}
+        <Link to="/docs/integrate#skill">Integrate with your agent</Link>{" "}
+        carries the short version.
       </P>
 
       <H2 id="tools">Tools</H2>

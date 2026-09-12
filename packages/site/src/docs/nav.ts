@@ -72,6 +72,11 @@ export const DOC_GROUPS: DocGroup[] = [
         title: "The record",
         summary: "Conduct written into a shared registry, linked to the transaction.",
       },
+      {
+        slug: "settlement",
+        title: "Settlement and the rail",
+        summary: "How a payment actually moves, what Circle charges, and the floor that puts under a purchase.",
+      },
     ],
   },
   {
@@ -102,6 +107,11 @@ export const DOC_GROUPS: DocGroup[] = [
         title: "Attest",
         summary: "The record, priced: one x402 call before a seller serves an agent.",
       },
+      {
+        slug: "console",
+        title: "Console",
+        summary: "The owner's four screens, and which controls cost a signature.",
+      },
     ],
   },
   {
@@ -121,6 +131,11 @@ export const DOC_GROUPS: DocGroup[] = [
         slug: "gates",
         title: "Gates",
         summary: "The acceptance criteria, and the numbers the runs produced.",
+      },
+      {
+        slug: "troubleshooting",
+        title: "Troubleshooting",
+        summary: "The errors this project hit itself, quoted, and what each one means.",
       },
       {
         slug: "faq",

@@ -129,6 +129,10 @@ export function Configuration() {
           [<C key="as">CORDON_ASSETS</C>, "the assets it will pay in"],
           [<C key="port">CORDON_PORT</C>, "8402"],
           [<C key="poll">CORDON_POLL_MS</C>, "250, matched to Arc's finality rather than to viem's 4,000"],
+          [
+            <C key="mcpnode">CORDON_MCP_NODE</C>,
+            "unset, and then the MCP server speaks for whichever key parsed first. Read only by the MCP server, which serves one node",
+          ],
         ]}
       />
       <Note tone="warn" title="Keys are named, never inlined">

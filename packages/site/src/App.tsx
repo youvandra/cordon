@@ -95,7 +95,7 @@ export function App() {
         {/* The documentation. Its own frame: a contents list, a page, and the
             headings of that page, which is a different room from the landing's
             one long scroll. */}
-        <Route path="/docs" element={<Navigate to="/docs/introduction" replace />} />
+        <Route path="/docs" element={<Docs />} />
         <Route path="/docs/:slug" element={<Docs />} />
 
         <Route path="/drill" element={<Drill />} />

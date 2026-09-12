@@ -117,6 +117,13 @@ export function Quickstart() {
           creates the mandate and funds the vault.
         </li>
       </UL>
+      <Note tone="info" title="No mandate yet?">
+        This page starts at one that exists.{" "}
+        <Link to="/docs/walkthrough">Step by step</Link> is the longer road:
+        sign one, fund the vault, give a node a key, and run the daemon.{" "}
+        <Link to="/docs/integrate">Integrate with your agent</Link> covers the
+        two ways in that are not an MCP client.
+      </Note>
       <Note tone="info" title="Testnet only">
         Arc mainnet has not launched. Everything below runs against the testnet,
         where the gas token and the money are both test USDC.

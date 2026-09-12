@@ -30,7 +30,11 @@ function useHeadings(slug: string): Heading[] {
 }
 
 export function DocsLayout({ children }: { children: ReactNode }) {
-  const { slug = "introduction" } = useParams();
+  /* The contents page has no slug of its own, and the frame reads one for the
+     title, the neighbours and the headings list. `contents` is a slug no page
+     claims, so each of those falls through to nothing rather than to the
+     introduction's. */
+  const { slug = "contents" } = useParams();
   const { pathname } = useLocation();
   const page = findPage(slug);
   const { prev, next } = neighbours(slug);
@@ -86,12 +90,13 @@ export function DocsLayout({ children }: { children: ReactNode }) {
 
         <main className="docs__main">
           <article className="doc">
-            {page ? (
-              <header className="doc__head">
-                <p className="doc__kicker">{groupOf(slug)}</p>
-                <h1 className="doc__title">{page.title}</h1>
-              </header>
-            ) : null}
+            {/* The contents page is in no group and has no entry of its own,
+                so it carries its own heading rather than borrowing the first
+                page's. */}
+            <header className="doc__head">
+              <p className="doc__kicker">{page ? groupOf(slug) : "Cordon"}</p>
+              <h1 className="doc__title">{page ? page.title : "Documentation"}</h1>
+            </header>
 
             <div className="doc__body">{children}</div>
 

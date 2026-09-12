@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ARC, ATTEST, DEPLOYMENT, MCP_CONFIG, REASONS, REASON_MEANING, formatUsdc } from "@cordon/fixtures";
 import { C, Code, Defs, H2, H3, Lead, Note, OL, P, Table, UL } from "../parts";
+import { DOC_GROUPS } from "../nav";
 
 /**
  * How somebody else's agent gets behind the fence.
@@ -325,6 +326,45 @@ what it says about that agent.`}</Code>
           },
         ]}
       />
+    </>
+  );
+}
+
+/**
+ * The front of the documentation.
+ *
+ * Every page in the contents carries a one line summary, and until now there
+ * was nowhere those were read: `/docs` redirected straight into the
+ * introduction, so twenty-one sentences were written for a screen that did not
+ * exist. This is that screen — the shape of the whole thing, before a reader
+ * has to guess which group holds the answer they came for.
+ */
+export function DocsIndex() {
+  return (
+    <>
+      <Lead>
+        Cordon gives a tree of agents one budget and enforces it in a contract.
+        These are the pages, in reading order.
+      </Lead>
+
+      {DOC_GROUPS.map((group) => (
+        <div key={group.title}>
+          <H2 id={group.title.toLowerCase().replace(/[^a-z]+/g, "-")}>{group.title}</H2>
+          <Defs
+            items={group.pages.map((page) => ({
+              term: <Link to={`/docs/${page.slug}`}>{page.title}</Link>,
+              def: page.summary,
+            }))}
+          />
+        </div>
+      ))}
+
+      <Note tone="info" title="In a hurry">
+        <Link to="/docs/walkthrough">Step by step</Link> is the whole thing
+        once, in order.{" "}
+        <Link to="/docs/integrate">Integrate with your agent</Link> is the part
+        you paste into a config.
+      </Note>
     </>
   );
 }
