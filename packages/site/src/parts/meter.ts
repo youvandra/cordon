@@ -44,7 +44,16 @@ export interface LiveRefusal extends Range {
   reason: string;
   site: LiveSite;
   released: boolean | null;
-  attested: boolean | null;
+  /**
+   * What the meter actually sends for one refusal: the identity it was
+   * published under, the hash of the record, and the transaction that wrote
+   * it. This was typed as a boolean, so the page rendered a badge saying the
+   * refusal had been published and threw away the only thing that proves it.
+   *
+   * `null` is not `false`: a range the meter has not read says nothing about
+   * whether a refusal reached the registry.
+   */
+  attested: { agentId: string; recordHash: string; site: LiveSite } | null;
 }
 
 /** What `/agent/:id` answers: a node's conduct, by ERC-8004 identity. */

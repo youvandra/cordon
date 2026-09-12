@@ -251,7 +251,7 @@ function LiveRefusalPage({ data }: { data: LiveRefusal }) {
                 {/* `null` is not `false`: the meter says nothing about a range
                     it has not read, and a page that renders that as "never
                     published" is inventing a fact about the registry. */}
-                <Tag tone={data.attested === null ? "caution" : data.attested ? "neutral" : "caution"} size="sm" dot>
+                <Tag tone={data.attested ? "neutral" : "caution"} size="sm" dot>
                   {data.attested === null
                     ? "publication unknown in this range"
                     : data.attested
@@ -262,6 +262,44 @@ function LiveRefusalPage({ data }: { data: LiveRefusal }) {
             </Stack>
           </CardBody>
         </Card>
+
+        {/* The claim this whole project rests on is that the refusal outlives
+            us, in a registry we do not own. The badge above asserted it and the
+            page offered nothing to check it against — while the meter was
+            sending the identity, the record hash and the transaction that wrote
+            it, all of which were parsed into a boolean and dropped. */}
+        {data.attested ? (
+          <Card>
+            <CardBody>
+              <Stack direction="column" gap="sm" align="start">
+                <Text variant="micro" tone="dim" as="p" className="eyebrow">
+                  where it was published
+                </Text>
+                <Text variant="body" tone="copy" as="p">
+                  Written to the ERC-8004 Reputation Registry under agent{" "}
+                  <Link to={`/agent/${data.attested.agentId}`} className="mono">
+                    {data.attested.agentId}
+                  </Link>
+                  , in a registry nobody here deployed and nobody here can edit.
+                </Text>
+                <Stack direction="row" gap="md" wrap>
+                  <a
+                    href={txUrl(data.attested.site.transactionHash)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mono"
+                  >
+                    {shortTx(data.attested.site.transactionHash)}
+                  </a>
+                  <Text variant="micro" tone="dim" as="span" className="mono">
+                    record {shortTx(data.attested.recordHash)}
+                  </Text>
+                </Stack>
+                <Enforced>{ENFORCED_BY.record}</Enforced>
+              </Stack>
+            </CardBody>
+          </Card>
+        ) : null}
 
         <Section title="the draw the contract refused">
           <Grid columns={4} min={220} gap="md">

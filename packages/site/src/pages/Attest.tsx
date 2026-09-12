@@ -83,7 +83,10 @@ function liveAttestation(data: LiveConduct): Attestation {
       blockNumber: row.site.blockNumber,
       transactionHash: row.site.transactionHash,
       released: row.released === true,
-      attested: row.attested === true,
+      /* The endpoint's own shape is a flag; the meter sends the publication
+         itself. A refusal carrying one is published, and the row that proves
+         it lives on `/refusal/:id`. */
+      attested: row.attested !== null,
     })),
     range: { chainId: data.chainId, fromBlock: data.fromBlock, toBlock: data.toBlock },
     /* Never a literal: the addresses come from the deployment file, and an
