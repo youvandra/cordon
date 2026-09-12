@@ -85,7 +85,14 @@ export function Proxy() {
       </Lead>
 
       <H2 id="cordon-run">cordon run</H2>
-      <Code lang="bash">{`cordon run --node 0x7f3a… -- python my_agent.py`}</Code>
+      <P>
+        The package is private and unpublished, so the binary it would install
+        as <C>cordon-run</C> is not on anybody's PATH yet. The entry point takes
+        the same arguments either way — <C>run</C> is an optional first word —
+        and the published command becomes <C>cordon run</C> the day{" "}
+        <C>npm publish</C> puts it there.
+      </P>
+      <Code lang="bash">{`node packages/proxy/src/run.ts --node 0x7f3a… -- python my_agent.py`}</Code>
       <P>
         This starts a proxy, hands one child process the environment that points
         at it, and takes both away when the child exits. The program is

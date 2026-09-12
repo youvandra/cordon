@@ -9,10 +9,15 @@ is paid for by the daemon, inside the bound the owner signed, or it is not paid
 for at all.
 
 ```bash
-cordon run --node 0x7f3a… -- python my_agent.py
+node src/run.ts --node 0x7f3a… -- python my_agent.py
 ```
 
 That is the whole integration. No import, no wrapper, no library.
+
+The package is private and unpublished, so the binaries it declares —
+`cordon-run` and `cordon-proxy` — are not on anybody's PATH yet; the entry
+point is the same either way, and `run` is an optional first word, so this
+becomes `cordon run …` the day `npm publish` puts it there.
 
 ## What this surface does, and what it does not
 
@@ -79,6 +84,9 @@ whose command line you own:
 CORDON_NODE=0x7f3a… CORDON_DAEMON=http://127.0.0.1:8402 CORDON_CA=1 \
   node src/main.ts
 ```
+
+`CORDON_NODE` and `CORDON_DAEMON` are read by `run.ts` too, so a container that
+sets them needs neither flag.
 
 | Variable | |
 |---|---|

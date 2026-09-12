@@ -174,7 +174,7 @@ through cordon_fetch and tell me the price.`}</Code>
         If the thing spending money is a program rather than a model, use the
         proxy. Nothing about the program changes.
       </P>
-      <Code lang="bash">{`cordon run --node 0x7f3a… -- python my_agent.py`}</Code>
+      <Code lang="bash">{`node packages/proxy/src/run.ts --node 0x7f3a… -- python my_agent.py`}</Code>
       <P>
         See <Link to="/docs/proxy">Proxy and cordon run</Link> for how it handles
         https and what it hands back when a purchase is refused.

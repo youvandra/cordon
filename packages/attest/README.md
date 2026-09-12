@@ -8,10 +8,30 @@ what did the contract refuse it?
 CORDON_ATTEST_KEY=0x… node src/main.ts --chain 5042002
 ```
 
+Live at **<https://attest.getcordon.xyz>**, behind nginx on the box that also
+serves the site.
+
+| | |
+|---|---|
+| `GET /health` | the terms, the range read, and the counts. Free |
+| `GET /attest/:agentId` | the record. **$0.01**, x402 `exact` |
+
 The same facts `/agent/:id` shows a human, for a caller in a loop, behind x402.
-The price is a fixture, and it sits under the catalogue median, inside the band
-where most live offers already are: a check that costs more than the call it
-guards is a check nobody makes.
+
+## Why a cent, and not a tenth of one
+
+The price is a fixture rather than a measurement, but it is not a preference
+either. **Circle charges $0.0035 for a same-chain Gateway transfer on Arc, on
+top of the value rather than out of it**, so a tranche can only pay for its own
+settlement when it is larger than the fee: a burn of $0.0100 against a $0.0100
+balance is refused for `required 0.0135`. The other rail,
+`GatewayWallet.withdraw`, takes fourteen days.
+
+So a tenth of a cent cannot settle here at all, and a cent is the smallest
+price that pays for its own release. It also lands under the catalogue median
+and inside the band where most live offers already are, which is the other half
+of the answer: a check that costs more than the call it guards is a check
+nobody makes.
 
 ## What is actually being sold
 
@@ -66,3 +86,11 @@ npm test
 `collect.test.ts` deploys a token that implements EIP-3009 the way USDC does,
 signs as a payer would, and checks that the money moved, that the payer's gas
 balance did not, and that the same authorisation cannot be settled twice.
+
+## Running it on a box
+
+`ops/README.md` has the systemd unit and the nginx vhost. Two things it will
+refuse to do: start when `packages/contracts/deployments/<chain>.json` is
+absent, because an attest endpoint that invents an address answers about
+nothing; and start when the token's own `DOMAIN_SEPARATOR` does not match the
+EIP-712 domain it would publish.

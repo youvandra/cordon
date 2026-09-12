@@ -363,7 +363,7 @@ The long version, with what to check on the chain after each step:
 | You have | Use | What changes in your code |
 |---|---|---|
 | An MCP client | the config block above | nothing |
-| A program you cannot edit | `cordon run -- python agent.py` | nothing |
+| A program you cannot edit | `node packages/proxy/src/run.ts --node 0x… -- python agent.py` | nothing |
 | Anything else | `POST /fetch` on the daemon | one call |
 
 ### The skill file
@@ -606,7 +606,7 @@ packages/
   contracts/   MandateRegistry, TreeVault, ConductRecord, and the G1/G4/G5/G6 suites
   daemon/      holds the operator keys; reads 402s, draws, pays, publishes
   mcp/         the agent's surface — three tools, and SKILL.md
-  proxy/       cordon run -- <your program>; one env var in front of it
+  proxy/       run.ts in front of an unmodified program; it sets the proxy variables
   meter/       Arc events into a ledger, plus the read API
   attest/      an x402 endpoint of our own: conduct, priced
   eval/        G7 — the gate that measures whether the fence lets work through

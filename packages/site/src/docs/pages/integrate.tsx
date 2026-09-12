@@ -97,7 +97,7 @@ often an ancestor, so a balance above this agent is not this agent's to spend.`}
         changes: <C>cordon run</C> sets the proxy variables its HTTP client
         already reads, and every paid request it makes comes past the gate.
       </P>
-      <Code lang="bash">{`cordon run --node 0x7f3a… -- python my_agent.py`}</Code>
+      <Code lang="bash">{`node packages/proxy/src/run.ts --node 0x7f3a… -- python my_agent.py`}</Code>
       <P>
         See <Link to="/docs/proxy">Proxy and cordon run</Link> for what it does
         with https and what the program receives when a purchase is refused.
