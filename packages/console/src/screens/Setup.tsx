@@ -88,6 +88,11 @@ export default function Setup() {
   const { address, real } = useWallet();
   const { state, open } = useOpenMandate(address);
   const live = real && Boolean(REGISTRY) && Boolean(address);
+  /* Compared case-insensitively: an address typed from a block explorer is
+     checksummed and one pasted from a config file often is not, and two
+     spellings of one key are one key. */
+  const operatorIsOwner =
+    Boolean(address) && isAddress(operator) && operator.toLowerCase() === address!.toLowerCase();
   /* What this wallet has already signed. Without it the screen has no memory:
      sign a mandate, reload, and it asks for one again while the chain holds
      the answer. */
@@ -204,11 +209,23 @@ export default function Setup() {
     {
       label: "Which key does the spending?",
       step: "operator",
-      complete: isAddress(operator),
+      /* The one field where a valid answer can still be the wrong one. The
+         contract checks that an operator is not the zero address and can check
+         nothing else: it has no way to know that this address is also the
+         owner's. A mandate operated by the wallet that owns it is the whole
+         argument undone — the key that signs every purchase is the key that
+         funds the vault and can cut the branch — so the form refuses it here,
+         which is the only place it can be refused. */
+      complete: isAddress(operator) && !operatorIsOwner,
       field: (
         <Field
           label="Operator address"
-            info="The address that does the spending — made by `cordon init` and held by the daemon. Not your wallet, and not the agent's: you sign the limit, this spends inside it."
+          info="The address that does the spending — made by `cordon init` and held by the daemon. Not your wallet, and not the agent's: you sign the limit, this spends inside it."
+          error={
+            operatorIsOwner
+              ? "This is the wallet you are signing with. An operator is a key a daemon holds; using your own means the key that spends is the key that owns."
+              : undefined
+          }
         >
           <TextField
             value={operator}
