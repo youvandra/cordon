@@ -29,6 +29,11 @@
 .cordon-modal--sm { max-width: 400px; }
 .cordon-modal--md { max-width: 560px; }
 .cordon-modal--lg { max-width: 760px; }
+/* A surface to work in rather than one to read. A dialog that holds a drawing
+   somebody is going to explore wants the window, not a column of it. */
+.cordon-modal--full { max-width: min(1280px, calc(100vw - var(--cordon-gutter) * 2)); }
+.cordon-modal--full .cordon-modal__surface { height: calc(100svh - var(--cordon-gutter) * 2); }
+.cordon-modal--full .cordon-modal__body { display: flex; min-height: 0; }
 
 .cordon-modal__surface {
   display: flex;

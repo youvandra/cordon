@@ -25,7 +25,7 @@ export interface ModalProps {
   children?: ReactNode;
   /** Buttons, right-aligned. */
   footer?: ReactNode;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "full";
   /** Hide the corner dismiss. Use for decisions the viewer must actually make. */
   hideClose?: boolean;
   /** Clicking the scrim closes. Off for destructive confirmations. */
