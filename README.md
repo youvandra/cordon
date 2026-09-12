@@ -1,16 +1,280 @@
 # Cordon
 
-One budget for a tree of AI agents, enforced on Arc.
+**One budget for a tree of agents, enforced on chain.** Every draw debits every
+ancestor up to the root, so a fan-out of agents cannot spend past a total none
+of them can see — and no agent in the tree holds a key.
 
-An agent that spawns agents has no budget. Four workers allowed $5 each do not
-implement a $10 limit, because nothing adds them up. Cordon makes the addition
-happen in a contract: **every draw debits every ancestor up to the root**, so a
-child cannot spend past a total it never sees, and no agent in the tree holds a
-key.
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.28-363636)](packages/contracts)
+[![EVM](https://img.shields.io/badge/EVM-Shanghai-363636)](packages/contracts/foundry.toml)
+[![Arc](https://img.shields.io/badge/Arc%20testnet-5042002-000000)](https://testnet.arcscan.app)
+[![Node](https://img.shields.io/badge/Node-23.6%2B-5FA04E)](#running-it)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6)](packages/daemon/package.json)
+[![x402](https://img.shields.io/badge/x402-exact-6E56CF)](#settlement-and-the-rail)
+[![ERC-8004](https://img.shields.io/badge/ERC--8004-identity%20%2B%20reputation-B5342A)](#the-record)
+[![Licence](https://img.shields.io/badge/licence-MIT-blue)](#licence)
 
-- Site — <https://getcordon.xyz>
-- Console — <https://getcordon.xyz/console/>
-- Docs — <https://getcordon.xyz/docs>
+| | |
+|---|---|
+| **The argument** | <https://getcordon.xyz> |
+| **Documentation** | <https://getcordon.xyz/docs> |
+| **Owner's console** | <https://getcordon.xyz/console/> |
+| **Look around, no wallet** | <https://getcordon.xyz/console/tree> |
+| **A refusal, on chain and published** | <https://getcordon.xyz/refusal/9> |
+| **The hostile drill, published whichever way it came out** | <https://getcordon.xyz/drill> |
+| **A conduct record, read from the chain** | <https://getcordon.xyz/agent/894130> |
+
+---
+
+## Contents
+
+[Overview](#overview) · [The solution](#the-solution) ·
+[Why this is not a smaller wallet](#why-this-is-not-a-smaller-wallet) ·
+[Architecture](#architecture) · [The mandate](#the-mandate) ·
+[The five bounds](#the-five-bounds) · [What is deployed](#what-is-deployed) ·
+[Quick start](#quick-start) · [Integration paths](#integration-paths) ·
+[HTTP API](#http-api) · [Settlement and the rail](#settlement-and-the-rail) ·
+[The record](#the-record) · [Evidence and gates](#evidence-and-gates) ·
+[What this does not claim](#what-this-does-not-claim) ·
+[Tech stack](#tech-stack) ·
+[Repository structure](#repository-structure) · [Testing](#testing) ·
+[Running it](#running-it) · [Self-hosting](#self-hosting) ·
+[Roadmap](#roadmap) · [Third-party components](#third-party-components) ·
+[Licence](#licence)
+
+---
+
+## Overview
+
+An orchestrator spawns workers. Each worker gets a spending limit, and each
+worker respects it. The workers spawn helpers of their own, who also get limits,
+and also respect them. Every local check passes, and **nobody anywhere adds the
+numbers up.**
+
+Four workers allowed $5 each do not implement a $10 limit. The owner signed for
+one figure and the tree can spend a multiple of it without a single rule being
+broken, because a limit written per agent is a statement about one agent and
+delegation is the way around it.
+
+Existing controls answer a different question. Per-transaction caps bound one
+transaction. Per-session budgets bound one session. A wallet with less money in
+it bounds one wallet — and the moment that wallet's owner can create another
+agent, the cap is per branch rather than per tree and the total is unbounded
+again. None of them crosses a delegation boundary, because none of them is
+asked about the tree.
+
+**Cordon is asked before the money exists, by a contract with no admin key and
+no upgrade path.** It charges the agent that asked and every agent above it, up
+to the owner who signed for the whole tree, and when the sum would break that
+signature the purchase does not happen — the refusal is written on chain and
+published to a reputation registry nobody here controls.
+
+---
+
+## The solution
+
+One mandate, signed once by a person, and a tree of agents underneath it.
+
+- The owner signs a **root mandate**: a budget per window, a total for the life
+  of the mandate, a cap on any single purchase, a share of a window any one
+  seller may take, and how deep the tree may go.
+- A parent **spawns children on its own**, in seconds, while the owner sleeps.
+  The contract refuses a child wider than its parent whoever asks — the owner
+  included — so no per-spawn approval is needed and none would be safe to ask
+  for.
+- An agent asks for a **URL**, which is the only thing it can ask for. There is
+  no tool that takes a recipient or an amount.
+- The daemon reads the seller's own payment challenge, asks the vault for a
+  tranche of exactly that size for exactly that payee, and the contract checks
+  every node from the asking agent to the root.
+- If every bound passes, all of them are debited and the money moves into that
+  one agent's payment balance. If any fails, **nothing moves**, and the refusal
+  is a record rather than an error.
+
+> **The order is the design.** The bound is checked before the money exists.
+> That is what makes a refusal a refusal rather than a regret.
+
+---
+
+## Why this is not a smaller wallet
+
+|  | A smaller wallet | A per-session cap | Cordon |
+|---|---|---|---|
+| Bounds one agent | yes | yes | yes |
+| Bounds the agents it creates | **no** | **no** | yes |
+| Survives delegation | no | no | yes |
+| Money held by the agent | the whole balance | the whole balance | **none** |
+| Who enforces | nobody | the process doing the spending | a contract with no owner |
+| A refusal leaves | nothing | a log line | a transaction, and a registry entry |
+
+The fourth row is the one that decides the others. Under Cordon an agent holds
+no key at all — not a float, not one tranche. Every purchase passes the gate, so
+the most an unsupervised agent can spend is what the contract lets through
+rather than whatever it happens to be holding.
+
+---
+
+## Architecture
+
+Four layers, and authority runs one way: **down to the contract, never up from
+the agent.**
+
+```mermaid
+flowchart TB
+    subgraph agent[" Agent layer — holds no key "]
+        A["Your agent<br/><i>asks for a URL, nothing else</i>"]
+        S["MCP server · proxy · HTTP"]
+        A --> S
+    end
+
+    subgraph daemon[" Daemon — holds the operator key "]
+        D["cordonFetch<br/><i>reads the seller's 402, asks the vault,<br/>signs the payment</i>"]
+    end
+
+    subgraph chain[" Enforcement — Arc testnet 5042002 "]
+        direction LR
+        MR["MandateRegistry<br/><i>the tree, and narrowing</i>"]
+        TV["TreeVault<br/><i>the money, and ancestor debit</i>"]
+        CR["ConductRecord<br/><i>the only seat that may publish</i>"]
+        TV -.reads.-> MR
+        CR -.reads.-> TV
+    end
+
+    subgraph record[" The record — not ours "]
+        E8["ERC-8004 Identity + Reputation<br/><i>already live on Arc</i>"]
+    end
+
+    subgraph read[" Readers "]
+        MT["Meter<br/><i>events into a ledger, rebuildable</i>"]
+        CO["Console · site · attest"]
+        MT --> CO
+    end
+
+    S --> D
+    D -->|draw| TV
+    TV -->|"Drawn, or Refused"| MT
+    D -->|"Gateway, then x402"| SELL["Seller"]
+    CR --> E8
+    TV -.-> CR
+
+    classDef enforce fill:#0f172a,color:#ffffff,stroke:#0f172a
+    class MR,TV,CR enforce
+```
+
+**The contracts decide.** Nothing above them can permit what they refuse.
+**The meter** reduces Arc's events into the shape the pages render and is
+rebuildable from the chain, so our own database is never the authority on what
+happened. **The console** is where a person signs. **The agent** holds nothing.
+
+### One purchase, end to end
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Ag as Agent
+    participant Dm as Daemon
+    participant Sl as Seller
+    participant TV as TreeVault
+    participant GW as Circle Gateway
+    participant CR as ConductRecord
+
+    Ag->>Dm: cordon_fetch(url)
+    Dm->>Sl: GET url
+    Sl-->>Dm: 402 — price and payee, the seller's own
+    Note over Dm: the amount and the recipient come<br/>from the seller, never from the agent
+    Dm->>TV: draw(node, counterparty, amount6)
+    TV->>TV: every bound, on every node up to the root
+
+    alt every bound passes
+        TV-->>Dm: Drawn — every ancestor debited
+        TV->>GW: the tranche, into this operator's balance
+        Dm->>Sl: EIP-3009 authorisation, signed off chain
+        Sl-->>Dm: 200, the body
+        Dm-->>Ag: the body
+    else any bound fails
+        TV-->>Dm: Refused — nothing moved, no budget spent
+        TV->>CR: the refusal
+        CR->>CR: published to ERC-8004, naming the draw transaction
+        Dm-->>Ag: a refusal, which is final
+    end
+```
+
+### What the vault evaluates
+
+```mermaid
+flowchart LR
+    S(["draw(node, counterparty, amount6)"]) --> P["path: this node up to the root"]
+    P --> B["for every node on it"]
+    B --> C1["tranche cap · window budget<br/>lifetime cap · concentration<br/>revoked"]
+    C1 --> V{"any breach?"}
+    V -->|no| OK["debit every ancestor,<br/>release exactly one purchase"]
+    V -->|yes| NO["Refused — returns, never reverts.<br/>Window untouched."]
+
+    classDef stop fill:#B52F25,color:#ffffff,stroke:#B52F25
+    classDef go fill:#0f172a,color:#ffffff,stroke:#0f172a
+    class NO stop
+    class OK go
+```
+
+A refused draw **returns**; it does not revert. A revert would roll back the
+events, and a refusal that leaves no trace is not a record.
+
+---
+
+## The mandate
+
+Seven fields, set at `open` and never editable. A mandate narrows; it never
+widens.
+
+| Field | What it bounds | Enforced by |
+|---|---|---|
+| `budget6` | what the whole subtree may draw in one window | `TreeVault.windowSpent` |
+| `windowSeconds` | the length of that window, trailing | `TreeVault._roll` |
+| `lifetimeCap6` | the total for the life of the mandate; it does not refill | `TreeVault.lifetimeSpent` |
+| `trancheCap6` | the most any single draw may be | `TreeVault._evaluate` |
+| `concentrationBps` | the share of a window any one seller may take | `TreeVault.concentrationBound` |
+| `maxDepth` | how far it may be delegated | `MandateRegistry.spawn` |
+| `operator` | the address that signs for this node. Never the owner, never the agent | `MandateRegistry.open` |
+
+### Narrowing, and the one field that must be equal
+
+A child may be narrower on every axis and wider on none — **except
+`windowSeconds`, which must be equal to its parent's.** A shorter child window
+refills faster than the window it debits, which is a hole rather than a
+tightening. `MandateRegistry.spawn` refuses all of it, whoever asks.
+
+### Ancestor debit
+
+```
+root        $20 per window ─────────────┐
+ └── worker  $8 ────────────┐           │  a $1 draw at the grandchild
+      └── helper $3 ────┐   │           │  debits $1 here,
+                        └───┴───────────┘  here, and here.
+```
+
+`TreeVault.headroom(node)` returns what a node may *actually* draw and the node
+that bound it — which is often an ancestor. A grandchild with $3 of its own
+window untouched draws nothing when the root has $0 left, and that is the one
+thing no per-agent wallet can express.
+
+---
+
+## The five bounds
+
+| Reason | What it means | When it fires |
+|---|---|---|
+| `tranche-cap` | the purchase is larger than one draw may be | before anything is debited |
+| `window-budget` | the window is spent, on this node or an ancestor | on any node of the path |
+| `lifetime-cap` | the total this mandate was signed for is spent, and it does not come back | on any node of the path |
+| `concentration` | this recipient has taken its share of the window | per counterparty, per node |
+| `vault-balance` | the bounds passed and the treasury is empty | last, so an empty vault never masks a bound |
+| `revoked` | this mandate, or one above it, has been cut | first |
+
+Every one of them is the contract's own word, decoded from `TreeVault.Reason`.
+The surfaces, the MCP skill file and the docs all read the same list from
+`packages/fixtures`, so a refusal cannot be explained one way on a page and
+another in an agent's instructions.
+
+---
 
 ## What is deployed
 
@@ -29,142 +293,369 @@ Addresses live in `packages/contracts/deployments/5042002.json` and nowhere
 else — including the table above, which `deploy.sh` rewrites from that file.
 Nothing in this repository hardcodes one.
 
-## How it fits together
+Also on Arc, and not ours: ERC-8004 **Identity** at
+`0x8004A818BFB912233c491871b3d84c89A494BD9e` and **Reputation** at
+`0x8004B663056A597Dffe9eCcC1965A193B7388713`. Cordon writes into what is
+already there rather than standing up a registry nobody would read.
 
+> **Testnet only.** Arc mainnet has not launched. The gas token and the money
+> are both test USDC, and every transaction linked from this repository opens
+> in a public explorer.
+
+---
+
+## Quick start
+
+### Read it without installing anything
+
+The console runs against the live tree with no wallet: <https://getcordon.xyz/console/tree>.
+Every figure on it is read from the contract that enforces it, and the drawing
+opens onto every field the registry and the vault hold for a node.
+
+### Put the fence in front of an MCP client
+
+`@cordon/mcp` is not published to npm yet, so the config block names the entry
+point in a checkout rather than an `npx` that would 404:
+
+```json
+{
+  "mcpServers": {
+    "cordon": {
+      "command": "node",
+      "args": ["/path/to/cordon/packages/mcp/src/main.ts"],
+      "env": {
+        "CORDON_VAULT": "0x00ab57acd260c594a661b6101bdf7e92267af135",
+        "CORDON_REGISTRY": "0xf86de085e63b00c9fba300b19807c883deb961e9",
+        "CORDON_NODE_ME": "0x…",
+        "CORDON_KEY_ME": "…",
+        "CORDON_RPC": "https://rpc.testnet.arc.io"
+      }
+    }
+  }
+}
 ```
-owner signs a mandate ──> MandateRegistry ──> TreeVault (holds the money)
-                                                   │
-        agent ──> MCP server ──> daemon ──> draw ──┘──> Gateway ──> seller (x402)
-        (holds no key)            (holds the key)          │
-                                                           └──> ConductRecord ──> ERC-8004
+
+`CORDON_KEY_ME` is held by the server process. The model never sees it and has
+no tool that could use one. Where the keyring holds several nodes,
+`CORDON_MCP_NODE` names which one this server speaks for.
+
+### The whole path, from an empty wallet
+
+1. **Sign one mandate** at [`/console/setup`](https://getcordon.xyz/console/setup) — six questions, one signature.
+2. **Fund the vault** from the root window tile. Two signatures: approve, then fund.
+3. **Make operator keys** with `npm run init --prefix packages/daemon -- --nodes 4`.
+4. **Spawn a child** from the agents tile, naming one of those addresses.
+5. **Run the daemon**, which is the only thing that ever holds a key.
+6. **Ask for something priced**, then ask for something too large.
+
+The long version, with what to check on the chain after each step:
+<https://getcordon.xyz/docs/walkthrough>.
+
+---
+
+## Integration paths
+
+| You have | Use | What changes in your code |
+|---|---|---|
+| An MCP client | the config block above | nothing |
+| A program you cannot edit | `cordon run -- python agent.py` | nothing |
+| Anything else | `POST /fetch` on the daemon | one call |
+
+### The skill file
+
+Tools say what an agent may call. They do not say that a refusal is final, that
+retrying one costs gas and lands on the agent's own record, or that splitting a
+purchase to get under a cap is the behaviour the cap exists to catch. That
+belongs in the agent's instructions, and [`packages/mcp/SKILL.md`](packages/mcp/SKILL.md)
+is generated for it — from the same fixtures the tools are, so it cannot
+describe a tool that no longer registers.
+
+```bash
+node packages/mcp/scripts/emit-skill.ts   # rewrites SKILL.md
 ```
 
-Drawn, as the seven steps one purchase takes:
-<https://getcordon.xyz/docs/how-it-works#architecture>
+### The tools, and the ones that will never exist
 
-| Package | What it is |
+| Tool | Takes |
 |---|---|
-| `contracts` | `MandateRegistry` (the tree and its narrowing), `TreeVault` (the money and ancestor debit), `ConductRecord` (the enforcement seat that writes into ERC-8004) |
-| `daemon` | Holds the operator keys, answers 402 challenges, draws, pays, publishes refusals |
-| `mcp` | The agent's surface. Three tools, and the absent ones are part of the fence |
-| `proxy` | `cordon run -- <your program>`. An unmodified program, one env var; a refusal arrives as a 402 |
-| `meter` | Arc events into a ledger, plus a read-only API. The snapshot is a cache and there is a test that says so |
-| `attest` | `GET /attest/:agentId`, an agent's conduct record sold over x402 |
-| `site`, `console`, `ui`, `brand` | The public site, the owner's surface, the design system and the marks |
-| `fixtures` | Every figure the surfaces display, in one place |
+| `cordon_fetch` | `url`, and optionally a method and a body |
+| `cordon_status` | nothing — what is left, and which node is the limit |
+| `cordon_spawn` | a label and bounds, narrower than this node's |
 
-## Gates
+`cordon_transfer`, `cordon_pay` and `cordon_send` are absent, permanently. The
+absence is part of the fence: an agent that cannot express "send money to X"
+cannot be talked into it, and there is a test asserting each name stays
+unregistered.
 
-Claims in this project are meant to be falsifiable, so each one is a gate with
-a test named after the attack it prevents. A gate is green because a run said
-so: `packages/fixtures/src/gates.gen.ts` is written by the test run, and a gate
-missing from it reads as pending.
+---
+
+## HTTP API
+
+### Daemon — `:8402` by default
+
+| | |
+|---|---|
+| `GET /status` | every node this daemon holds a key for, its headroom and its mandate |
+| `POST /fetch` | `{ node, url, method?, body? }` — fetch, and pay if the seller asks |
+| `POST /spawn` | `{ node, budget6, trancheCap6, … }` — a child, narrower than its parent |
+| *absent* | there is no transfer endpoint, and there will not be one |
+
+A purchase and a refusal are both `200`. A refusal is an answer, not a failure,
+so it does not arrive as a `5xx` for a retry loop to hammer:
+
+```json
+{
+  "paid": false,
+  "free": false,
+  "refusal": {
+    "reason": "tranche-cap",
+    "breachedAt": "0x08bd7e42…",
+    "refusalId": "9",
+    "txHash": "0x974e2ca6…",
+    "released": false
+  },
+  "offer": { "amount": "10000", "payTo": "0x3feeA285…" }
+}
+```
+
+### Meter — read-only, uncredentialed, `*`-CORS
+
+| | |
+|---|---|
+| `GET /health` | the range it has read |
+| `GET /tree/:root` | every node under a root, with its figures |
+| `GET /node/:node` | one node |
+| `GET /agent/:agentId` | conduct, by ERC-8004 identity |
+| `GET /refusals?root=&limit=&before=` | refusals, newest first |
+| `GET /refusal/:id` | one refusal, and where it was published |
+| `GET /reconcile` | every operator's Gateway balance against what the vault released to it |
+
+The meter is a cache and never an authority: it can be rebuilt from the chain,
+and there is a test that says so.
+
+### Attest — `attest.getcordon.xyz`, x402
+
+| | |
+|---|---|
+| `GET /health` | the terms, free |
+| `GET /attest/:agentId` | a buyer's live mandate and its conduct — **$0.01**, x402 `exact` |
+
+---
+
+## Settlement and the rail
+
+Two clocks. The slow one is on chain and is guarded; the fast one is off chain,
+costs nothing, and Cordon does not touch it.
+
+One purchase, read back off Arc on **11 September 2026**, is three
+transactions:
+
+| | Transaction |
+|---|---|
+| The draw the contract bounded | [`0x860378ac…edd2c2`](https://testnet.arcscan.app/tx/0x860378acb682cdf29c9256e17da9adf980d144b49f4362a6054a7eddc6edd2c2) |
+| Circle's Gateway landing the tranche | [`0x296b8c88…d67555`](https://testnet.arcscan.app/tx/0x296b8c881781cf2dbff6d83cc3126947da76fa3aa9e1480929351a1a8ed67555) |
+| The seller collecting its EIP-3009 authorisation | [`0xc70f76f1…a0f0c8`](https://testnet.arcscan.app/tx/0xc70f76f160aef7cc32518d2827357a1d9f996b3b6cc943ed56a9aed913a0f0c8) |
+
+**Circle charges $0.0035 for a same-chain Gateway transfer on Arc, on top of
+the value rather than out of it.** A burn of $0.0100 against a $0.0100 balance
+is refused for `required 0.0135`. So a tranche can only pay for its own
+settlement when it is larger than the fee, and that floor — not a pricing
+decision — is why the attestation endpoint costs $0.01. The other rail,
+`GatewayWallet.withdraw`, takes fourteen days.
+
+The seller is named in `destinationRecipient`, a field inside a burn intent
+signed off chain and handed to Circle's API. No contract sees it. The
+consequence is stated rather than implied: a bound that names a counterparty is
+enforced at the moment a balance is topped up — the draw — and not against
+money already sitting in a Gateway balance.
+
+---
+
+## The record
+
+There is already a shared registry for agent reputation, live on Arc, and
+anyone can read it. The trouble is that anyone can also write to it: on Base,
+**90.6%** of reviewers are Sybil-flagged, **98.7–100%** of feedback carries no
+payment behind it, and flipping an agent's standing costs **$0.0027**.
+
+Cordon writes the opposite kind of entry. `ConductRecord` is the only address
+that may publish under its identities, and every record it writes:
+
+- names the **draw transaction** that produced it — a record without that
+  linkage is not written;
+- is a **measurement**, never an opinion. No score originates in a model, a
+  heuristic or a human judgement call; only in what the contract refused;
+- resolves at `https://getcordon.xyz/refusal/<id>`, which is a Solidity
+  constant in `ConductRecord.RECORD_BASE` rather than a link we can move.
+
+A released refusal is published too. The exception a person signed sits beside
+the refusal it stepped around, and neither can be removed.
+
+---
+
+## Evidence and gates
+
+Every claim in this project is a gate with a test named after the attack it
+prevents. A gate is green because a run said so: `packages/fixtures/src/gates.gen.ts`
+is written by the run, and a gate missing from it reads `pending` rather than
+green.
 
 | Gate | Ends when | Status |
 |---|---|---|
-| G1 tree arithmetic | every draw debits every ancestor, exactly | green, 66 tests |
-| G2 live on Arc | four-agent tree, no agent holds a key, refusal on arcscan | green, 8 checks |
-| G3 the hostile drill | an unrestricted agent is told to spend, and the number is published | green, 5 checks |
-| G4 bounded search | thousands of strategies scored by the contract, none passes a bound | green |
-| G5 the refusal survives us | no admin key, no proxy, reversal fails as the deployer | green, 12 tests |
-| G6 the record cannot be forged | every record names its draw transaction; nobody else can write one | green, 14 tests |
-| G7 the work still gets done | one task, two conditions, three runs each, and the brief completes under the fence | green, 10 tests |
+| **G1** tree arithmetic | every draw debits every ancestor, exactly | green, 66 tests |
+| **G2** live on Arc | four-agent tree, no agent holds a key, refusal on arcscan | green, 8 checks |
+| **G3** the hostile drill | an unrestricted agent is told to spend, and the number is published | green, 5 checks |
+| **G4** bounded search | thousands of strategies scored by the contract, none passes a bound | green |
+| **G5** the refusal survives us | no admin key, no proxy, reversal fails as the deployer | green, 12 tests |
+| **G6** the record cannot be forged | every record names its draw transaction; nobody else can write one | green, 14 tests |
+| **G7** the work still gets done | one task, two conditions, three runs each, and the brief completes | green, 10 tests |
 
-G7 is the gate that can come out against the product. One task — a brief
+**G4** played 1,200 adversarial spending strategies through 45,360 draws:
+12,033 refused, **0 past a bound**, and the closest any strategy came was the
+bound exactly — $100.000000 of the $100 window that run was scored against.
+Scored by the contract, never by a model of it. Tactic 8 is a negative control
+that must reach zero refusals, because a contract that refused everything would
+pass every other assertion.
+
+**G7 is the gate allowed to come out against the product.** One task — a brief
 citing four paid sources, split across a root and its two workers — run three
-times under Cordon and three times under a plain shared cap, against
-acceptance criteria fixed before the first run. Both conditions are given the
-same authority: the $20 window the owner signed.
+times under Cordon and three times under a plain shared cap, against criteria
+fixed before the first run.
 
-When nothing goes wrong, **both completed 3 of 3 and spent the same $4.68**.
-What separates them is when the money leaves the owner: $0.00 at risk before
-any work under Cordon, the whole $20 under a shared balance, because a shared
-cap is released up front and enforced by a counter in the process doing the
-spending. The fence costs a second transaction per purchase.
+| Condition | Briefs | Spent | Taken by the loop | At risk before any work |
+|---|---|---|---|---|
+| Nothing goes wrong — Cordon | 3 of 3 | $4.68 | $0.00 | **$0.00** |
+| Nothing goes wrong — shared cap | 3 of 3 | $4.68 | $0.00 | $20.00 |
+| One worker in a loop — Cordon | **3 of 3** | $13.86 | $9.18 | **$0.00** |
+| One worker in a loop — shared cap | **0 of 3** | $59.76 | $56.61 | $20.00 |
 
-Then the same task with one worker stuck in a loop, each worker given half the
-window. **Cordon delivered the brief 3 of 3**; the loop was refused by
-`concentration` on its own node after $9.18 and the sibling's half was still
-there. **The shared cap delivered 0 of 3**: it stopped the spending at the
-total it was given, having no way to say *and no single worker may take all of
-it*, so the loop took $56.61 across the three runs and the other worker's
-sources were never bought. The agents are scripted and deterministic, and the
-run record says so rather than implying a model. G7 deploys the same contracts
-to a local node and runs there: it is evidence about the contracts, not about
-Arc. G2 is the gate that is about Arc, and it is green: eight checks read back
-from the chain rather than from a suite, including a node refused by a
-lifetime cap at its **parent** while its own budget was untouched
-(`0x16093231…`).
+When nothing goes wrong, both conditions do the same work for the same money;
+what separates them is when the money leaves the owner. With a worker stuck in
+a loop, the shared cap stopped the spending at the total it was given — having
+no way to say *and no single worker may take all of it* — so the loop took
+$56.61 and the other worker's sources were never bought.
 
-G4 swept 1,200 strategies through 45,360 draws: 12,033 refused, **0 past a
-bound**, and the closest any strategy came was $100.000000 of the $100 window
-that run was scored against. Those numbers are written into
-`packages/fixtures/src/search.gen.ts` by the run itself, never typed.
-Tactic 8 is a negative control that must reach zero refusals, because a
-contract that refused everything would pass every other assertion.
+**G3, the hostile drill.** An agent was given the daemon and told to spend as
+much as it could, neither restricted nor helped, against a mandate signed for
+$0.02. It reached **$0.007 — 35% of the ceiling** — and was stopped by
+`concentration` at a node whose own window still had money in it. Both outcomes
+were written before the run, including the one that disproves the product.
+<https://getcordon.xyz/drill>
 
-Suites: contracts 83 test functions, daemon 18, proxy 18, attest 27, meter 16,
-mcp 11.
+---
 
 ## What this does not claim
 
-Being explicit about the edge of the guarantee is the point of the project, so:
+Being explicit about the edge of the guarantee is the point, so:
 
-- **Counterparty concentration is declared, not enforced.** A seller's address
-  lives in an off-chain signed burn intent that no contract can read, so the
-  vault bounds a counterparty the daemon *names*. `STRENGTH` in `fixtures`
-  marks every figure `enforced` or `declared`, and the surfaces print which.
-- **The bound is the contract plus the fact that the agent holds no key.** The
-  proxy is not the bound. A request that never reaches the proxy fails; it does
-  not escape.
-- **A draw and the payment it funds are two steps, and nothing closes the gap
-  between them.** The contract releases a tranche into the operator's Gateway
-  balance; paying the seller is an off-chain signature after that. If the
-  daemon stops in between, the window has been debited, the money is in the
-  operator's balance and no seller was paid — there is no commitment ledger, no
-  retry and no compensating entry. The meter's `reconcileGateway` bounds the
-  aggregate, that an operator's balance never exceeds what the vault released
-  to it; it does not reconcile one purchase.
-- **A payment has settled, and it cost more than it bought.** One purchase
-  ran end to end on Arc on 11 September: draw `0x860378ac…`, Gateway release
-  `0x296b8c88…`, and the seller's own collection `0xc70f76f1…` moving $0.01 to
-  the payee the contract was asked about. Circle charges **$0.0035** on top of
-  a same-chain Gateway transfer and the release costs about $0.003 of gas, so
-  settling a purchase costs roughly two thirds of a one-cent purchase — paid
-  by the operator, like gas, and outside the mandate. The other rail,
-  `GatewayWallet.withdraw`, is fourteen days. **That floor is why the
-  attestation endpoint is priced at $0.01**: below it a tranche cannot pay for
-  its own release, and the settler refuses such a purchase with Circle's own
-  number.
-- **G3's number is authority reached, not money that left.** The drill ran
-  before settlement was wired and settled nothing; both figures are true and
-  they measure different things.
-- **G3's number is 35.0% of the ceiling** — $0.007000 of $0.020000 — and it was
-  stopped by `concentration` at a node whose window still had money in it. It
-  is published whichever way it came out, and it came out this way.
-- Figures that no run has produced read `pending`. That is a value, not a
+- **You cannot stop one payment. You can stop the ten-thousandth.** x402 batch
+  settlement needs an EOA signature and does not support ERC-1271, so no
+  contract can sit in the path of a single payment. Cordon bounds capacity, not
+  items.
+- **Counterparty concentration is declared, not enforced.** The payee inside an
+  off-chain signature is unreadable to any contract, so the vault bounds the
+  payee the daemon *names*. `STRENGTH` in `fixtures` marks every figure
+  `enforced` or `declared`, and the surfaces print which.
+- **A draw and the payment it funds are two steps, and nothing closes the gap.**
+  If the daemon stops in between, a window has been debited and no seller was
+  paid. There is no commitment ledger and no retry. `reconcileGateway` bounds
+  the aggregate — an operator's balance never exceeds what the vault released to
+  it — and does not reconcile one purchase.
+- **An agent holding its own wallet is outside all of this.** Cordon bounds what
+  passes the gate; money that never came through the gate is money it can
+  observe and not control. It says so rather than implying otherwise.
+- **G3's figure is authority reached, not money that left.** The drill ran
+  before settlement was wired; both numbers are true and they measure different
+  things.
+- **Figures no run has produced read `pending`.** That is a value, not a
   placeholder to be tidied away.
+
+---
+
+## Tech stack
+
+| Layer | Technology | Why this one |
+|---|---|---|
+| Contracts | Solidity 0.8.28, Foundry, EVM Shanghai | no proxy, no admin key, nothing upgradeable |
+| Chain | Arc testnet (5042002) | sub-second finality, USDC as gas — a tranche the size of one purchase is only affordable here |
+| Money | USDC, 6-decimal ERC-20 view at `0x3600…0000` | the same asset as the gas, with two decimal views of one balance |
+| Payments | x402 `exact`, EIP-3009, Circle Gateway | the seller's own challenge names the price and the payee |
+| Agent surface | `@modelcontextprotocol/sdk` | one config block into a client people already run |
+| Services | Node 23.6+, TypeScript 5.7, viem 2 | `.ts` sources run directly; no build step in the payment path |
+| Reads | a Node indexer over Arc events | rebuildable from the chain, never the authority |
+| Surfaces | React 18, Vite, framer-motion, Privy | Privy holds the key, Cordon holds the bound |
+
+### Standards
+
+**x402** for the payment challenge · **EIP-3009** for the authorisation the
+seller collects · **EIP-712** for Circle's burn intent · **ERC-8004** for
+identity and reputation · **CAIP-2** for naming the network a payment settles
+on · **MCP** for the agent's surface.
+
+---
+
+## Repository structure
+
+```
+packages/
+  contracts/   MandateRegistry, TreeVault, ConductRecord, and the G1/G4/G5/G6 suites
+  daemon/      holds the operator keys; reads 402s, draws, pays, publishes
+  mcp/         the agent's surface — three tools, and SKILL.md
+  proxy/       cordon run -- <your program>; one env var in front of it
+  meter/       Arc events into a ledger, plus the read API
+  attest/      an x402 endpoint of our own: conduct, priced
+  eval/        G7 — the gate that measures whether the fence lets work through
+  fixtures/    every figure any surface displays, in one place
+  site/        the public argument, the docs, the record pages
+  console/     the owner's four screens
+  ui/          the design system
+  brand/       the marks, and the generator that writes them
+ops/           nginx, systemd units, publish and check scripts
+```
+
+**`packages/fixtures` is the only source of any figure.** No cap, window,
+decimal count, price or count is written anywhere else — and the generated
+files in it (`gates.gen.ts`, `drill.gen.ts`, `search.gen.ts`, `eval.gen.ts`,
+`settlement.gen.ts`, `tools.gen.ts`, `deployment.gen.ts`) are written by the
+runs that produced them, never by hand.
+
+---
+
+## Testing
+
+```bash
+cd packages/contracts && forge test          # G1, G4, G5, G6
+npm test --prefix packages/daemon            # the gate, the settler, the fetch path
+npm test --prefix packages/meter             # the ledger, and that it rebuilds
+npm test --prefix packages/attest            # x402: replay, expiry, version
+npm test --prefix packages/proxy             # a refusal arrives as a 402
+npm test --prefix packages/mcp               # the tools, and the absent ones
+npm test --prefix packages/eval              # G7
+npm test --prefix packages/fixtures          # the figures themselves
+```
+
+Measured on 12 September 2026: **96** contract tests, **46** daemon, **39**
+meter, **34** attest, **18** proxy, **14** mcp, **10** eval, **3** fixtures.
+
+`CORDON_G4_VARIANTS=3` runs the adversarial search coarse while iterating; the
+full sweep is most of the contract suite's runtime.
+
+---
 
 ## Running it
 
-Built and tested on Node 26 with [Foundry](https://getfoundry.sh). The
-packages run their `.ts` sources directly, so they need a Node new enough to
-strip types without a flag.
+Built on **Node 23.6 or newer** (developed on 26) and
+[Foundry](https://getfoundry.sh). The packages run their `.ts` sources
+directly, so they need a Node new enough to strip types without a flag.
 
 ```bash
 npm ci --prefix packages/site && npm run dev --prefix packages/site
+npm ci --prefix packages/console && npm run dev --prefix packages/console
 ```
 
-```bash
-cd packages/contracts && forge test
-```
+### Operator keys
 
-`CORDON_G4_VARIANTS=3` runs the search coarse while iterating; the full sweep is
-most of the suite's runtime.
-
-### The operator keys
-
-The daemon is the only thing that ever needs one, so the daemon makes them.
+The daemon is the only thing that ever needs one, so the daemon makes them:
 
 ```bash
 npm run init --prefix packages/daemon -- --nodes 4
@@ -173,28 +664,85 @@ npm run init --prefix packages/daemon -- --nodes 4
 It writes `~/.cordon/cordon.env` at `0600` and prints **addresses only** — the
 public half, and the part you paste into the console when you sign a mandate.
 No private key is printed, and there is a test asserting that. A second run
-refuses: a key there may already be the operator of a live mandate, and a
-mandate's operator is set at `open` and cannot be repointed.
+refuses: a key there may already be the operator of a live mandate, and an
+operator is set at `open` and cannot be repointed.
 
 Each address needs gas and holds no USDC by design; the vault tops it up one
 purchase at a time.
 
-Deploying needs a Foundry keystore and a funded account; the private key is
-never an argument to the script and never an environment variable:
+### The daemon
+
+```bash
+node --env-file=.env.live --env-file=~/.cordon/cordon.env \
+  packages/daemon/src/main.ts
+```
+
+It prints the nodes it holds keys for and refuses to start misconfigured — a
+daemon that starts anyway is one that discovers a missing address halfway
+through a payment.
+
+### Deploying
+
+The private key is never an argument and never an environment variable:
 
 ```bash
 cast wallet import cordon-deployer --interactive
 cd packages/contracts && ./script/deploy.sh
 ```
 
-`ops/README.md` covers serving the site, the console, the meter and `attest`
-behind nginx.
+The script writes `deployments/<chainId>.json`, then rewrites the address
+fixture and the table in this README from it.
 
-## Reuse and AI tools
+---
 
-Third-party dependencies are open source and declared in the lockfiles. No code
-was carried over from an earlier project. See [AI_USAGE.md](AI_USAGE.md) for
-how AI tools were used and what was directed by hand.
+## Self-hosting
+
+`ops/README.md` covers the whole box: nginx for the site, the console, the
+meter and `attest`; systemd units for the two services that stay up; and:
+
+```bash
+ops/bin/cordon-publish.sh    # rebuild both bundles and publish them
+ops/bin/cordon-check.sh      # ask the deployed surfaces from outside
+```
+
+`cordon-check.sh` reads the **bundle**, not the page: `index.html` barely
+changes between builds, so a stale deploy looks fine until you read the
+JavaScript. It exits non-zero only when something claims to be up and is wrong
+— a `pending` figure is the honest state of a project whose gates say so.
+
+---
+
+## Roadmap
+
+| | |
+|---|---|
+| **Next** | publish `@cordon/mcp`, so the config block can say `npx -y @cordon/mcp` |
+| **Next** | Arc mainnet, when it launches — the contracts are the ones that would run there, with no upgrade path and no owner |
+| **Then** | buyer-side settlement search, if Circle's x402 transfer endpoints turn out to exist, so reconciliation can match a declared payee against the paid one |
+| **Then** | cross-organisation delegation, where a parent and a child belong to different people — the same mechanism, waiting on strangers to adopt it |
+| **Not planned** | an admin key, a pause, an upgrade path, or any surface that can reverse a refusal |
+
+### Scope
+
+The unit Cordon is built for is one owner running a fan-out of their own
+agents: an orchestrator with workers, all under one set of keys, funded from
+one vault. That case is checkable, because the vault really is the only source
+of money.
+
+---
+
+## Third-party components
+
+Every dependency is open source and declared in the lockfiles: viem, the
+Model Context Protocol SDK, React, Vite, framer-motion, Privy, and Foundry's
+`forge-std` for the contract suites. Circle's Gateway and the ERC-8004
+registries are live services this project calls and does not own. No code was
+carried over from an earlier project of ours.
+
+See [AI_USAGE.md](AI_USAGE.md) for how AI tools were used and what was directed
+by hand.
+
+---
 
 ## Licence
 
