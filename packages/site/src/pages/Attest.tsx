@@ -294,12 +294,26 @@ export default function Attest() {
                       which is a different thing entirely. */}
                   {body.conduct.refusals > 0 ? (
                     <Text variant="body" tone="copy" as="p">
-                      {body.conduct.attested} of{" "}
-                      {plural(body.conduct.refusals, "refusal")} reached the
-                      reputation registry. The rest are on chain and were never
-                      published, which a daemon running without{" "}
-                      <span className="mono">CORDON_RECORD</span> is enough to
-                      cause.
+                      {/* "The rest" needs there to be a rest. Where every
+                          refusal reached the registry the sentence says that
+                          and stops. */}
+                      {body.conduct.attested === body.conduct.refusals ? (
+                        <>
+                          Every one of{" "}
+                          {plural(body.conduct.refusals, "refusal")} reached the
+                          reputation registry, each naming the transaction it
+                          came from.
+                        </>
+                      ) : (
+                        <>
+                          {body.conduct.attested} of{" "}
+                          {plural(body.conduct.refusals, "refusal")} reached the
+                          reputation registry. The rest are on chain and were
+                          never published, which a daemon running without{" "}
+                          <span className="mono">CORDON_RECORD</span> is enough
+                          to cause.
+                        </>
+                      )}
                     </Text>
                   ) : null}
                   <Enforced>{ENFORCED_BY.record}</Enforced>
