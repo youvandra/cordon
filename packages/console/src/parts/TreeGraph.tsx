@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { Tag } from "cordon-ui";
 import { formatUsdc } from "@cordon/fixtures";
 
@@ -106,9 +106,29 @@ export function TreeGraph({
 }) {
   const { placed, width, height } = layout(nodes);
   const at = new Map(placed.map((node) => [node.id, node]));
+  const scroller = useRef<HTMLDivElement | null>(null);
+
+  /* Bring the selected node into the scroller.
+   *
+   * A real tree is several times wider than any box it is in, so whatever is
+   * selected is usually off to one side — on opening, that is the root, and a
+   * drawing of a tree that opens somewhere in the middle of it reads as
+   * broken. Convenience only: nothing here decides whether a node is drawn,
+   * and a scroller nobody scrolled still holds every node. */
+  useEffect(() => {
+    const box = scroller.current;
+    if (!box || !selected) return;
+    const node = at.get(selected);
+    if (!node) return;
+    const middle = node.x + NODE_W / 2 - box.clientWidth / 2;
+    box.scrollTo({ left: Math.max(0, middle), behavior: "auto" });
+    /* `at` is rebuilt every render; the selection and the shape are what
+       should move this. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, width, height]);
 
   return (
-    <div className="graph" role="group" aria-label="The mandate tree">
+    <div className="graph" role="group" aria-label="The mandate tree" ref={scroller}>
       <div className="graph__canvas" style={{ width, height }}>
         <svg className="graph__edges" width={width} height={height} aria-hidden="true">
           {placed.map((node) => {
@@ -133,7 +153,19 @@ export function TreeGraph({
              the end of the bar is authority the node holds on paper and cannot
              use — which is the one thing no per-agent wallet can draw. */
           const ceiling = pct(node.spent6 + node.available6);
-          const held = ceiling < 99.5 && !node.revoked;
+          /* Short of its own window, whatever the reason. The tick is drawn
+             for both reasons because both are true and both are the contract's,
+             but the words under it are not interchangeable. An ancestor can be
+             named here because `headroom` returns it. The other three reasons
+             a node is short of its own window — its lifetime cap, its own
+             window, the treasury — all come back as the node itself, and this
+             card does not carry the fields to tell them apart. So it says the
+             true thing it knows and the panel, which has every field, names
+             which. Saying "capped by an ancestor" on a root was the first
+             thing this drawing got wrong, and "the vault holds no more" over a
+             spent lifetime cap was the second. */
+          const short = ceiling < 99.5 && !node.revoked;
+          const held = short && Boolean(node.heldBy);
 
           return (
             <Fragment key={node.id}>
@@ -143,6 +175,7 @@ export function TreeGraph({
                 data-revoked={node.revoked ? "" : undefined}
                 data-root={node.parent === null ? "" : undefined}
                 data-bound={held ? "" : undefined}
+                data-short={short ? "" : undefined}
                 data-depth={Math.min(node.depth, 3)}
                 data-selected={selected === node.id ? "" : undefined}
                 style={{ left: node.x, top: node.y, width: NODE_W, height: NODE_H }}
@@ -164,7 +197,13 @@ export function TreeGraph({
                 <span className="graph__foot">
                   <span className="graph__draw num">{formatUsdc(node.available6)}</span>
                   <span className="graph__note">
-                    {node.revoked ? "cut" : held ? `left · capped by ${node.heldBy ?? "an ancestor"}` : "left to draw"}
+                    {node.revoked
+                      ? "cut"
+                      : held
+                        ? `left · capped by ${node.heldBy}`
+                        : short
+                          ? "left · less than this window allows"
+                          : "left to draw"}
                   </span>
                 </span>
 
@@ -175,7 +214,7 @@ export function TreeGraph({
                       style={{ width: `${spent}%` }}
                       data-hot={spent >= 95 ? "" : undefined}
                     />
-                    {held ? (
+                    {short ? (
                       <span className="graph__ceiling" style={{ left: `${ceiling}%` }} />
                     ) : null}
                   </span>

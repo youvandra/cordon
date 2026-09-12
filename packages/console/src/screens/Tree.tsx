@@ -29,6 +29,7 @@ import { useWallet } from "../lib/wallet";
 import { useChainTree, type ChainNode } from "../lib/tree";
 import { useFundVault, useRevoke, useSpawnChild } from "../lib/mandate";
 import { TreeGraph } from "../parts/TreeGraph";
+import { TreePlayground } from "../parts/TreePlayground";
 import { useEntrance } from "../lib/entrance";
 
 /** The path from the root down to `id`, excluding `id` itself. */
@@ -217,22 +218,12 @@ function ChainTree({ nodes, owner }: { nodes: ChainNode[]; owner: string | null 
         />
       </Grid>
 
+      {/* The drawing used to be here, 2,388 pixels of it inside a card 684
+          wide — the thing the product is about, arriving as a strip you
+          scrolled sideways through three nodes at a time. It is a surface of
+          its own now, and this is the door to it. */}
       <Section title="delegation tree" aside={<Enforced>{ENFORCED_BY.treeBar}</Enforced>}>
-        <TreeGraph
-          nodes={nodes.map((node) => ({
-            id: node.node,
-            label: `${node.node.slice(0, 8)}…${node.node.slice(-4)}`,
-            parent: node.parent,
-            spent6: node.windowSpent6,
-            budget6: node.budget6,
-            available6: node.available6,
-            heldBy:
-              node.boundBy.toLowerCase() === node.node.toLowerCase()
-                ? null
-                : `${node.boundBy.slice(0, 8)}…`,
-            revoked: node.revoked,
-          }))}
-        />
+        <TreePlayground nodes={nodes} />
       </Section>
 
       <Section title="every node, as figures">
