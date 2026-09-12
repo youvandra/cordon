@@ -1,19 +1,11 @@
 /* ==========================================================================
-   Cordon console — placement only.
+   Cordon console — layout.
 
-   Every surface, control, figure and table comes from `@cordon/ui`. What is
-   left here is the room those things stand in: the shell grid, the page
-   rhythm, and the two marks this product needs that a general UI system has no
-   reason to ship — `.enforced`, which names the contract function behind a
-   figure, and `.eyebrow`, which labels a block.
-
-   The previous version of this file was 594 lines. That was the tell: a
-   console built on a design system does not need to redraw the design system,
-   and every rule that got deleted here came back as a component — `Card`,
-   `MetricCard`, `Bento`, `TileWall`, `Grid`, `Container`, `Headline`,
-   `StepProgress`.
-
-   Nothing below defines a colour of its own.
+   Colour and type come from `@cordon/ui` tokens and nothing else: no value
+   below is a colour of its own. What lives here is where things stand — the
+   bar, the page column, panels, tables, the side sheet — laid out for the
+   three things an owner comes to do: see what the tree may still spend, find
+   the agent that is the limit, and decide about a refusal.
    ========================================================================== */
 
 html,
@@ -22,26 +14,27 @@ body {
   background: var(--cordon-paper);
 }
 
-/* Belt and braces. If an entrance has not finished within 1.6s — a paused
-   frame loop, a blocked script, a device too slow — every animated element is
-   forced into view. A console that needs JavaScript to become visible is a
-   console that is sometimes blank. */
-html.entrance-done .cordon-metriccard,
-html.entrance-done .cordon-headline,
-html.entrance-done .cordon-headline > *,
-html.entrance-done .cordon-bento__cell,
-html.entrance-done .cordon-card {
-  opacity: 1 !important;
-  transform: none !important;
+body {
+  font-family: var(--cordon-font);
+  color: var(--cordon-ink);
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
   min-height: 100svh;
 }
 
-body {
-  font-family: var(--cordon-font);
-  color: var(--cordon-ink);
+a {
+  color: inherit;
+}
+
+/* Belt and braces: nothing animated may still be hidden after 1.6s. */
+html.entrance-done .cordon-metriccard,
+html.entrance-done .cordon-headline,
+html.entrance-done .cordon-headline > *,
+html.entrance-done .cordon-card {
+  opacity: 1 !important;
+  transform: none !important;
 }
 
 .mono {
@@ -53,12 +46,28 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.grow {
-  flex: 1 1 auto;
+.strong {
+  color: var(--cordon-ink-strong);
+  font-weight: 600;
 }
 
-/* Present to the document outline and to a screen reader, absent to the eye.
-   For a heading a component already shows in its own type. */
+.muted {
+  color: var(--cordon-copy-dim);
+}
+
+.small {
+  font-size: 12px;
+}
+
+.accent-text {
+  color: var(--cordon-accent);
+  font-size: 12px;
+}
+
+.breakable {
+  word-break: break-all;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -71,799 +80,645 @@ body {
   border: 0;
 }
 
-/* The first thing in the tab order, and invisible until it is focused. A
-   keyboard reader should not have to walk the whole bar on every page. */
-.skip {
-  position: absolute;
-  left: -9999px;
-  top: 0;
-  z-index: 100;
-  padding: 10px 16px;
-  border-radius: 0 0 var(--cordon-radius-3) 0;
-  background: var(--cordon-ink);
-  color: var(--cordon-paper);
-  font-size: 13px;
-  text-decoration: none;
-}
-
-.skip:focus {
-  left: 0;
-}
-
-/* ---- shell --------------------------------------------------------------- */
+/* ---- shell ---------------------------------------------------------------- */
 
 .shell {
-  display: flex;
-  flex-direction: column;
   min-height: 100svh;
 }
 
-/* The docs shell's topbar, copied deliberately: same height, same padding,
-   same paper-at-72% behind the same blur. `--cordon-glass-fill` is the value
-   for a floating panel over content, not for a bar sitting on paper, and using
-   it here is what made this bar read as a different product. */
-.top {
+.bar {
   position: sticky;
   top: 0;
-  z-index: var(--cordon-z-sticky);
-  display: flex;
-  align-items: center;
-  gap: var(--cordon-space-5);
-  height: 56px;
-  padding: 0 var(--cordon-space-6);
-  border-bottom: 1px solid var(--cordon-hairline-soft);
-  background: rgba(236, 236, 234, 0.72);
-  -webkit-backdrop-filter: blur(16px) saturate(1.08);
-  backdrop-filter: blur(16px) saturate(1.08);
+  z-index: 30;
+  border-bottom: 1px solid var(--cordon-hairline);
+  background: color-mix(in srgb, var(--cordon-paper) 86%, transparent);
+  backdrop-filter: saturate(1.2) blur(12px);
+  -webkit-backdrop-filter: saturate(1.2) blur(12px);
 }
 
-.top__brand {
-  flex: 0 0 auto;
+.bar__inner {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: var(--cordon-space-7);
+  max-width: 1180px;
+  height: 58px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+.bar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--cordon-ink-strong);
+  text-decoration: none;
+}
+
+.bar__product {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding-left: 10px;
+  border-left: 1px solid var(--cordon-hairline);
+}
+
+.bar__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.bar__link {
+  padding: 7px 12px;
+  border-radius: var(--cordon-radius-pill);
+  color: var(--cordon-copy-dim);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.bar__link:hover {
+  color: var(--cordon-ink-strong);
+}
+
+.bar__link.is-active {
+  color: var(--cordon-ink-strong);
+  background: var(--cordon-paper-raised);
+  box-shadow: inset 0 0 0 1px var(--cordon-hairline);
+}
+
+.bar__end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.bar__placeholder {
+  width: 120px;
+  height: 30px;
+}
+
+.notice {
+  border-bottom: 1px solid var(--cordon-hairline-soft);
+  background: var(--cordon-paper-dim);
+}
+
+.notice__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 9px 28px;
+  color: var(--cordon-copy);
+  font-size: 13px;
+}
+
+.notice__action {
   padding: 0;
   border: 0;
   background: none;
-  text-decoration: none;
-  color: inherit;
+  color: var(--cordon-ink-strong);
+  font: inherit;
+  font-weight: 600;
   cursor: pointer;
 }
 
-/* The docs bar drops this because the docs site *is* the product. A console
-   has to say which product it is, and quietly. */
-.top__mark {
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+.notice__action:hover {
+  text-decoration: underline;
 }
 
-.top__spacer {
-  flex: 1 1 auto;
+/* ---- page ----------------------------------------------------------------- */
+
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 36px 28px 96px;
 }
 
-.top__addr {
-  font-size: 12px;
-}
-
-/* The docs bar carries one control at the end; this one carries three, so the
-   omnibox has to give ground rather than push them off the edge. */
-.top__end {
-  flex: 0 0 auto;
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--cordon-space-4);
-}
-
-@media (max-width: 820px) {
-  .top {
-    gap: var(--cordon-space-3);
-    padding: 0 var(--cordon-space-5);
-  }
-  .top__mark {
-    display: none;
-  }
-}
-
-/* ---- the wallet gate ----------------------------------------------------- */
-
-.gate {
+.stack {
   display: grid;
-  place-items: center;
-  flex: 1 1 auto;
-  padding: var(--cordon-space-8) var(--cordon-gutter);
+  gap: 20px;
 }
 
-/* The one surface here that is white type on a light glaze.
-   The violet glaze is built to be luminous and its lightest region sits
-   exactly where this card's eyebrow and first line of copy fall, so white at
-   87% was reading at somewhere under 2:1 up there. The metric card solved the
-   same problem with a shadow — a dark one, tight, under the type — and it is
-   the same answer here: the glaze stays as designed and the type stops
-   depending on it.
-
-   The glaze itself being too light for white type is the thing underneath
-   this, and changing a brand surface is not a contrast fix. */
-.gate__panel {
-  width: min(100%, 640px);
-  padding: clamp(28px, 4vw, 48px);
-}
-
-.gate__panel .gate__title,
-.gate__panel .gate__copy,
-.gate__panel .eyebrow,
-.gate__panel .gate__fn {
-  text-shadow: 0 1px 2px rgba(60, 21, 35, 0.34);
-}
-
-.gate__title {
-  margin: var(--cordon-space-3) 0 0;
-  color: var(--cordon-on-glaze);
-  font-size: var(--cordon-size-title);
-  font-weight: 500;
-  letter-spacing: var(--cordon-track-display);
-  line-height: var(--cordon-leading-title);
-}
-
-.gate__copy {
-  max-width: 52ch;
-  margin-top: var(--cordon-space-4);
-}
-
-.gate__actions {
+.page__head {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--cordon-space-3);
-  margin-top: var(--cordon-space-6);
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin-bottom: 8px;
 }
 
-.gate__foot {
+.page__heading {
+  min-width: 0;
+}
+
+.page__title {
+  margin: 0;
+  color: var(--cordon-ink-strong);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.page__sub {
+  max-width: 64ch;
+  margin: 6px 0 0;
+  color: var(--cordon-copy-dim);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.page__actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cordon-space-4);
-  margin-top: var(--cordon-space-7);
-  padding-top: var(--cordon-space-5);
-  border-top: 1px solid var(--cordon-on-glaze-line);
+  gap: 8px;
 }
 
-.gate__fn {
-  color: var(--cordon-on-glaze-dim);
+.inline-note {
+  margin: -8px 0 0;
+  color: var(--cordon-copy-dim);
+  font-size: 13px;
 }
 
-/* ---- console layout ------------------------------------------------------ */
+/* ---- panels --------------------------------------------------------------- */
 
-.console {
-  display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
-  gap: var(--cordon-space-7);
-  padding: var(--cordon-space-7) var(--cordon-space-6);
-  align-items: start;
-}
-
-.console__side {
-  position: sticky;
-  top: calc(56px + var(--cordon-space-5));
-}
-
-/* ---- sidebar ------------------------------------------------------------- */
-
-.side {
-  position: sticky;
-  top: calc(56px + var(--cordon-space-5));
-  display: flex;
-  flex-direction: column;
-  gap: var(--cordon-space-6);
-}
-
-/* Which tree this console is looking at. A sidebar that opens with navigation
-   and never names the thing being navigated is a sidebar for a product with
-   exactly one of everything. */
-.side__head {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: var(--cordon-space-4) var(--cordon-space-5);
+.panel {
+  min-width: 0;
+  padding: 20px 22px;
   border: 1px solid var(--cordon-hairline-soft);
   border-radius: var(--cordon-radius-4);
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--cordon-paper-raised);
 }
-.side__head-label {
-  color: var(--cordon-copy-dim);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-.side__head-id { color: var(--cordon-ink-strong); font-size: 12px; }
 
-.side__group { display: flex; flex-direction: column; gap: var(--cordon-space-2); }
-.side__group-title {
-  margin: 0 0 2px 10px;
-  color: var(--cordon-copy-dim);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+.panel--flush {
+  padding: 0;
+  overflow: hidden;
 }
-.side__list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
 
-.side__item {
-  display: flex;
-  align-items: center;
-  gap: var(--cordon-space-3);
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid transparent;
-  border-radius: var(--cordon-radius-3);
+.panel--flush .cordon-table__shell {
+  border: 0;
+  border-radius: 0;
   background: transparent;
-  color: var(--cordon-copy);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background var(--cordon-dur-control) var(--cordon-ease-settle),
-    color var(--cordon-dur-control) var(--cordon-ease-settle),
-    border-color var(--cordon-dur-control) var(--cordon-ease-settle);
-}
-.side__item:hover { background: rgba(34, 34, 34, 0.05); color: var(--cordon-ink-strong); }
-.side__item--active {
-  border-color: var(--cordon-hairline-soft);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: var(--cordon-shadow-control);
-  color: var(--cordon-ink-strong);
-}
-.side__item--active .side__icon { color: var(--cordon-accent); }
-
-.side__icon { flex: none; color: var(--cordon-copy-dim); }
-.side__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.side__label { font-size: 13.5px; font-weight: 500; letter-spacing: -0.012em; }
-.side__desc { color: var(--cordon-copy-dim); font-size: 11.5px; line-height: 1.35; }
-
-/* How many decisions are waiting. The one number worth carrying in a nav. */
-.side__count {
-  flex: none;
-  min-width: 20px;
-  margin-left: auto;
-  padding: 2px 6px;
-  border-radius: var(--cordon-radius-pill);
-  background: color-mix(in srgb, var(--cordon-critical) 12%, var(--cordon-paper));
-  border: 1px solid color-mix(in srgb, var(--cordon-critical) 26%, transparent);
-  color: var(--cordon-critical);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
 }
 
-.side__out {
+.panel__head {
   display: flex;
-  align-items: center;
-  gap: var(--cordon-space-3);
-  padding: 7px 10px;
-  border-radius: var(--cordon-radius-3);
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.panel__title {
+  margin: 0;
+  color: var(--cordon-ink-strong);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.panel__link,
+.panel__hint {
   color: var(--cordon-copy-dim);
   font-size: 13px;
   text-decoration: none;
-  transition: background var(--cordon-dur-control) var(--cordon-ease-settle), color var(--cordon-dur-control) var(--cordon-ease-settle);
-}
-.side__out:hover { background: rgba(34, 34, 34, 0.05); color: var(--cordon-ink-strong); }
-
-.console__main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cordon-space-7);
-  min-width: 0;
 }
 
-@media (max-width: 900px) {
-  .console {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .console__side,
-  .side {
-    position: static;
-  }
-}
-
-/* On a phone the rail became a full screen of navigation above the screen it
-   navigates to: a card, three groups with titles, four items with a
-   description each, and three outbound links — all before the first figure.
-   Under 760px it is a strip of tabs instead, scrollable sideways, in the
-   order a reader needs them. */
-@media (max-width: 760px) {
-  .console { padding: var(--cordon-space-5) var(--cordon-space-4); gap: var(--cordon-space-5); }
-
-  .side {
-    flex-direction: row;
-    align-items: center;
-    gap: var(--cordon-space-2);
-    overflow-x: auto;
-    /* The strip scrolls; the page must not. */
-    margin-inline: calc(-1 * var(--cordon-space-4));
-    padding-inline: var(--cordon-space-4);
-    scrollbar-width: none;
-  }
-  .side::-webkit-scrollbar { display: none; }
-
-  /* The bar above already says which network this is, and the address is on
-     the session menu beside it. */
-  .side__head { display: none; }
-  .side__group { flex-direction: row; gap: var(--cordon-space-2); }
-  .side__group-title { display: none; }
-  .side__list { flex-direction: row; gap: var(--cordon-space-2); }
-
-  .side__item,
-  .side__out {
-    white-space: nowrap;
-    padding: 7px 12px;
-    border: 1px solid var(--cordon-hairline-soft);
-    border-radius: var(--cordon-radius-pill);
-    background: rgba(255, 255, 255, 0.62);
-  }
-  /* One line per tab: the description is a sentence for a rail with room. */
-  .side__desc { display: none; }
-}
-
-.screen__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--cordon-space-5);
-  flex-wrap: wrap;
-}
-
-.screen__title {
-  margin: 0;
-  font-size: var(--cordon-size-title);
-  font-weight: 500;
-  letter-spacing: var(--cordon-track-display);
-  line-height: var(--cordon-leading-title);
+.panel__link:hover {
   color: var(--cordon-ink-strong);
 }
 
-.screen__lede {
-  max-width: 72ch;
-  margin-top: var(--cordon-space-2);
-}
+/* ---- figures -------------------------------------------------------------- */
 
-.eyebrow {
-  margin: 0;
-  font-size: var(--cordon-size-micro);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-/* The mark that keeps a figure honest: the contract function that produces it. */
-.enforced {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  color: var(--cordon-copy-dim);
-  font-size: 11.5px;
-  /* Contract signatures are long and live in narrow cells. Wrapping one is
-     better than truncating it, because a truncated function name cannot be
-     checked against the contract, which is the only reason it is printed. */
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.enforced__dot {
-  flex: 0 0 auto;
-  align-self: center;
-  width: 4px;
-  height: 4px;
-  border-radius: var(--cordon-radius-pill);
-  background: var(--cordon-positive);
-}
-
-/* On a fired surface only. `data-cordon-glaze` is stamped by the provider on
-   the whole app, so selecting on it paints every mark on paper as if it were
-   on glaze — which is to say invisible. The glaze classes are per-surface. */
-.cordon-surface--rose .enforced,
-.cordon-surface--violet .enforced,
-.cordon-surface--ember .enforced {
-  color: var(--cordon-on-glaze-dim);
-}
-
-/* ---- the few product-specific shapes ------------------------------------- */
-
-.kv {
+.kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--cordon-space-4) var(--cordon-space-5);
-  margin: 0 0 var(--cordon-space-4);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
 }
 
-.kv > div {
+.kpi {
   display: flex;
   flex-direction: column;
+}
+
+.kpi__label {
+  margin: 0;
+  color: var(--cordon-copy-dim);
+  font-size: 13px;
+}
+
+.kpi__value {
+  margin: 10px 0 14px;
+  color: var(--cordon-ink-strong);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1;
+}
+
+.kpi__of {
+  color: var(--cordon-copy-dim);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.kpi__spacer {
+  height: 4px;
+}
+
+.kpi__foot {
+  margin: 12px 0 0;
+  color: var(--cordon-copy);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.kpi__fn {
+  margin: auto 0 0;
+  padding-top: 10px;
+  color: var(--cordon-copy-dim);
+  font-size: 10.5px;
+  opacity: 0.8;
+}
+
+.meter {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--cordon-hairline-soft);
+}
+
+.meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--cordon-ink);
+}
+
+.meter__fill[data-hot] {
+  background: var(--cordon-accent);
+}
+
+/* ---- lists ---------------------------------------------------------------- */
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.list {
+  margin: 0 -22px -8px;
+  padding: 0;
+  list-style: none;
+}
+
+.list__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px 92px;
+  align-items: center;
+  gap: 16px;
+  padding: 11px 22px;
+  border-top: 1px solid var(--cordon-hairline-soft);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 120ms ease;
+}
+
+.list__row--two {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.list__row:hover {
+  background: var(--cordon-paper);
+}
+
+.list__main {
+  display: grid;
   gap: 3px;
   min-width: 0;
 }
 
-.kv dt {
-  color: var(--cordon-copy-dim);
-  font-size: var(--cordon-size-micro);
-  letter-spacing: 0.02em;
-}
-
-.kv dd {
-  margin: 0;
-  color: var(--cordon-ink);
-  font-size: var(--cordon-size-caption);
-  min-width: 0;
-}
-
-.kv__break {
-  word-break: break-all;
-}
-
-.code {
-  margin: 0 0 var(--cordon-space-5);
-  padding: var(--cordon-space-5);
-  overflow-x: auto;
-  border-radius: var(--cordon-radius-4);
-  background: var(--cordon-paper-dim);
-  box-shadow: var(--cordon-shadow-inset-well);
-  color: var(--cordon-ink);
-  line-height: 1.7;
-}
-
-.cell__node {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.cell__link {
+.list__id {
   color: var(--cordon-ink-strong);
-  font-weight: 500;
-  text-decoration: none;
-  border-bottom: 1px solid var(--cordon-accent-line);
 }
 
-.cell__link:hover {
-  color: var(--cordon-accent);
+.list__strong {
+  color: var(--cordon-ink-strong);
+  font-size: 15px;
+  font-weight: 600;
 }
 
-.cell__id,
-.cell__cp,
-.treemeta {
+.list__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--cordon-copy-dim);
+  font-size: 12px;
+}
+
+.list__bar {
+  display: grid;
+  gap: 5px;
+}
+
+.list__small {
   color: var(--cordon-copy-dim);
   font-size: 11.5px;
 }
 
-.treemeta[data-hot] {
-  color: var(--cordon-critical);
-}
-
-/* The refusal's one comparison: what was asked against what was left. Two
-   figures on one baseline read as a relation; the same two as fields in a
-   four-column list read as trivia. */
-.ask {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--cordon-space-3) var(--cordon-space-5);
-  margin-bottom: var(--cordon-space-6);
-}
-
-.ask__side {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ask__label {
-  color: var(--cordon-copy-dim);
-  font-size: var(--cordon-size-micro);
-  letter-spacing: 0.02em;
-}
-
-.ask__value {
+.list__num {
   color: var(--cordon-ink-strong);
-  font-size: clamp(20px, 2.2vw, 26px);
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
 }
 
-/* The headroom is the figure that lost. Saying so is the whole card. */
-.ask__value--short {
-  color: var(--cordon-critical);
+.terms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 18px 24px;
+  margin: 0;
 }
 
-.ask__vs {
-  align-self: end;
-  padding-bottom: 3px;
+.term dt {
+  margin: 0 0 5px;
   color: var(--cordon-copy-dim);
   font-size: 12.5px;
 }
 
-.refusal__top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--cordon-space-5);
-  flex-wrap: wrap;
-}
-
-.refusal__node {
-  display: block;
+.term dd {
+  margin: 0;
   color: var(--cordon-ink-strong);
-  font-size: var(--cordon-size-body);
+  font-size: 15px;
   font-weight: 500;
-  letter-spacing: -0.016em;
 }
 
-.refusal__bound {
-  display: block;
-  margin-top: 2px;
-  color: var(--cordon-copy-dim);
-  font-size: 12.5px;
-}
+/* ---- tables and toolbars -------------------------------------------------- */
 
-/* Who wanted paying, top right, where an address is looked up rather than
-   read. The transaction hangs underneath it because the two answer the same
-   question: who, and where can I check. */
-.refusal__party {
+.toolbar {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  padding: 4px 8px;
-  margin: -4px -8px 0 0;
-  border-radius: var(--cordon-radius-3);
-  color: var(--cordon-copy);
-  text-decoration: none;
-  transition: background var(--cordon-dur-control) var(--cordon-ease-settle);
-}
-.refusal__party:hover { background: rgba(34, 34, 34, 0.05); color: var(--cordon-ink-strong); }
-.refusal__tx { color: var(--cordon-copy-dim); font-size: 11px; }
-
-/* Quieter than the buttons opposite it, because it leaves the console and
-   changes nothing. It reads as text until it is wanted. */
-.refusal__record {
-  color: var(--cordon-copy-dim);
-  font-size: 12px;
-  text-decoration: none;
-  border-bottom: 1px solid var(--cordon-hairline);
-  transition: color var(--cordon-dur-control) var(--cordon-ease-settle);
-}
-.refusal__record:hover {
-  color: var(--cordon-ink-strong);
-  border-bottom-color: currentColor;
-}
-
-/* The status on the left, the decision on the right. A row of three equal
-   buttons made the irreversible one look like a peer of the safe one. */
-.refusal__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cordon-space-5);
-  width: 100%;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
 }
 
-/* The figure and the reason for it, together — an owner should never learn
-   which limit was the real one from a refusal. */
-.headroom {
+.toolbar__search {
+  width: 280px;
+  max-width: 100%;
+}
+
+.toolbar__grow {
+  flex: 1 1 auto;
+}
+
+.panel--flush .cordon-table tbody tr {
+  cursor: pointer;
+}
+
+.agent {
   display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-  line-height: 1.25;
-}
-
-.headroom__bound {
-  font-size: 10.5px;
-  color: var(--cordon-ink-dim);
-}
-
-.gate__id {
-  color: var(--cordon-accent);
-}
-
-/* The count beside a gate is recorded from the run that produced it, so it
-   sits with the status rather than anywhere a reader has to go looking. */
-.gate__status {
-  display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
+}
+
+.agent__id {
+  color: var(--cordon-ink-strong);
   white-space: nowrap;
 }
 
-/* ---- statements on glaze ------------------------------------------------- */
-
-.drill,
-.compare__panel {
-  padding: clamp(24px, 3vw, 40px);
-}
-
-.drill {
+.cell-stack {
   display: grid;
-  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
-  align-items: center;
-  gap: clamp(24px, 4vw, 56px);
+  gap: 5px;
+  min-width: 140px;
 }
 
-@media (max-width: 860px) {
-  .drill {
+.cell-stack--end {
+  justify-items: end;
+  min-width: 0;
+}
+
+.table-empty {
+  padding: 28px;
+  text-align: center;
+}
+
+.panel--canvas .graph {
+  padding: 28px;
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+/* ---- side sheet detail ---------------------------------------------------- */
+
+.detail {
+  display: grid;
+  gap: 20px;
+}
+
+.detail__summary {
+  display: grid;
+  gap: 8px;
+}
+
+.detail__flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detail__big {
+  margin: 6px 0 0;
+  color: var(--cordon-ink-strong);
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+}
+
+.detail__note {
+  margin: 0;
+  color: var(--cordon-copy);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.detail__list {
+  margin: 0;
+}
+
+.detail__row {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--cordon-hairline-soft);
+}
+
+.detail__label {
+  color: var(--cordon-copy-dim);
+  font-size: 12.5px;
+}
+
+.detail__fn {
+  display: block;
+  margin-top: 3px;
+  color: var(--cordon-copy-dim);
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.detail__value {
+  min-width: 0;
+  margin: 0;
+  color: var(--cordon-ink-strong);
+  font-size: 13.5px;
+}
+
+/* ---- composing a mandate -------------------------------------------------- */
+
+.compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+.compose__aside {
+  position: sticky;
+  top: 80px;
+}
+
+.compose__foot {
+  margin: 12px 0 0;
+  color: var(--cordon-copy-dim);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+.form {
+  display: grid;
+  gap: 28px;
+}
+
+.form__section {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.form__section + .form__section {
+  padding-top: 26px;
+  border-top: 1px solid var(--cordon-hairline-soft);
+}
+
+.form__legend {
+  padding: 0;
+  color: var(--cordon-ink-strong);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.form__help {
+  margin: 4px 0 16px;
+  color: var(--cordon-copy-dim);
+  font-size: 13px;
+}
+
+.form__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.form-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.summary {
+  margin: 0 0 18px;
+}
+
+.summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--cordon-hairline-soft);
+  font-size: 13.5px;
+}
+
+.summary dt {
+  color: var(--cordon-copy-dim);
+}
+
+.summary dd {
+  margin: 0;
+  color: var(--cordon-ink-strong);
+  font-weight: 500;
+}
+
+/* ---- narrow --------------------------------------------------------------- */
+
+@media (max-width: 960px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .split,
+  .compose {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .compose__aside {
+    position: static;
+  }
+  .form__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-/* The readout is the number the screen exists to show; it was the quietest
-   thing on the panel. Same change as the public page, same reason. */
-.drill__readout {
-  font-size: clamp(40px, 4.4vw, 58px);
-  line-height: 1;
-  color: var(--cordon-on-glaze);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+@media (max-width: 640px) {
+  .bar__inner {
+    gap: 12px;
+    padding: 0 16px;
+  }
+  .bar__product,
+  .bar__end .cordon-tag {
+    display: none;
+  }
+  .page {
+    padding: 24px 16px 72px;
+  }
+  .notice__inner {
+    padding: 9px 16px;
+  }
+  .kpis,
+  .form__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .list__row {
+    grid-template-columns: minmax(0, 1fr) 84px;
+  }
+  .list__bar {
+    display: none;
+  }
 }
 
-/* A sentence that bounds what the figures mean, rather than another sentence
-   reporting them. */
-.pane__foot--aside {
-  padding: var(--cordon-space-3) 0 0;
-  margin-top: var(--cordon-space-3);
-  border-top: 1px solid rgba(255, 214, 228, 0.32);
-}
+/* ---- the tree drawing, carried over ---------------------------------------- */
 
-.drill__statement,
-.compare {
-  margin: 0 0 var(--cordon-space-4);
-  color: var(--cordon-on-glaze);
-  font-size: var(--cordon-size-lead);
-  font-weight: 500;
-  letter-spacing: var(--cordon-track-lead);
-  line-height: var(--cordon-leading-lead);
-}
-
-.pane__foot {
-  margin: var(--cordon-space-5) 0 0;
-  color: var(--cordon-copy-dim);
-  font-size: 12.5px;
-  line-height: 1.55;
-}
-
-.drill .pane__foot,
-.compare__panel .pane__foot {
-  color: var(--cordon-on-glaze-soft);
-}
-
-/* ---- footer -------------------------------------------------------------- */
-
-.foot {
-  border-top: 1px solid var(--cordon-hairline-soft);
-  padding: var(--cordon-space-8) var(--cordon-space-6);
-}
-
-.foot__inner {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cordon-space-4);
-  width: min(100%, 1180px);
-  margin-inline: auto;
-}
-
-.foot__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--cordon-space-5);
-}
-
-.foot__links a {
-  color: var(--cordon-copy-dim);
-  font-size: 13px;
-  text-decoration: none;
-}
-
-.foot__links a:hover {
-  color: var(--cordon-ink);
-}
-
-/* A figure the contract bounds only as a declaration. The colour is the same
-   one every other caution in this system uses, so the reader does not have to
-   learn a new signal to notice the difference. */
-.enforced[data-strength="declared"]::before,
-.enforced[data-strength="declared"] .enforced__dot {
-  background: var(--cordon-caution);
-}
-
-.enforced__strength {
-  font-size: 10.5px;
-  letter-spacing: 0.02em;
-  color: var(--cordon-caution);
-}
-
-/* A declared figure inside a dense table gets the caution colour rather than a
-   second label; the column header already says what "declared" means, and
-   repeating it on every row would drown the number. */
-.cell__cp[data-strength="declared"] {
-  color: var(--cordon-caution);
-}
-
-/* The help bubble sits under the label and gets room to be one or two lines
-   rather than six. Placed above, a long explanation grew out of the card and
-   was clipped by it — the reader saw a shadow and no words. */
-/* The signature confirmation, as a short receipt of what is about to be
-   signed. It was a paragraph, and a paragraph is the wrong shape for five
-   numbers somebody is about to commit to permanently. */
-.signoff { display: grid; gap: var(--cordon-space-4); }
-.signoff__terms {
-  display: grid;
-  gap: 0;
-  margin: 0;
-  border: 1px solid var(--cordon-hairline);
-  border-radius: var(--cordon-radius-3);
-  overflow: hidden;
-}
-.signoff__row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--cordon-space-4);
-  padding: 10px 14px;
-}
-.signoff__row + .signoff__row { border-top: 1px solid var(--cordon-hairline-soft); }
-.signoff__term {
-  color: var(--cordon-copy-dim);
-  font-size: var(--cordon-size-micro);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.signoff__value {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 0;
-  color: var(--cordon-ink-strong);
-  font-size: 15.5px;
-  font-weight: 560;
-}
-.signoff__note {
-  color: var(--cordon-copy-dim);
-  font-size: var(--cordon-size-micro);
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-}
-.signoff__operator {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 0;
-  color: var(--cordon-ink);
-  font-size: 14px;
-}
-.signoff__foot {
-  margin: 0;
-  color: var(--cordon-copy-dim);
-  font-size: var(--cordon-size-micro);
-  line-height: 1.55;
-}
-
-/* ---- the mandate tree, drawn ------------------------------------------- */
-/* The tree is wider than the card on any real tree, so this scrolls. What it
-   did not do was say so: node cards were cut clean through at the right edge
-   with only a scrollbar under them, which reads as a layout that broke rather
-   than as content that continues.
-
-   The fade is in CSS and permanent, deliberately. A scroll listener would have
-   to run to decide whether to show it, and anything whose visibility waits on
-   a frame is blank in a background tab. A permanent fade is correct in both
-   the states that matter: over a tree too narrow to scroll it falls on empty
-   ground and is invisible, and at the end of a scroll it softens the last
-   card's outer edge — which is why it stops at 0.3 rather than at 0, so the
-   edge is softened and never erased.
-
-   `scrollbar-gutter` keeps the strip reserved, so the graph does not jump by
-   the scrollbar's height the first time a tree grows wide enough for one. */
 .graph {
   overflow-x: auto;
   padding: 8px 2px 12px;
@@ -1117,262 +972,3 @@ body {
   color: var(--cordon-accent);
   font-size: 11px;
 }
-
-/* One line under the figures, saying the only thing left to say about a
-   mandate that cannot be edited. */
-.setup__after { margin: var(--cordon-space-5) 0 0; max-width: 62ch; }
-
-/* Cutting a branch is not a next step and does not get a button beside one.
-   It is the exception this sentence already describes, so it is offered where
-   it is explained — underlined rather than coloured, because the colour in
-   this console is reserved for a bound that fired. */
-.setup__cut {
-  color: var(--cordon-copy);
-  text-decoration: underline;
-  text-decoration-color: var(--cordon-hairline);
-  text-underline-offset: 3px;
-}
-.setup__cut:hover,
-.setup__cut:focus-visible {
-  color: var(--cordon-critical);
-  text-decoration-color: currentColor;
-}
-
-/* A release into a branch that has been cut. The colour is the one every other
-   exception in this system uses, because a reader should not have to learn a
-   new signal to notice that this one is different. */
-.refusal__warn { color: var(--cordon-critical); }
-
-/* The refused amount, given the weight of a figure rather than of a sentence.
-   A reader scanning a page of these is looking for how much did not leave, and
-   for whom wanted it — in that order. */
-.refusal__figure {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 0;
-  flex-wrap: wrap;
-}
-.refusal__amount {
-  color: var(--cordon-ink-strong);
-  font-size: 24px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-.refusal__to { color: var(--cordon-copy-dim); font-size: 12.5px; }
-
-/* The identity of the decision sits above a rule, the same way a node in the
-   drawing carries its id — one card vocabulary across the console. Which id
-   and what became of it belong on one line: stacked, the status read as a
-   second heading for a card that has one. */
-.refusal .cordon-card__header {
-  flex-direction: row;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--cordon-space-4);
-  padding-bottom: var(--cordon-space-3);
-  border-bottom: 1px solid var(--cordon-hairline);
-  flex-wrap: wrap;
-}
-
-/* ---- the tree's shape, on the count tile ---------------------------------- */
-
-/* One row of dots per level. A count says how many agents there are and
-   nothing about how they are arranged, and the arrangement is the product.
-   Fixed sizes throughout: no measurement, so it is right on the first frame
-   and in a hidden tab. */
-/* Above the number, not behind it. The figure box on a metric tile is sized
-   for the gauge, which is a ring the number sits inside; a block of dots in
-   the same box lands on top of the digits instead. These take the band
-   between the title and the metric and leave the rest alone. */
-.depths {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  width: 100%;
-  height: 100%;
-  padding-top: 2%;
-}
-
-.depths__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  max-width: 78%;
-}
-
-.depths__dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22);
-}
-
-/* The root is the one node a person signed for. */
-.depths__dot[data-root] {
-  width: 12px;
-  height: 12px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
-}
-
-/* A cut node keeps its place in the shape. A tree that drops what it revoked
-   is a tree that cannot be checked against the chain. */
-.depths__dot[data-cut] {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
-}
-
-/* ---- the tree, as a surface of its own ------------------------------------ */
-
-/* The door. A short pitch, the three counts worth knowing before opening it,
-   and the button. */
-.playground__pitch {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--cordon-space-4);
-  padding: var(--cordon-space-5);
-}
-
-.playground__counts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--cordon-space-5);
-  color: var(--cordon-copy-dim);
-  font-size: var(--cordon-size-caption);
-}
-.playground__counts strong {
-  margin-right: 5px;
-  color: var(--cordon-ink-strong);
-  font-size: 19px;
-  font-weight: 600;
-}
-
-/* The surface. Drawing on the left with the room it needs, every field of the
-   selected node on the right. One column under 900px, because a panel beside a
-   drawing on a phone is two things too narrow to read. */
-.playground {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 332px;
-  gap: var(--cordon-space-5);
-  width: 100%;
-  min-height: 0;
-}
-@media (max-width: 900px) {
-  .playground { grid-template-columns: minmax(0, 1fr); }
-}
-
-.playground__canvas {
-  min-width: 0;
-  overflow: auto;
-  border: 1px solid var(--cordon-hairline-soft);
-  border-radius: var(--cordon-radius-4);
-  background: var(--cordon-paper);
-}
-/* The graph brings its own edge fade for a card it overflows. In here it has
-   the room, and a fade over a surface you are panning reads as a smudge. */
-.playground__canvas .graph {
-  -webkit-mask-image: none;
-  mask-image: none;
-  padding: var(--cordon-space-5);
-}
-
-.playground__aside {
-  min-width: 0;
-  overflow-y: auto;
-  border: 1px solid var(--cordon-hairline-soft);
-  border-radius: var(--cordon-radius-4);
-  background: var(--cordon-paper-raised);
-}
-
-/* ---- one node, every field ------------------------------------------------ */
-
-.detail { display: flex; flex-direction: column; gap: var(--cordon-space-4); padding: var(--cordon-space-5); }
-
-.detail__head { display: flex; flex-direction: column; gap: 6px; }
-.detail__id { margin: 0; color: var(--cordon-copy); font-size: 10.5px; word-break: break-all; }
-.detail__flags { display: flex; flex-wrap: wrap; gap: 6px; }
-
-/* The figure an owner came for, given the size that says so. */
-.detail__headline { display: flex; flex-direction: column; gap: 2px; }
-.detail__big {
-  color: var(--cordon-ink-strong);
-  font-size: 30px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-.detail__note { color: var(--cordon-copy-dim); font-size: var(--cordon-size-micro); }
-
-.detail__list { display: flex; flex-direction: column; gap: 0; margin: 0; }
-.detail__row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--cordon-space-3) 0;
-  border-top: 1px solid var(--cordon-hairline-soft);
-}
-.detail__label {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--cordon-space-3);
-  color: var(--cordon-copy-dim);
-  font-size: var(--cordon-size-micro);
-}
-/* The rule this project runs on: a figure names the function that produces it
-   or it does not belong on a surface. */
-.detail__fn { color: rgba(34, 34, 34, 0.32); font-size: 9.5px; text-align: right; }
-.detail__value { margin: 0; color: var(--cordon-ink); font-size: var(--cordon-size-caption); word-break: break-word; }
-
-.detail__foot { padding-top: var(--cordon-space-2); }
-.detail__link { color: var(--cordon-accent); font-size: var(--cordon-size-micro); }
-
-
-/* ---- the tree screen's top: figures beside the rows ----------------------- */
-
-/* The two tiles summarise the table, so they sit next to it rather than above
-   a drawing above it. The tiles keep their own proportions and take the width
-   they need; the table takes the rest, and below 1100px the two stack, because
-   a five-column table in half of a laptop is a row of ellipses. */
-.tree__top {
-  display: grid;
-  gap: var(--cordon-space-5);
-  align-items: start;
-}
-
-@media (min-width: 1100px) {
-  .tree__top {
-    grid-template-columns: minmax(360px, 0.82fr) minmax(0, 1.18fr);
-    gap: var(--cordon-space-6, 28px);
-  }
-}
-
-/* Two tiles, close together: they are one figure each of the same tree, and a
-   wide gutter between them reads as two unrelated cards. */
-.tree__tiles { --cordon-grid-min: 200px; }
-.tree__nodes { min-width: 0; }
-
-/* An address is one token and wrapping it in the middle makes two lines that
-   are neither an address. Beside the tiles the table is narrower than it was,
-   and a wrapped operator was costing a column's worth of width on every row. */
-.tree__nodes .cordon-table .mono { white-space: nowrap; }
-
-/* The publication, beside the status it belongs to. Quiet: it is a link to a
-   transaction, not a second status. */
-.refusal__published {
-  color: var(--cordon-copy-dim);
-  font-size: 11px;
-  text-decoration: underline;
-  text-decoration-color: var(--cordon-hairline);
-  text-underline-offset: 3px;
-}
-.refusal__published:hover { color: var(--cordon-ink-strong); }

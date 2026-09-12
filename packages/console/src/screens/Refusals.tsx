@@ -1,520 +1,248 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Button,
-  Card,
-  CardBody,
-  CardFooter,
-  CardHeader,
-  Modal,
-  Skeleton,
-  Stack,
-  Tag,
-  Text,
-  useNotify,
-} from "cordon-ui";
-import { DEMO, formatUsdc } from "@cordon/fixtures";
-import {
-  REFUSALS,
-  refusalOrdinal,
-  shortTx,
-  txUrl,
-  type Refusal,
-} from "@cordon/fixtures/preview";
-import { site } from "../lib/links";
-import { ScreenHead } from "../parts/Preview";
+import { useSearchParams } from "react-router-dom";
+import { Button, DataTable, Modal, Segmented, Sheet, Tag, useNotify } from "cordon-ui";
+import { ARC, ENFORCED_BY, REASON_MEANING, formatUsdc } from "@cordon/fixtures";
 import { useTitle } from "../parts/Shell";
-import { useWallet } from "../lib/wallet";
-import { useChainTree } from "../lib/tree";
+import { PageHeader, PageSkeleton, Panel, ReadFailed } from "../parts/Page";
+import { useConsoleTree } from "../lib/useConsoleTree";
 import { useChainRefusals, type ChainRefusal } from "../lib/refusals";
 import { useRelease } from "../lib/mandate";
-import { ARC, REASON_MEANING } from "@cordon/fixtures";
+import { cutLookup, shortId } from "../lib/format";
+import { site } from "../lib/links";
 
-/**
- * One card, one decision.
- *
- * The card used to carry four labelled fields, a timestamp, a contract
- * function and three buttons in a row, and the actual question, which is
- * whether to release money past a bound, sat in the middle of all of it. What
- * is left is the shape of the decision: who wanted paying and how much, at the
- * top; what stopped it, in the middle; and the two buttons at the bottom right
- * where a hand already is.
- */
-function RefusalCard({ refusal }: { refusal: Refusal }) {
-  const [released, setReleased] = useState(refusal.released);
-  /* Releasing is the one thing in this console that moves money past a bound
-     somebody already signed. It is a decision, it is permanent, and it is
-     recorded next to the refusal it stepped around — so it is asked for
-     twice. */
-  const [confirming, setConfirming] = useState(false);
-  const notify = useNotify();
+type Filter = "all" | "standing" | "released";
 
-  const release = () => {
-    setConfirming(false);
-    setReleased(true);
-    notify({
-      tone: "caution",
-      title: `Refusal ${refusalOrdinal(refusal)} released`,
-      children:
-        "The bound did not move. The refusal and the release are both on the record, side by side.",
-      duration: 8000,
-    });
-  };
-  const short = `${refusal.counterparty.slice(0, 6)}…${refusal.counterparty.slice(-4)}`;
-
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <Card className="refusal">
-      <CardHeader>
-        <div className="refusal__top">
-          <div>
-            <span className="refusal__node">{refusal.nodeLabel}</span>
-            <span className="refusal__bound">stopped by {refusal.boundLabel}</span>
-          </div>
-          <a
-            className="refusal__party"
-            href={txUrl(refusal.tx)}
-            target="_blank"
-            rel="noreferrer"
-            title={refusal.counterparty}
-          >
-            <span className="mono">{short}</span>
-            <span className="refusal__tx mono">{shortTx(refusal.tx)}</span>
-          </a>
-        </div>
-      </CardHeader>
-
-      <CardBody>
-        {/* One comparison, because that is the whole decision: what was asked
-            for, against what there was room for. */}
-        <div className="ask">
-          <div className="ask__side">
-            <span className="ask__label">wanted</span>
-            <span className="ask__value num">{formatUsdc(refusal.requested6)}</span>
-          </div>
-          <span className="ask__vs" aria-hidden="true">
-            against
-          </span>
-          <div className="ask__side">
-            <span className="ask__label">room left</span>
-            <span className="ask__value ask__value--short num">{formatUsdc(refusal.headroom6)}</span>
-          </div>
-        </div>
-      </CardBody>
-
-      <CardFooter>
-        <div className="refusal__foot">
-          {/* The status, and where anybody else reads it. `RECORD_BASE` is
-              compiled into the contract, so every refusal in the reputation
-              registry already points at this page; the owner is the one
-              person who could not reach it, which made the console the only
-              view of a refusal that did not know its public address. */}
-          <Stack direction="row" gap="sm" align="center">
-            {released ? (
-              <Tag tone="positive" size="sm" dot>
-                released by you
-              </Tag>
-            ) : (
-              <Tag tone="critical" size="sm" dot>
-                refused
-              </Tag>
-            )}
-            <a className="refusal__record" href={site(`/refusal/${refusalOrdinal(refusal)}`)}>
-              what a seller sees
-            </a>
-          </Stack>
-
-          {/* Weight follows consequence. Leaving it refused costs nothing and
-              is the safe answer, so it is the quiet button; releasing spends
-              past a bound you signed, so it carries the colour. */}
-          <Stack direction="row" gap="sm" align="center">
-            <Button size="sm" variant="secondary" disabled={released}>
-              Leave it
-            </Button>
-            <Button size="sm" variant="danger" disabled={released} onClick={() => setConfirming(true)}>
-              Sign to release
-            </Button>
-          </Stack>
-        </div>
-      </CardFooter>
-
-      <Modal
-        open={confirming}
-        onClose={() => setConfirming(false)}
-        title={`Release ${formatUsdc(refusal.requested6)} past this bound?`}
-        description="This does not raise the bound. The same purchase is refused again a second later, and both the refusal and your release stay on the record."
-        hideClose
-        dismissOnScrim={false}
-        footer={
-          <Stack direction="row" gap="sm">
-            <Button variant="secondary" onClick={() => setConfirming(false)}>
-              Leave it refused
-            </Button>
-            <Button variant="danger" onClick={release}>
-              Sign the release
-            </Button>
-          </Stack>
-        }
-      >
-        <Text variant="body" tone="copy" as="p">
-          Paid to <span className="mono">{short}</span>, from your own key.
-          Nobody else can sign this — not us, not the deployer, and no admin
-          key, because there is none.
-        </Text>
-      </Modal>
-    </Card>
+    <div className="detail__row">
+      <dt className="detail__label">{label}</dt>
+      <dd className="detail__value">{children}</dd>
+    </div>
   );
 }
 
-
-/**
- * A refusal the contract actually wrote, and the decision it leaves open.
- *
- * Releasing is a transaction from the owner's own key, and it is one now: it
- * pays this one refused draw out of the treasury, raises no bound, and is
- * written beside the refusal it overrode. A visitor reading the public tree
- * sees no button, because the signature is not theirs to give.
- */
-function ChainRefusalCard({
-  refusal,
-  owner,
-  cut,
-}: {
-  refusal: ChainRefusal;
-  owner: string | null;
-  /** Whether this refusal's node, or an ancestor of it, has been revoked. */
-  cut: boolean;
-}) {
-  const short = `${refusal.counterparty.slice(0, 6)}…${refusal.counterparty.slice(-4)}`;
-  const notify = useNotify();
-  const { state, release } = useRelease(owner);
-  const [confirming, setConfirming] = useState(false);
-
-  const announced = useRef<string | null>(null);
-  useEffect(() => {
-    const outcome = `release:${state.status}:${"hash" in state ? state.hash : "why" in state ? state.why : ""}`;
-    if (announced.current === outcome) return;
-    if (state.status === "done") {
-      announced.current = outcome;
-      notify({
-        id: state.hash,
-        tone: "caution",
-        title: `Refusal ${String(refusal.id)} released`,
-        children: "The bound did not move. The refusal and the release are both on the record, side by side.",
-        duration: 8000,
-      });
-      window.location.reload();
-    }
-    if (state.status === "failed") {
-      announced.current = outcome;
-      notify({ id: `release-failed-${refusal.id}`, tone: "critical", title: "Not released", children: state.why, duration: 0 });
-    }
-  }, [state, notify, refusal.id]);
-
+function TxLink({ hash }: { hash: string }) {
   return (
-    <Card className="refusal">
-      <CardHeader>
-        <Text variant="micro" tone="dim" as="span" className="eyebrow">
-          refusal {String(refusal.id)} · block {String(refusal.blockNumber)}
-        </Text>
-        {/* A refusal that stands is what this screen is full of, and colour
-            here means the exception — so the tag that gets it is the one where
-            somebody signed money past a bound. */}
-        <Stack direction="row" gap="sm" align="center" wrap>
-          <Tag tone={refusal.released ? "caution" : "neutral"} size="sm" dot>
-            {refusal.released ? "signed out later" : "still standing"}
-          </Tag>
-          {/* Whether it reached the registry, where the read can say. The
-              chain fallback reads two events and not `Attested`, and silence
-              there is not the same as "never published". */}
-          {refusal.attested === undefined ? null : refusal.attested ? (
-            <a
-              className="refusal__published mono"
-              href={`${ARC.explorer}/tx/${refusal.attested}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              published
-            </a>
-          ) : (
-            <Text variant="micro" tone="dim" as="span">
-              not published
-            </Text>
-          )}
-        </Stack>
-      </CardHeader>
-
-      <CardBody>
-        <Stack direction="column" gap="sm" align="start">
-          {/* What was not paid, and to whom. It was a line of body text with
-              the amount inside it, which is the one figure a reader is
-              scanning a page of these for. */}
-          <p className="refusal__figure">
-            <span className="refusal__amount num">{formatUsdc(refusal.amount6)}</span>
-            <span className="refusal__to">
-              to <span className="mono">{short}</span>
-            </span>
-          </p>
-          <Text variant="body" tone="copy" as="p">
-            {REASON_MEANING[refusal.reason] ?? refusal.reason}.
-          </Text>
-          <Stack direction="row" gap="md" wrap>
-            <span className="mono refusal__bound">{refusal.reason}</span>
-            <a
-              href={`${ARC.explorer}/tx/${refusal.transactionHash}`}
-              target="_blank"
-              rel="noreferrer"
-              className="mono"
-            >
-              {refusal.transactionHash.slice(0, 10)}…
-            </a>
-            <a href={site(`/refusal/${refusal.id}`)}>what a seller sees</a>
-          </Stack>
-        </Stack>
-      </CardBody>
-
-      {/* A visitor got this footer too, carrying one sentence about whose
-          signature a release takes — on every card, nine times down a screen
-          whose own lede says it once. There is nothing for them to do here, so
-          there is nothing here. */}
-      {owner ? (
-        <CardFooter>
-          <div className="refusal__actions">
-            <Stack direction="row" gap="sm" align="center" wrap>
-              <Button
-                size="sm"
-                variant="danger"
-                disabled={refusal.released || state.status === "working"}
-                onClick={() => setConfirming(true)}
-              >
-                {state.status === "working" ? state.step : "Sign to release"}
-              </Button>
-              <Text variant="micro" tone="dim" as="span" className={cut ? "refusal__warn" : undefined}>
-                {cut
-                  ? "this branch is cut — releasing still pays its operator, because the vault checks the owner and not the revocation"
-                  : "one transaction from your own key, and it does not move the bound"}
-              </Text>
-            </Stack>
-          </div>
-        </CardFooter>
-      ) : null}
-
-      <Modal
-        open={confirming}
-        onClose={() => setConfirming(false)}
-        title={`Release ${formatUsdc(refusal.amount6)} past this bound?`}
-        description="This does not raise the bound. The same purchase is refused again a second later, and both the refusal and your release stay on the record."
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setConfirming(false)}>
-              Leave it refused
-            </Button>
-            <Button
-              variant="danger"
-              disabled={state.status === "working"}
-              onClick={() => {
-                setConfirming(false);
-                void release(refusal.id);
-              }}
-            >
-              Sign the release
-            </Button>
-          </>
-        }
-      >
-        <Text variant="body" tone="copy" as="p">
-          The money comes out of the treasury and goes to this node's operator,
-          sized to the draw the contract refused. It is not a new draw: no
-          window is debited, because this amount was never inside the authority
-          they describe.
-        </Text>
-        {cut ? (
-          <Text variant="body" tone="copy" as="p" className="refusal__warn">
-            <b>This branch has been revoked.</b> It can draw nothing on its own,
-            and a release still reaches its operator: `release` checks that you
-            are the owner, not that the node is live. Cutting a branch stops it
-            spending; it does not stop you paying it.
-          </Text>
-        ) : null}
-      </Modal>
-    </Card>
-  );
-}
-
-function RefusalsSkeleton({ note }: { note: string }) {
-  return (
-    <>
-      <ScreenHead
-        title="Reading the refusals"
-        lede="Every one of these is a decision the contract made, read from the events it emitted."
-        note={note}
-        figures={false}
-      />
-      <Stack direction="column" gap="lg">
-        {[0, 1].map((row) => (
-          <Card key={row}>
-            <CardBody>
-              <Stack direction="column" gap="md" align="start">
-                <Skeleton width="32%" height={12} />
-                <Skeleton width="64%" height={26} />
-                <Skeleton variant="text" lines={3} />
-              </Stack>
-            </CardBody>
-          </Card>
-        ))}
-      </Stack>
-    </>
+    <a className="mono" href={`${ARC.explorer}/tx/${hash}`} target="_blank" rel="noreferrer">
+      {shortId(hash, 8, 6)} ↗
+    </a>
   );
 }
 
 export default function Refusals() {
   useTitle("Refusals · Cordon console");
-
-  /* An owner sees their own refusals; a visitor sees the ones the public tree
-     on Arc has actually collected. Neither is a sample: a refusal that nobody
-     was refused is the one thing this screen must never show. */
-  const { address, real, ready } = useWallet();
-  const owner = real ? address : DEMO.owner;
-  const chain = useChainTree(owner);
-  const nodes = chain.state === "read" ? chain.nodes.map((node) => node.node) : [];
-  const rootNode = chain.state === "read" ? chain.nodes.find((node) => node.parent === null) : undefined;
-  const live = useChainRefusals(nodes, rootNode?.node ?? null);
-  const mine = real && Boolean(address);
-
-  /* Revocation runs down a branch: `revokedAt` walks up from a node, so a
-     child of a cut parent is cut too even though its own flag is false. */
-  const byId = new Map(
-    (chain.state === "read" ? chain.nodes : []).map((node) => [node.node.toLowerCase(), node]),
+  const { ready, mine, owner, chain, nodes, root } = useConsoleTree();
+  const live = useChainRefusals(
+    nodes.map((node) => node.node),
+    root?.node ?? null,
   );
-  const isCut = (id: string): boolean => {
-    let cursor = byId.get(id.toLowerCase());
-    while (cursor) {
-      if (cursor.revoked) return true;
-      cursor = cursor.parent ? byId.get(cursor.parent.toLowerCase()) : undefined;
+  const [params, setParams] = useSearchParams();
+  const [filter, setFilter] = useState<Filter>("all");
+  const [releasing, setReleasing] = useState<ChainRefusal | null>(null);
+  const { state, release } = useRelease(owner);
+  const notify = useNotify();
+  const seen = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (state.status !== "done" && state.status !== "failed") return;
+    const id = `release:${state.status === "done" ? state.hash : state.why}`;
+    if (seen.current === id) return;
+    seen.current = id;
+    if (state.status === "done") {
+      notify({ id, tone: "caution", title: "Refusal released", children: "The bound did not move. The refusal and the release sit side by side on the record.", duration: 6000 });
+      setReleasing(null);
+      window.setTimeout(() => window.location.reload(), 1400);
+    } else {
+      notify({ id, tone: "critical", title: "Not released", children: state.why, duration: 0 });
     }
-    return false;
+  }, [state, notify]);
+
+  const selectedId = params.get("id");
+  const select = (id: bigint | null) => {
+    const next = new URLSearchParams(params);
+    if (id !== null) next.set("id", String(id));
+    else next.delete("id");
+    setParams(next, { replace: true });
   };
 
-  if (!ready) return <RefusalsSkeleton note="restoring this session…" />;
+  if (!ready || chain.state === "looking" || live.state === "looking") return <PageSkeleton />;
+  if (chain.state === "failed") return <ReadFailed why={chain.why} />;
+  if (live.state === "failed") return <ReadFailed why={live.why} />;
+  if (live.state !== "read") return <ReadFailed title="No deployment configured" why="This build has no contract addresses to read." />;
 
-  /* The same rule as the tree screen: a wallet whose refusals are being read
-     is not shown the sample ones in the meantime. */
-  if (chain.state === "looking" || live.state === "looking") {
-    return <RefusalsSkeleton note={`reading ${ARC.name}…`} />;
-  }
-
-  /* The chain was asked and did not answer. Saying so is the only honest
-     option: the alternative is a screen of samples that looks like a clean
-     record, which is what this used to do. */
-  if (live.state === "failed") {
-    return (
-      <>
-        <ScreenHead
-          title="The chain did not answer."
-          lede="Refusals are read from the meter beside this console, and from the chain when there is none. Neither answered, so this screen has nothing to show — which is not the same as there being nothing to show."
-          note="read failed"
-          figures={false}
-        />
-        <Card>
-          <CardBody>
-            <Text variant="body" tone="copy" as="p" className="mono">
-              {live.why}
-            </Text>
-          </CardBody>
-        </Card>
-      </>
-    );
-  }
-
-  if (live.state === "read") {
-    const standing = live.refusals.filter((refusal) => !refusal.released).length;
-    return (
-      <>
-        <ScreenHead
-          title={
-            live.refusals.length === 0
-              ? "Nothing has been refused yet."
-              : `${standing} standing, ${live.refusals.length - standing} released.`
-          }
-          lede={
-            mine
-              ? "Every one of these is a decision the contract made about your own tree, read from the events it emitted. A refusal is not an error and it costs no budget; the money simply did not move."
-              : "Every one of these is a decision the contract made about the tree Cordon runs on Arc, read from the events it emitted. Releasing one takes the owner's own signature, so there is nothing here to press: this is the record, not the console for it."
-          }
-          note={
-            /* A chain read that stopped at its window cap holds part of the
-               record, and the badge is where this screen says which part. */
-            live.from
-              ? `from block ${String(live.from)} · read from ${ARC.name}`
-              : mine
-                ? `read from ${ARC.name}`
-                : `the public tree · read from ${ARC.name}`
-          }
-          live
-        />
-        {/* The meter caps what one answer carries. A screen that draws a page
-            and prints it as the whole record is the same defect as a tree with
-            a branch missing, so it says which it is holding. */}
-        {live.total > live.refusals.length ? (
-          <Card>
-            <CardBody>
-              <Text variant="body" tone="copy" as="p">
-                Showing the {live.refusals.length} most recent of {live.total}. The
-                rest are on the chain and in the meter; this screen asks for a
-                page of them rather than all of them at once.
-              </Text>
-            </CardBody>
-          </Card>
-        ) : null}
-        {live.refusals.length === 0 ? (
-          <Card>
-            <CardBody>
-              <Text variant="body" tone="copy" as="p">
-                Nothing in your tree has asked for more than it was allowed. That
-                is a fact about the range this reads — from the block the
-                contracts were made in — as much as about the agents.
-              </Text>
-            </CardBody>
-          </Card>
-        ) : (
-          <Stack direction="column" gap="lg">
-            {live.refusals.map((refusal) => (
-              <ChainRefusalCard
-                key={String(refusal.id)}
-                refusal={refusal}
-                owner={mine ? address : null}
-                cut={isCut(refusal.node)}
-              />
-            ))}
-          </Stack>
-        )}
-      </>
-    );
-  }
-
-  const released = REFUSALS.filter((refusal) => refusal.released).length;
-  const standing = REFUSALS.length - released;
+  const isCut = cutLookup(nodes);
+  const all = live.refusals;
+  const standing = all.filter((refusal) => !refusal.released).length;
+  const rows = all.filter((refusal) =>
+    filter === "all" ? true : filter === "standing" ? !refusal.released : refusal.released,
+  );
+  const selected = all.find((refusal) => String(refusal.id) === selectedId);
+  const partial = live.total > all.length || Boolean(live.from);
+  const working = state.status === "working";
 
   return (
-    <>
-      <ScreenHead
-        title="Which node, how much, which bound."
-        lede="Two answers, no third. Leaving a refusal standing costs nothing. Releasing one is you signing from your own key, and it stays on the record next to the refusal."
-        note="sample refusals, signing is mocked"
+    <div className="stack">
+      <PageHeader
+        title="Refusals"
+        subtitle={
+          all.length === 0
+            ? "Nothing has been refused. Every purchase so far fit every bound."
+            : `${standing} standing · ${all.length - standing} released. Each one is a decision the contract made, not an error.`
+        }
       />
 
-      <Stack direction="row" gap="sm" align="center" wrap>
-        <Tag tone="critical" size="sm" dot>
-          {standing} standing
-        </Tag>
-        <Tag tone="positive" size="sm" dot>
-          {released} released
-        </Tag>
-      </Stack>
+      {partial ? (
+        <p className="inline-note">
+          {live.from
+            ? `Read from the chain back to block ${String(live.from)}; older refusals are not shown.`
+            : `Showing the ${all.length} most recent of ${live.total}.`}
+        </p>
+      ) : null}
 
-      <Stack direction="column" gap="lg">
-        {REFUSALS.map((refusal) => (
-          <RefusalCard key={refusal.id} refusal={refusal} />
-        ))}
-      </Stack>
-    </>
+      <div className="toolbar">
+        <Segmented
+          size="sm"
+          label="Filter refusals"
+          value={filter}
+          onValueChange={(value) => setFilter(value as Filter)}
+          options={[
+            { value: "all", label: `All ${all.length}` },
+            { value: "standing", label: `Standing ${standing}` },
+            { value: "released", label: `Released ${all.length - standing}` },
+          ]}
+        />
+      </div>
+
+      <Panel flush>
+        <DataTable
+          rows={rows}
+          rowKey={(refusal) => String(refusal.id)}
+          onRowClick={(refusal) => select(refusal.id)}
+          empty={<p className="muted table-empty">No refusals here.</p>}
+          columns={[
+            { id: "id", header: "#", width: 64, cell: (refusal) => <span className="mono muted">{String(refusal.id)}</span> },
+            {
+              id: "amount",
+              header: "Amount",
+              numeric: true,
+              sortBy: (refusal) => Number(refusal.amount6),
+              cell: (refusal) => <span className="num strong">{formatUsdc(refusal.amount6)}</span>,
+            },
+            { id: "reason", header: "Bound", cell: (refusal) => <span className="mono">{refusal.reason}</span> },
+            { id: "agent", header: "Agent", cell: (refusal) => <span className="mono muted">{shortId(refusal.node)}</span> },
+            {
+              id: "status",
+              header: "Status",
+              cell: (refusal) =>
+                refusal.released ? <Tag tone="caution" size="sm" dot>Released</Tag> : <Tag size="sm" dot>Standing</Tag>,
+            },
+            {
+              id: "published",
+              header: "Published",
+              cell: (refusal) =>
+                refusal.attested ? (
+                  <span className="small">Registry</span>
+                ) : refusal.attested === null ? (
+                  <span className="small muted">No</span>
+                ) : (
+                  <span className="small muted">—</span>
+                ),
+            },
+            ...(mine
+              ? [
+                  {
+                    id: "action",
+                    header: "",
+                    width: 96,
+                    cell: (refusal: ChainRefusal) =>
+                      refusal.released ? null : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setReleasing(refusal);
+                          }}
+                        >
+                          Release
+                        </Button>
+                      ),
+                  },
+                ]
+              : []),
+          ]}
+        />
+      </Panel>
+
+      <Sheet
+        open={Boolean(selected)}
+        onClose={() => select(null)}
+        side="right"
+        size={460}
+        title={selected ? `Refusal #${String(selected.id)}` : "Refusal"}
+        description={selected ? `Block ${String(selected.blockNumber)} · ${ARC.name}` : undefined}
+        footer={
+          mine && selected && !selected.released ? (
+            <Button variant="danger" onClick={() => setReleasing(selected)}>
+              Release this purchase
+            </Button>
+          ) : undefined
+        }
+      >
+        {selected ? (
+          <div className="detail">
+            <div className="detail__summary">
+              <div className="detail__flags">
+                {selected.released ? <Tag tone="caution" size="sm" dot>Released</Tag> : <Tag size="sm" dot>Standing</Tag>}
+                {isCut(selected.node) ? <Tag tone="critical" size="sm">Branch revoked</Tag> : null}
+              </div>
+              <p className="detail__big num">{formatUsdc(selected.amount6)}</p>
+              <p className="detail__note">
+                Refused by <span className="mono">{selected.reason}</span> — {REASON_MEANING[selected.reason] ?? "an unrecognised bound"}.
+              </p>
+            </div>
+            <dl className="detail__list">
+              <Fact label="Agent"><span className="mono breakable">{selected.node}</span></Fact>
+              <Fact label="Bound hit at"><span className="mono">{shortId(selected.breachedAt)}</span></Fact>
+              <Fact label="Seller"><span className="mono breakable">{selected.counterparty}</span></Fact>
+              <Fact label="Transaction"><TxLink hash={selected.transactionHash} /></Fact>
+              <Fact label="Published">
+                {selected.attested ? <TxLink hash={selected.attested} /> : selected.attested === null ? "Not published" : "Unknown from this read"}
+              </Fact>
+              <Fact label="Public record">
+                <a href={site(`/refusal/${selected.id}`)} target="_blank" rel="noreferrer">
+                  getcordon.xyz/refusal/{String(selected.id)} ↗
+                </a>
+              </Fact>
+            </dl>
+            <p className="detail__fn mono">{ENFORCED_BY.refusal}</p>
+          </div>
+        ) : null}
+      </Sheet>
+
+      <Modal
+        open={Boolean(releasing)}
+        onClose={working ? () => undefined : () => setReleasing(null)}
+        title={releasing ? `Release ${formatUsdc(releasing.amount6)}?` : "Release"}
+        description="This pays that one purchase past the bound, from your own key. The bound does not move — the same purchase is refused again a moment later — and both the refusal and the release stay on the record."
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setReleasing(null)} disabled={working}>
+              Leave it refused
+            </Button>
+            <Button variant="danger" loading={working} disabled={working || !releasing} onClick={() => releasing && void release(releasing.id)}>
+              {state.status === "working" ? state.step : "Sign release"}
+            </Button>
+          </>
+        }
+      >
+        {releasing && isCut(releasing.node) ? (
+          <p className="accent-text">
+            This agent's branch is revoked. Releasing still pays its operator, because the vault checks the owner and not the revocation.
+          </p>
+        ) : null}
+      </Modal>
+    </div>
   );
 }

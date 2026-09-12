@@ -1,0 +1,196 @@
+import { useEffect, useRef, useState } from "react";
+import { Button, Field, Modal, TextField, useNotify } from "cordon-ui";
+import { formatUsdc, isAddress } from "@cordon/fixtures";
+import { useFundVault, useRevoke, useSpawnChild, type ActionState } from "../lib/mandate";
+import type { ChainNode } from "../lib/tree";
+import { shortId, usdc6 } from "../lib/format";
+
+/** A reload a moment later, so the toast that said what happened is read first. */
+function reloadSoon() {
+  window.setTimeout(() => window.location.reload(), 1400);
+}
+
+/**
+ * Announces an action's outcome once. A toast re-renders the screen, and an
+ * effect that announced on every render would announce for ever.
+ */
+function useOutcome(
+  state: ActionState,
+  key: string,
+  done: { title: string; body: string },
+  failedTitle: string,
+  onDone: () => void,
+) {
+  const notify = useNotify();
+  const seen = useRef<string | null>(null);
+  const after = useRef(onDone);
+  after.current = onDone;
+
+  useEffect(() => {
+    if (state.status !== "done" && state.status !== "failed") return;
+    const id = `${key}:${state.status === "done" ? state.hash : state.why}`;
+    if (seen.current === id) return;
+    seen.current = id;
+    if (state.status === "done") {
+      notify({ id, tone: "positive", title: done.title, children: done.body, duration: 6000 });
+      after.current();
+    } else {
+      notify({ id, tone: "critical", title: failedTitle, children: state.why, duration: 0 });
+    }
+  }, [state, key, done.title, done.body, failedTitle, notify]);
+}
+
+export function FundDialog({ open, onClose, root, owner }: { open: boolean; onClose: () => void; root: ChainNode; owner: string }) {
+  const { state, fund } = useFundVault(owner);
+  const [amount, setAmount] = useState("1");
+  const value = usdc6(amount);
+  const working = state.status === "working";
+
+  useOutcome(state, "fund", { title: "Vault funded", body: "Purchases can be released against it now." }, "Not funded", () => {
+    onClose();
+    reloadSoon();
+  });
+
+  return (
+    <Modal
+      open={open}
+      onClose={working ? () => undefined : onClose}
+      title="Fund the vault"
+      description="USDC moves from your wallet into the vault. Agents never hold it — the vault releases one purchase at a time, and only when every bound allows it."
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={working}>
+            Cancel
+          </Button>
+          <Button variant="primary" loading={working} disabled={working || value <= 0n} onClick={() => void fund(root.node, value)}>
+            {state.status === "working" ? state.step : `Fund ${formatUsdc(value)}`}
+          </Button>
+        </>
+      }
+    >
+      <Field label="Amount" hint="Your wallet asks twice: once to approve, once to fund.">
+        <TextField
+          type="number"
+          min="0"
+          step="0.01"
+          value={amount}
+          suffix="USDC"
+          autoFocus
+          onChange={(event) => setAmount(event.target.value)}
+        />
+      </Field>
+    </Modal>
+  );
+}
+
+export function SpawnDialog({ open, onClose, root, owner }: { open: boolean; onClose: () => void; root: ChainNode; owner: string }) {
+  const { state, spawn } = useSpawnChild(owner);
+  const [operator, setOperator] = useState("");
+  const [shareText, setShareText] = useState("50");
+  const working = state.status === "working";
+
+  const shareValue = Math.round(Number(shareText || "0"));
+  const shareOk = Number.isFinite(shareValue) && shareValue >= 1 && shareValue <= 100;
+  const isOwner = isAddress(operator) && operator.toLowerCase() === owner.toLowerCase();
+  const operatorError =
+    operator === "" ? undefined : !isAddress(operator) ? "Not an address." : isOwner ? "This is your own wallet. Use an operator key from `npm run init`." : undefined;
+  const childBudget6 = shareOk ? (root.budget6 * BigInt(shareValue)) / 100n : 0n;
+
+  useOutcome(state, "spawn", { title: "Agent spawned", body: "Narrower than its parent on every axis — the contract checked." }, "Not spawned", () => {
+    onClose();
+    reloadSoon();
+  });
+
+  return (
+    <Modal
+      open={open}
+      onClose={working ? () => undefined : onClose}
+      title="Spawn an agent"
+      description="A child mandate under the root. It can only ever be narrower than its parent, and the contract refuses a wider one whoever asks."
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={working}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            loading={working}
+            disabled={working || !isAddress(operator) || isOwner || !shareOk || childBudget6 <= 0n}
+            onClick={() =>
+              void spawn(root.node, {
+                operator: operator as `0x${string}`,
+                budget6: childBudget6,
+                lifetimeCap6: (root.lifetimeCap6 * BigInt(shareValue)) / 100n,
+                /* Equal to the parent's, read from the chain: a shorter child
+                   window refills faster than the window it debits. */
+                windowSeconds: root.windowSeconds,
+                trancheCap6: root.trancheCap6,
+                concentrationBps: root.concentrationBps,
+                maxDepth: root.maxDepth,
+              })
+            }
+          >
+            {state.status === "working" ? state.step : "Spawn agent"}
+          </Button>
+        </>
+      }
+    >
+      <div className="form-stack">
+        <Field label="Operator address" hint="An address printed by `npm run init`, not the wallet you are signed in with." error={operatorError}>
+          <TextField value={operator} placeholder="0x…" autoFocus onChange={(event) => setOperator(event.target.value.trim())} />
+        </Field>
+        <Field
+          label="Share of the parent"
+          hint={shareOk ? `${formatUsdc(childBudget6)} of ${formatUsdc(root.budget6)} per window, and the same share of the lifetime cap.` : "A whole number from 1 to 100."}
+          error={shareText !== "" && !shareOk ? "Between 1 and 100." : undefined}
+        >
+          <TextField type="number" min="1" max="100" value={shareText} suffix="%" onChange={(event) => setShareText(event.target.value)} />
+        </Field>
+      </div>
+    </Modal>
+  );
+}
+
+export function RevokeDialog({
+  node,
+  affected,
+  onClose,
+  owner,
+}: {
+  node: ChainNode | null;
+  affected: number;
+  onClose: () => void;
+  owner: string;
+}) {
+  const { state, revoke } = useRevoke(owner);
+  const working = state.status === "working";
+
+  useOutcome(state, "revoke", { title: "Branch revoked", body: "That agent and everything under it draws nothing from now on." }, "Not revoked", () => {
+    onClose();
+    reloadSoon();
+  });
+
+  return (
+    <Modal
+      open={Boolean(node)}
+      onClose={working ? () => undefined : onClose}
+      title="Revoke this agent?"
+      description={`${affected} ${affected === 1 ? "agent stops" : "agents stop"} drawing: this one and everything under it. It cannot be undone, and the record keeps the branch.`}
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={working}>
+            Keep it
+          </Button>
+          <Button variant="danger" loading={working} disabled={working || !node} onClick={() => node && void revoke(node.node)}>
+            {state.status === "working" ? state.step : "Revoke on chain"}
+          </Button>
+        </>
+      }
+    >
+      {node ? <p className="mono muted breakable">{shortId(node.node, 10, 8)}</p> : null}
+    </Modal>
+  );
+}
