@@ -171,17 +171,10 @@
   outline-offset: 2px;
 }
 
-/* A field's explanation opens rightwards from its icon rather than centring on
-   it. The bubble is 240–340px and the icon is 18px, so centred it hangs more
-   than a hundred pixels each side — and a label sits at the left edge of the
-   card it is in, which is where that bubble goes off the card. `Tooltip` has
-   no collision handling to fall back on, so the anchor is the fix.
-
-   Left-aligned text for the same reason `Ask` was: these are sentences, and a
-   centred three-line sentence is read word by word. */
-.cordon-field__labelrow .cordon-tooltip__bubble--bottom {
-  left: -8px;
+/* These are sentences rather than labels, and a centred three-line sentence is
+   read word by word. `Tooltip` keeps the bubble inside the window on its own
+   now, so the anchoring this used to do here is gone. */
+.cordon-field__labelrow .cordon-tooltip__bubble {
   max-width: 288px;
-  transform: none;
   text-align: left;
 }
