@@ -64,7 +64,8 @@ sudo certbot certonly --webroot -w /var/www/cordon -d attest.getcordon.xyz
 # Both snippets. `cordon-headers.conf` is included from every `location` in
 # the other one and from the attest vhost, because nginx's `add_header` does
 # not merge — a `location` that sets one of its own inherits none from above.
-sudo cp ops/nginx/cordon-headers.conf ops/nginx/cordon-locations.conf /etc/nginx/snippets/
+sudo cp ops/nginx/cordon-headers.conf ops/nginx/cordon-locations.conf \
+       ops/nginx/cordon-compression.conf /etc/nginx/snippets/
 # The rate-limit zone. conf.d, not the vhost: `limit_req_zone` is http-context
 # and must be declared exactly once on the box.
 sudo cp ops/nginx/cordon-limits.conf /etc/nginx/conf.d/
@@ -79,6 +80,10 @@ sudo nginx -t && sudo systemctl reload nginx
 curl -sI https://getcordon.xyz/console/ | grep -i 'frame-ancestors\|nosniff\|strict-transport'
 curl -sI https://getcordon.xyz/assets/ -o /dev/null -w '%{http_code}\n'
 curl -sI https://attest.getcordon.xyz/health | grep -i 'nosniff\|strict-transport'
+
+# 6. and that the bundles are actually compressed. `gzip on` in nginx.conf
+# does nothing for scripts on its own: the default gzip_types is text/html.
+curl -sI --compressed https://getcordon.xyz/console/ | grep -i content-encoding
 ```
 
 ## The services, after the deploy exists
