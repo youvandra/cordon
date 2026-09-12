@@ -11,6 +11,17 @@ import { DOC_GROUPS } from "../nav";
  * edit, and an HTTP call for everything else. The same daemon is underneath
  * all three, so the refusal is the same object in every one of them.
  */
+/** What an owner can actually do about each reason, in the operator skill's
+ *  words, so the docs and the agent that helps an owner give the same advice. */
+const WAY_OUT: Record<string, string> = {
+  "tranche-cap": "a new, wider mandate — or release this one purchase",
+  "window-budget": "wait for the window to roll, or release this one purchase",
+  "lifetime-cap": "a new mandate; this total does not come back",
+  concentration: "usually the bound doing its job — say so rather than working round it",
+  "vault-balance": "the owner funds the vault; every bound passed",
+  revoked: "stop — this branch is cut and nothing under it will draw again",
+};
+
 export function Integrate() {
   const vault = DEPLOYMENT?.vault ?? "pending";
   const registry = DEPLOYMENT?.registry ?? "pending";
@@ -48,10 +59,19 @@ export function Integrate() {
 
       <H2 id="mcp">1. An MCP client</H2>
       <P>
-        The block below goes in your client's config. The addresses are this
-        deployment's; the node and the key are yours.
+        The block below goes in your client's config. It points the server at
+        the two files the daemon already reads — the addresses in{" "}
+        <C>.env.live</C>, the keys in the file <C>init</C> wrote — so every key
+        keeps one copy, in the file <C>init</C> guards, rather than a second one
+        in a config people paste into issues.
       </P>
       <Code lang="json">{MCP_CONFIG}</Code>
+      <Note tone="warn" title="Absolute paths, not ~">
+        An MCP client starts the server with no shell, so nothing expands{" "}
+        <C>~</C> or <C>$HOME</C> in that block — and node does not expand a
+        tilde itself. <C>--env-file=~/.cordon/cordon.env</C> fails with{" "}
+        <C>not found</C> there and in every shell.
+      </Note>
       <P>
         A keyring holding more than one node also takes <C>CORDON_MCP_NODE</C>,
         which names the node this server speaks for. Without it the server takes
@@ -108,9 +128,9 @@ often an ancestor, so a balance above this agent is not this agent's to spend.`}
         The daemon is the product; the other two surfaces forward to it. It
         serves three routes and, deliberately, not a fourth.
       </P>
-      <Code lang="bash">{`curl -s localhost:8412/status
+      <Code lang="bash">{`curl -s localhost:8402/status
 
-curl -s -X POST localhost:8412/fetch \\
+curl -s -X POST localhost:8402/fetch \\
   -H 'content-type: application/json' \\
   -d '{"node":"0x7f3a…","url":"https://api.example.com/report"}'`}</Code>
       <P>A purchase that went through comes back like this:</P>
@@ -141,21 +161,19 @@ curl -s -X POST localhost:8412/fetch \\
 
       <H2 id="handling-a-refusal">Handling a refusal in your own code</H2>
       <Table
-        head={["Reason", "What it means", "What to do"]}
+        head={["Reason", "What it means", "The way out"]}
         rows={REASONS.filter((reason) => reason !== "none").map((reason) => [
           <C key={reason}>{reason}</C>,
           REASON_MEANING[reason] ?? reason,
-          reason === "vault-balance"
-            ? "fund the vault; the bounds passed"
-            : reason === "revoked"
-              ? "stop — this branch is cut and nothing under it will draw"
-              : "report it to the owner; the bound is the owner's to move",
+          WAY_OUT[reason] ?? "report it to the owner; the bound is the owner's to move",
         ])}
       />
       <P>
-        Retrying is the one thing never to do. The same request is refused
-        again, and every attempt is a transaction that costs gas and lands on
-        this agent's record.
+        Three things never to do, and the reason is the same for all of them.{" "}
+        <b>Retrying</b> gets the same answer and costs a transaction on this
+        agent's record. <b>Splitting</b> a purchase into smaller ones to get under
+        a cap, and <b>finding an unpriced mirror</b> of a paid resource, are the
+        behaviour the cumulative bounds exist to catch — and both are recorded.
       </P>
 
       <H2 id="what-your-agent-must-not-have">What your agent must not have</H2>
@@ -325,7 +343,7 @@ CORDON_PORT=8402
 ENV
 
 node --env-file=packages/daemon/.env.live \\
-     --env-file=~/.cordon/cordon.env \\
+     --env-file="$HOME/.cordon/cordon.env" \\
      packages/daemon/src/main.ts`}</Code>
       <P>
         The addresses are on <Link to="/docs/contracts">Contracts</Link>. It

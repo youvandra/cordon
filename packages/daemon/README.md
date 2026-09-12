@@ -6,7 +6,7 @@ the contract allowed. Every other surface — MCP, the proxy, plain HTTP —
 forwards to this.
 
 ```bash
-node --env-file=.env.live --env-file=~/.cordon/cordon.env src/main.ts
+node --env-file=.env.live --env-file="$HOME/.cordon/cordon.env" src/main.ts
 ```
 
 It prints the nodes it holds keys for and **refuses to start misconfigured**. A

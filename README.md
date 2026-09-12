@@ -433,7 +433,7 @@ CORDON_PORT=8402
 ENV
 
 node --env-file=packages/daemon/.env.live \
-     --env-file=~/.cordon/cordon.env \
+     --env-file="$HOME/.cordon/cordon.env" \
      packages/daemon/src/main.ts
 ```
 
@@ -851,7 +851,7 @@ purchase at a time.
 ### The daemon
 
 ```bash
-node --env-file=.env.live --env-file=~/.cordon/cordon.env \
+node --env-file=.env.live --env-file="$HOME/.cordon/cordon.env" \
   packages/daemon/src/main.ts
 ```
 

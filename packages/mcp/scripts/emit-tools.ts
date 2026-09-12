@@ -104,13 +104,28 @@ function configBlock(): string {
      What works today is the checkout they already have, so that is what the
      block says. It goes back to npx on the day `npm publish` runs, and not a
      day earlier. */
+  /* The key stays in the file `init` wrote, and the client is pointed at it.
+     Inlining `CORDON_KEY_ME` here gives every key a second copy, in a file
+     people paste into issues and screenshot for slides. The addresses go the
+     same way, so the block carries no value the reader has to retype.
+
+     Absolute paths, because an MCP client starts the server with no shell:
+     nothing expands `~` or `$HOME`, and node does not expand a tilde either —
+     `--env-file=~/.cordon/cordon.env` is `not found` in every case. The env
+     block keeps only what picks a node, which is the one thing a keyring of
+     several needs said out loud. */
+  void env;
   return JSON.stringify(
     {
       mcpServers: {
         cordon: {
           command: "node",
-          args: ["/path/to/cordon/packages/mcp/src/main.ts"],
-          env,
+          args: [
+            "--env-file=/Users/<you>/cordon/packages/daemon/.env.live",
+            "--env-file=/Users/<you>/.cordon/cordon.env",
+            "/Users/<you>/cordon/packages/mcp/src/main.ts",
+          ],
+          env: { CORDON_MCP_NODE: "0x… — the node this server speaks for" },
         },
       },
     },
