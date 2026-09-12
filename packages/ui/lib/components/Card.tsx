@@ -114,7 +114,9 @@ export interface MetricCardProps {
   figure?: ReactNode | null;
   /** 0–1, drives the default gauge. */
   progress?: number;
-  action?: { label: string; onClick?: () => void };
+  /** The one thing to do with what this tile measures. Disabled while the
+   *  transaction it starts is in flight, so the tile cannot start a second. */
+  action?: { label: string; onClick?: () => void; disabled?: boolean };
   glaze?: "rose" | "violet" | "ember";
   index?: number;
   animate?: boolean;
@@ -188,7 +190,7 @@ export function MetricCard({
 
         {action ? (
           <motion.div className="cordon-metriccard__action" {...child(CHILD_OFFSET.control)}>
-            <Button variant="secondary" onClick={action.onClick}>
+            <Button variant="secondary" onClick={action.onClick} disabled={action.disabled}>
               {action.label}
             </Button>
           </motion.div>

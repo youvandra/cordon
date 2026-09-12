@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   CardBody,
-  CardHeader,
   Field,
   TextField,
   DataTable,
@@ -114,7 +113,29 @@ function DepthFigure({ nodes }: { nodes: ChainNode[] }) {
   );
 }
 
-function ChainTree({ nodes, owner }: { nodes: ChainNode[]; owner: string | null }) {
+/** One of the owner's two transactions, as the tile carrying it needs it. */
+interface TileAction {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
+function ChainTree({
+  nodes,
+  owner,
+  fund,
+  spawn,
+}: {
+  nodes: ChainNode[];
+  owner: string | null;
+  /* The two actions live on the tiles their own figures are on: funding under
+     the money, spawning under the count of agents. They were a pair of cards
+     at the foot of the screen, each holding one button and a paragraph, which
+     put the thing you do furthest from the thing it does. A visitor reading
+     the public tree passes neither. */
+  fund?: TileAction;
+  spawn?: TileAction;
+}) {
   const root = nodes.find((node) => node.parent === null);
   const cutNodes = nodes.filter((node) => node.revoked).length;
   const liveNodes = nodes.length - cutNodes;
@@ -189,6 +210,7 @@ function ChainTree({ nodes, owner }: { nodes: ChainNode[]; owner: string | null 
             ) : null
           }
           glaze="violet"
+          action={fund}
         />
 
         {/* A count is a figure, and it was set as a heading over a paragraph.
@@ -215,6 +237,7 @@ function ChainTree({ nodes, owner }: { nodes: ChainNode[]; owner: string | null 
             </>
           }
           glaze="ember"
+          action={spawn}
         />
       </Grid>
 
@@ -362,10 +385,12 @@ function ChainTree({ nodes, owner }: { nodes: ChainNode[]; owner: string | null 
  * draw from an empty vault, and learning either on chain costs gas.
  */
 function Operate({
+  nodes,
   root,
   owner,
   onDone,
 }: {
+  nodes: ChainNode[];
   root: ChainNode;
   owner: string;
   onDone: () => void;
@@ -439,55 +464,29 @@ function Operate({
 
   return (
     <>
-      {/* Two actions, offered rather than laid out.
+      {/* The tree, with the owner's two transactions on the tiles their own
+          figures are on.
 
-          Both of these are transactions the owner signs, and both were open
-          forms sitting under the tree — a number field and an address field on
-          the screen at all times, with nothing between reading the tree and
-          typing into it. An action that costs a signature should be asked for.
-          The card says what the action does and carries one button; the form
-          is what happens after somebody has decided. */}
-      <Grid columns={2} min={320} gap="lg" align="start">
-        <Card>
-          <CardHeader>
-            <Text variant="micro" tone="dim" as="span" className="eyebrow">
-              fund the vault
-            </Text>
-          </CardHeader>
-          <CardBody>
-            <Stack direction="column" gap="md" align="start">
-              <Text variant="body" tone="copy" as="p">
-                Nothing can be drawn from a vault with nothing in it. This is the
-                only funding source the tree has, and the money stays here until a
-                purchase the contract allows.
-              </Text>
-              <Button variant="primary" disabled={working} onClick={() => setAsking("fund")}>
-                {funding.status === "working" ? funding.step : "Fund the vault"}
-              </Button>
-            </Stack>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <Text variant="micro" tone="dim" as="span" className="eyebrow">
-              spawn a child
-            </Text>
-          </CardHeader>
-          <CardBody>
-            <Stack direction="column" gap="md" align="start">
-              <Text variant="body" tone="copy" as="p">
-                A child can only be narrower. Normally its parent spawns it while
-                you sleep; these first ones are yours, because no daemon is
-                running yet.
-              </Text>
-              <Button variant="primary" disabled={working} onClick={() => setAsking("spawn")}>
-                {spawning.status === "working" ? spawning.step : "Spawn a child"}
-              </Button>
-            </Stack>
-          </CardBody>
-        </Card>
-      </Grid>
+          They were two cards at the foot of the screen, each carrying one
+          button under a paragraph explaining it — which is a lot of surface
+          for two verbs, and it put funding as far from the money as the screen
+          allows. A tile already says what it measures; the action that changes
+          that measurement belongs on it. The explanations move into the
+          dialogs, which is where somebody who has decided is reading. */}
+      <ChainTree
+        nodes={nodes}
+        owner={owner}
+        fund={{
+          label: funding.status === "working" ? funding.step : "Fund the vault",
+          onClick: () => setAsking("fund"),
+          disabled: working,
+        }}
+        spawn={{
+          label: spawning.status === "working" ? spawning.step : "Spawn a child",
+          onClick: () => setAsking("spawn"),
+          disabled: working,
+        }}
+      />
 
       <Modal
         open={asking === "fund"}
@@ -788,14 +787,20 @@ export default function Tree() {
           note={mine ? `read from ${ARC.name}` : `the public tree · read from ${ARC.name}`}
           live
         />
-        <ChainTree nodes={chain.nodes} owner={mine ? address : null} />
         {/* Funding and spawning are the owner's, and the owner is the address
-            that signed the mandate. A visitor reading the public tree is shown
-            what they can do about it, which is nothing, rather than a form
-            that would fail at the wallet. */}
+            that signed the mandate. A visitor reading the public tree gets the
+            same tree with no controls on its tiles, rather than buttons that
+            would fail at the wallet. */}
         {mine && rootOf(chain.nodes) && address ? (
-          <Operate root={rootOf(chain.nodes)!} owner={address} onDone={() => window.location.reload()} />
-        ) : null}
+          <Operate
+            nodes={chain.nodes}
+            root={rootOf(chain.nodes)!}
+            owner={address}
+            onDone={() => window.location.reload()}
+          />
+        ) : (
+          <ChainTree nodes={chain.nodes} owner={mine ? address : null} />
+        )}
       </>
     );
   }
