@@ -96,6 +96,7 @@ const terms: Terms = {
   scheme: ATTEST.scheme,
   minLeadSeconds: ATTEST.minLeadSeconds,
   domain,
+  x402Version: ATTEST.x402Version,
 };
 
 let ledger: Ledger | undefined = existsSync(snapshot)

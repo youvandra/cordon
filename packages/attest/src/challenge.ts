@@ -25,7 +25,7 @@ export interface ChallengeOptions {
 export function challengeBody(options: ChallengeOptions): Record<string, unknown> {
   const { terms, resource, error } = options;
   return {
-    x402Version: ATTEST.x402Version,
+    x402Version: terms.x402Version,
     ...(error ? { error } : {}),
     accepts: [
       {

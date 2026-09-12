@@ -36,6 +36,7 @@ const terms: Terms = {
   price6: ATTEST.price6,
   scheme: ATTEST.scheme,
   minLeadSeconds: ATTEST.minLeadSeconds,
+  x402Version: ATTEST.x402Version,
   domain: { name: "USD Coin", version: "2", chainId: CHAIN, verifyingContract: ASSET },
 };
 
@@ -181,4 +182,68 @@ test("the nonce map forgets a settlement that failed, because the payer never sp
   assert.equal(nonces.has(auth), true);
   nonces.drop(auth);
   assert.equal(nonces.has(auth), false);
+});
+
+/* ------------------------------------------------------------------ */
+/* The version, and the set that only grew                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * `x402Version` was parsed and then never looked at.
+ *
+ * The version decides what the rest of the payload means: a later one may
+ * spell `authorization` differently or sign over different fields. Reading a
+ * payload whose version this endpoint does not implement is agreeing to terms
+ * nobody read — and the 402 that provoked it named a version, so a payer
+ * answering with another one is a payer to tell rather than to guess at.
+ */
+test("a payment in a version this endpoint does not speak is refused", async () => {
+  const parsed = parsePayment(await signed(authorization()));
+  const verdict = await verifyPayment({ ...parsed, x402Version: 3 }, terms, NOW);
+
+  assert.equal(verdict.ok, false);
+  assert.match((verdict as { reason: string }).reason, /x402 v3/);
+  assert.match((verdict as { reason: string }).reason, new RegExp(`v${ATTEST.x402Version}`));
+});
+
+test("a payment in the version the offer named is taken", async () => {
+  const verdict = await verifyPayment(parsePayment(await signed(authorization())), terms, NOW);
+  assert.equal(verdict.ok, true);
+});
+
+/**
+ * The replay set is a courtesy — the token is the authority, and it refuses a
+ * nonce past its own `validBefore` whatever this believes. So an entry is
+ * useful exactly until then and dead weight after it. Without a sweep this
+ * grew by one per sale forever, on a process built to stay up, and the only
+ * thing that ever emptied it was a restart.
+ */
+test("a spent nonce is forgotten once the token would refuse it anyway", async () => {
+  const nonces = new Nonces();
+
+  const older = authorization({ validBefore: NOW + 10n });
+  const newer = authorization({ nonce: `0x${"ab".repeat(32)}` as Hex, validBefore: NOW + 600n });
+  nonces.add(older);
+  nonces.add(newer);
+  assert.equal(nonces.size, 2);
+
+  /* Before either expires, both are still held: this is what stops a second
+     attempt while the first is in flight. */
+  assert.equal(nonces.forgetExpired(NOW), 0);
+  assert.equal(nonces.has(older), true);
+
+  /* Past the first one's own validity, the token refuses it and so this need
+     not remember it. The one still valid is untouched. */
+  assert.equal(nonces.forgetExpired(NOW + 11n), 1);
+  assert.equal(nonces.has(older), false);
+  assert.equal(nonces.has(newer), true);
+  assert.equal(nonces.size, 1);
+});
+
+test("a failed settlement gives the payer their nonce back", async () => {
+  const nonces = new Nonces();
+  const auth = authorization();
+  nonces.add(auth);
+  nonces.drop(auth);
+  assert.equal(nonces.has(auth), false, "the token consumed nothing, so neither does this");
 });

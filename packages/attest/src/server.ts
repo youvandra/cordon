@@ -162,6 +162,11 @@ export function createAttestApi(options: AttestOptions) {
       return offer("that authorisation has already been used here");
     }
     nonces.add(payment.authorization);
+    /* Swept here rather than on a timer: this is the only place a payment
+       arrives, the clock is already in hand, and a set that only grows is a
+       leak on a process built to stay up. An entry past its `validBefore` is
+       one the token refuses whatever this believes. */
+    nonces.forgetExpired(now());
 
     let collected;
     try {

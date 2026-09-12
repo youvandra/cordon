@@ -271,6 +271,12 @@ export class Gate {
     const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash });
 
     for (const log of receipt.logs) {
+      /* From the registry, and not merely shaped like it. A receipt carries
+         every log the transaction produced, including the token's and the
+         Gateway's, and `decodeEventLog` will decode anything whose topic hash
+         and argument layout happen to match. Checking the address is what
+         makes "this is the registry's event" true rather than likely. */
+      if (log.address.toLowerCase() !== this.config.registry.toLowerCase()) continue;
       try {
         const event = decodeEventLog({ abi: MandateRegistryAbi, data: log.data, topics: log.topics });
         if (event.eventName === "MandateSpawned") {
@@ -388,11 +394,15 @@ export class Gate {
     const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash });
 
     for (const log of receipt.logs) {
+      /* The vault's own, by address. This decides whether a purchase happened
+         and for what reason; a log from the token or the Gateway that decoded
+         by coincidence would answer that question with somebody else's event. */
+      if (log.address.toLowerCase() !== this.config.vault.toLowerCase()) continue;
       let event;
       try {
         event = decodeEventLog({ abi: TreeVaultAbi, data: log.data, topics: log.topics });
       } catch {
-        continue; // a log from another contract in the same transaction
+        continue; // a log this ABI has no name for
       }
 
       if (event.eventName === "Drawn") {

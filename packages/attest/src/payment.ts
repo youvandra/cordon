@@ -53,6 +53,8 @@ export interface Terms {
   scheme: string;
   minLeadSeconds: number;
   domain: TokenDomain;
+  /** The x402 version this endpoint publishes in its own 402. */
+  x402Version: number;
 }
 
 export const TRANSFER_WITH_AUTHORIZATION_TYPES = {
@@ -149,6 +151,15 @@ export async function verifyPayment(
 ): Promise<{ ok: true; payer: Address } | { ok: false; reason: string }> {
   const bad = (reason: string) => ({ ok: false as const, reason });
 
+  /* Checked, having been parsed and then ignored. The version decides what
+     the rest of the payload means — a future one may spell `authorization`
+     differently or sign over different fields — so taking a payload whose
+     version this endpoint does not implement is agreeing to terms nobody has
+     read. The offer states the version; a payer that answers with another one
+     is told, rather than having its fields read as if they were ours. */
+  if (payment.x402Version !== terms.x402Version) {
+    return bad(`payment is x402 v${payment.x402Version}, this endpoint speaks v${terms.x402Version}`);
+  }
   if (payment.scheme !== terms.scheme) return bad(`scheme is ${payment.scheme}, this endpoint takes ${terms.scheme}`);
   if (payment.network !== terms.network) return bad(`network is ${payment.network}, this endpoint settles on ${terms.network}`);
   if (payment.asset !== "0x" && payment.asset.toLowerCase() !== terms.asset.toLowerCase()) {
@@ -197,9 +208,17 @@ export async function verifyPayment(
  * `transferWithAuthorization` reverts on a nonce it has already seen, so a
  * replay that gets past this map still collects nothing. Keeping it in memory
  * means a restart forgets, and forgetting is safe for exactly that reason.
+ *
+ * Which is also why it can be forgotten on a schedule. Every authorisation
+ * carries a `validBefore`, and past it the token refuses the nonce whatever
+ * this set believes — so an entry is useful exactly until then and is dead
+ * weight afterwards. Without that this grew by one entry per sale forever, on
+ * a process meant to stay up, and the only thing that ever emptied it was a
+ * restart.
  */
 export class Nonces {
-  private readonly seen = new Set<string>();
+  /** Key to the second after which the token will refuse it anyway. */
+  private readonly seen = new Map<string, bigint>();
 
   key(auth: Authorization): string {
     return `${auth.from.toLowerCase()}:${auth.nonce.toLowerCase()}`;
@@ -210,7 +229,7 @@ export class Nonces {
   }
 
   add(auth: Authorization): void {
-    this.seen.add(this.key(auth));
+    this.seen.set(this.key(auth), auth.validBefore);
   }
 
   /* A settlement that failed consumed nothing on the token, so the payer is
@@ -218,6 +237,22 @@ export class Nonces {
      failure would refuse them their own money. */
   drop(auth: Authorization): void {
     this.seen.delete(this.key(auth));
+  }
+
+  /**
+   * Forget what the token would refuse on its own.
+   *
+   * Called with the same clock the verification uses, so a test drives it and
+   * a running endpoint does not need a timer of its own.
+   */
+  forgetExpired(nowSeconds: bigint): number {
+    let dropped = 0;
+    for (const [key, validBefore] of this.seen) {
+      if (validBefore > nowSeconds) continue;
+      this.seen.delete(key);
+      dropped += 1;
+    }
+    return dropped;
   }
 
   get size(): number {

@@ -42,6 +42,7 @@ const terms: Terms = {
   price6: ATTEST.price6,
   scheme: ATTEST.scheme,
   minLeadSeconds: ATTEST.minLeadSeconds,
+  x402Version: ATTEST.x402Version,
   domain: { name: "USD Coin", version: "2", chainId: CHAIN, verifyingContract: ASSET },
 };
 
