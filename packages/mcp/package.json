@@ -1,5 +1,5 @@
 {
-  "name": "@cordon/mcp",
+  "name": "cordon-mcp",
   "version": "0.1.0",
   "description": "Cordon inside an MCP client: an agent that can buy things and cannot move money, bounded by contracts on Arc.",
   "license": "MIT",

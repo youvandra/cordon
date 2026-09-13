@@ -4,12 +4,12 @@
  * is bounded by a contract it cannot reach.
  *
  *   { "mcpServers": { "cordon": {
- *       "command": "node", "args": ["/path/to/cordon/packages/mcp/src/main.ts"],
- *       "env": { "CORDON_NODE_ME": "0x…", "CORDON_KEY_ME": "…",
- *                "CORDON_VAULT": "0x…", "CORDON_REGISTRY": "0x…" } } } }
+ *       "command": "npx", "args": ["-y", "cordon-mcp"],
+ *       "env": { "CORDON_ENV_FILE": "/Users/<you>/.cordon/cordon.env",
+ *                "CORDON_MCP_NODE": "0x…" } } } }
  *
- * A path rather than `npx -y @cordon/mcp`, because this package is private and
- * unpublished: the npx form is a 404 until `npm publish` says otherwise.
+ * From a clone, `node /path/to/cordon/packages/mcp/src/main.ts` with the same
+ * env runs the same server.
  *
  * stdout belongs to the protocol. Anything this process wants to say goes to
  * stderr, or it corrupts the transport.

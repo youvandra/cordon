@@ -1,4 +1,4 @@
-# @cordon/mcp
+# cordon-mcp
 
 Cordon inside an MCP client. One config block, and the agent in front of you is
 bounded by a contract it cannot reach.
@@ -8,7 +8,7 @@ bounded by a contract it cannot reach.
   "mcpServers": {
     "cordon": {
       "command": "npx",
-      "args": ["-y", "@cordon/mcp"],
+      "args": ["-y", "cordon-mcp"],
       "env": {
         "CORDON_ENV_FILE": "/Users/<you>/.cordon/cordon.env",
         "CORDON_MCP_NODE": "0x<node id>"
