@@ -111,6 +111,39 @@ no key at all — not a float, not one tranche. Every purchase passes the gate, 
 the most an unsupervised agent can spend is what the contract lets through
 rather than whatever it happens to be holding.
 
+### Next to an agent wallet and a marketplace
+
+The usual shape today is an agent with a wallet of its own — Circle's Agent
+Wallet, say — that finds a paid service in a marketplace, reads its `402`, and
+pays it. Cordon does not watch that flow and cannot: money the agent holds
+itself never reaches the gate.
+
+It replaces one step of it. Discovery stays where it is — searching the
+marketplace and inspecting a seller costs nothing and moves nothing. The
+payment is what changes:
+
+| | Agent wallet | Agent wallet behind Cordon |
+|---|---|---|
+| Who finds the service | the agent | the agent |
+| Who holds the money | the agent | the vault; the agent holds no key |
+| What pays | the agent signs from its own balance | `cordon_fetch(url)` — the daemon draws exactly the seller's price |
+| Price and payee come from | the seller's `402` | the seller's `402`, and never from the agent |
+| The limit | what is in the wallet, and any policy on that wallet | one signature over the whole tree: tranche, window, lifetime, concentration, on every ancestor |
+| An agent that spawns helpers | each helper needs a wallet, and each wallet is a separate limit | each helper is a narrower child, debiting the same root |
+| When it goes wrong | the balance is gone | a refusal on chain, published to ERC-8004; the owner releases it or cuts the branch |
+| Rail | x402, vanilla or Gateway | Gateway, with a contract in front of it |
+
+Put plainly: the wallet is the agent's hands, and Cordon is the owner's
+permission to use them. The settlement rail is the same one; what Cordon adds
+is the part a wallet cannot express — that a purchase made three delegations
+down still counts against what the person at the top signed.
+
+**What this does not do yet.** Cordon runs on Arc testnet, and marketplace
+sellers settle on mainnet chains, so a Cordon mandate cannot pay one of them
+today. The seller in every example here is Cordon's own
+`attest.getcordon.xyz`, priced at a cent so there is always something real to
+buy and be refused.
+
 ---
 
 ## Architecture
