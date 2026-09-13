@@ -133,7 +133,7 @@ export default function NewMandate() {
                 <Field label="Window">
                   <Select options={WINDOWS} value={windowS} onValueChange={setWindowS} />
                 </Field>
-                <Field label="Lifetime cap" hint="The total, ever. It never refills." error={errors.lifetime}>
+                <Field label="Lifetime cap" info="The total, ever. It never refills." error={errors.lifetime}>
                   <TextField type="number" min="0" value={lifetime} suffix="USDC" onChange={(event) => setLifetime(event.target.value)} />
                 </Field>
               </div>
@@ -143,13 +143,17 @@ export default function NewMandate() {
               <legend className="form__legend">Limits</legend>
               <p className="form__help">Checked on every agent, and on every agent above it.</p>
               <div className="form__grid">
+                {/* The only `hint` left on this form, and it stays under the
+                    control: it is a warning about what was just typed rather
+                    than an explanation of the field, and a warning nobody
+                    opens is not a warning. */}
                 <Field label="Per purchase" error={errors.tranche} hint={tranche6 > budget6 && budget6 > 0n ? "Larger than the whole window." : undefined}>
                   <TextField type="number" min="0" value={tranche} suffix="USDC" onChange={(event) => setTranche(event.target.value)} />
                 </Field>
-                <Field label="Per seller" hint="Share of a window one seller may take." error={errors.concentration}>
+                <Field label="Per seller" info="Share of a window one seller may take." error={errors.concentration}>
                   <TextField type="number" min="0" max="100" value={concentration} suffix="%" onChange={(event) => setConcentration(event.target.value)} />
                 </Field>
-                <Field label="Max depth" hint="How far it may be delegated." error={errors.depth}>
+                <Field label="Max depth" info="How far it may be delegated." error={errors.depth}>
                   <TextField type="number" min="1" value={depth} onChange={(event) => setDepth(event.target.value)} />
                 </Field>
               </div>
@@ -158,7 +162,7 @@ export default function NewMandate() {
             <fieldset className="form__section">
               <legend className="form__legend">Operator</legend>
               <p className="form__help">The key your daemon holds for this mandate. It is fixed here and cannot be changed later.</p>
-              <Field label="Operator address" hint="Printed by `npm run init`." error={errors.operator}>
+              <Field label="Operator address" info="Printed by `npm run init`." error={errors.operator}>
                 <TextField value={operator} placeholder="0x…" onChange={(event) => setOperator(event.target.value.trim())} />
               </Field>
             </fieldset>

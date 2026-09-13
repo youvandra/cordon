@@ -69,7 +69,7 @@ export function FundDialog({ open, onClose, root, owner }: { open: boolean; onCl
         </>
       }
     >
-      <Field label="Amount" hint="Your wallet asks twice: once to approve, once to fund.">
+      <Field label="Amount" info="Your wallet asks twice: once to approve, once to fund.">
         <TextField
           type="number"
           min="0"
@@ -149,12 +149,16 @@ export function SpawnDialog({ open, onClose, parent, owner }: { open: boolean; o
         </p>
       ) : (
         <div className="form-stack">
-          <Field label="Operator address" hint="An address printed by `npm run init`, not the wallet you are signed in with." error={operatorError}>
+          <Field label="Operator address" info="An address printed by `npm run init`, not the wallet you are signed in with." error={operatorError}>
             <TextField value={operator} placeholder="0x…" autoFocus onChange={(event) => setOperator(event.target.value.trim())} />
           </Field>
           <Field
             label="Share of the parent"
-            hint={shareOk ? `${formatUsdc(childBudget6)} of ${formatUsdc(parent.budget6)} per window, and the same share of its lifetime cap.` : "A whole number from 1 to 100."}
+            info="A whole number from 1 to 100, of the parent's window and of its lifetime cap."
+            /* This one stays under the control: it is not an explanation but a
+               readout of the figure just typed, and it changes on every
+               keystroke. Behind an icon it would be a number nobody opens. */
+            hint={shareOk ? `${formatUsdc(childBudget6)} of ${formatUsdc(parent.budget6)} per window, and the same share of its lifetime cap.` : undefined}
             error={shareText !== "" && !shareOk ? "Between 1 and 100." : undefined}
           >
             <TextField type="number" min="1" max="100" value={shareText} suffix="%" onChange={(event) => setShareText(event.target.value)} />
@@ -229,7 +233,7 @@ export function WithdrawDialog({ open, onClose, root, owner }: { open: boolean; 
         </p>
         <Field
           label="Amount"
-          hint={`Sent to ${shortId(owner, 6, 4)}, the wallet you are signed in with.`}
+          info={`Sent to ${shortId(owner, 6, 4)}, the wallet you are signed in with. The console offers no other recipient.`}
           error={tooMuch ? "More than the vault holds for this tree." : treasury.state === "failed" ? treasury.why : undefined}
         >
           <TextField
