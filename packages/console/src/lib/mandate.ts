@@ -200,10 +200,34 @@ export type Existing =
   | { state: "unknown" }
   | { state: "looking" }
   | { state: "none" }
-  | { state: "found"; mandate: OpenMandate };
+  | { state: "found"; mandate: OpenMandate }
+  | { state: "failed"; why: string };
 
 /** How many of an owner's mandates to look for. Nonces are sequential. */
 const SCAN = 8;
+
+/**
+ * Whether this is the registry saying "nobody opened that", or something else.
+ *
+ * `mandate` reverts `UnknownMandate` on an id nobody has opened, and that
+ * revert is how the scan below knows it has reached the end of an owner's
+ * nonces. Every other failure — a rate limit, a dropped connection, an RPC
+ * that answered with nonsense — arrives at the same `catch`, and treating one
+ * as the other reports an owner with a live mandate as having none: they are
+ * then shown the form for opening one and sign a second.
+ *
+ * The revert is recognised by the error viem carries in its `cause` chain
+ * rather than by `instanceof`, which a second copy of viem in a bundle breaks.
+ */
+function isUnknownMandate(error: unknown): boolean {
+  for (let step = error as { cause?: unknown; name?: string; data?: { errorName?: string } } | undefined; step; ) {
+    if (step.name === "ContractFunctionRevertedError" && step.data?.errorName === "UnknownMandate") return true;
+    const next = step.cause as typeof step;
+    if (next === step) break;
+    step = next;
+  }
+  return false;
+}
 
 /**
  * What this address has already signed, read from the chain.
@@ -253,10 +277,13 @@ export function useExistingMandate(owner: string | null): Existing {
             setFound({ state: "found", mandate: { node, ...m } });
             return;
           }
-        } catch {
-          /* `mandate` reverts on an id nobody has opened, which is how the scan
-             ends: nonces are sequential, so the first gap is the end. */
-          break;
+        } catch (error) {
+          /* Nonces are sequential, so the first id nobody has opened is the
+             end of this owner's mandates. Anything else is a read that did not
+             happen, and a read that did not happen is not an answer. */
+          if (isUnknownMandate(error)) break;
+          if (live) setFound({ state: "failed", why: why(error) });
+          return;
         }
       }
       if (live) setFound({ state: "none" });

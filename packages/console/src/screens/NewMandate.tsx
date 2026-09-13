@@ -78,6 +78,17 @@ export default function NewMandate() {
 
   if (existing.state === "looking" || existing.state === "unknown") return <PageSkeleton />;
   if (existing.state === "found") return <Navigate to="/console" replace />;
+  /* A read that failed is not "you have no mandate". Offering the form here
+     would invite a second mandate from an owner who already has a live one,
+     and this screen ends in a signature. */
+  if (existing.state === "failed") {
+    return (
+      <ReadFailed
+        title="Could not check what this wallet has already signed"
+        why={`${existing.why} Until that read succeeds, opening a mandate here could open a second one beside a live mandate.`}
+      />
+    );
+  }
 
   const budget6 = usdc6(budget);
   const lifetime6 = usdc6(lifetime);
