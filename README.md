@@ -140,9 +140,14 @@ down still counts against what the person at the top signed.
 
 **What this does not do yet.** Cordon runs on Arc testnet, and marketplace
 sellers settle on mainnet chains, so a Cordon mandate cannot pay one of them
-today. The seller in every example here is Cordon's own
-`attest.getcordon.xyz`, priced at a cent so there is always something real to
-buy and be refused.
+today — Circle's catalogue listed 929 services on 13 September and none on a
+testnet. So there are two sellers of our own to point at:
+`attest.getcordon.xyz`, a conduct record at a cent, and
+`demo-seller.getcordon.xyz/arc/snapshot`, a live reading of Arc at **$1** — a
+seller that is not the record, priced so the bound that refuses it is plain.
+Bought live on 13 September: node `0xe4516a46…` with a $1 tranche cap paid,
+draw `0xd01e5976…`, settlement `0x0b1e6a31…`; node `0x08bd7e42…` with a
+$0.0005 cap was refused, `tranche-cap`, **refusal 13**.
 
 ---
 
