@@ -49,6 +49,22 @@ export interface DrawOutcome {
  * no namespaces. The daemon runs under plain `node src/main.ts` with no build
  * step, and a syntax that needs a compiler would quietly reintroduce one.
  */
+/**
+ * A spawn the registry refused before anything was broadcast.
+ *
+ * The distinction the key file depends on: this one is safe to take a key back
+ * from, because no mandate names it and none ever will. A failure raised after
+ * the transaction was sent is not this, however it reads — the transaction may
+ * be in a block already.
+ */
+export class SpawnRefused extends Error {
+  readonly broadcast = false;
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "SpawnRefused";
+  }
+}
+
 export class Gate {
   private readonly publicClient: PublicClient;
   private readonly wallets = new Map<Hex, WalletClient>();
@@ -230,7 +246,7 @@ export class Gate {
        *  never read as a bound. */
       purpose?: string;
     },
-  ): Promise<{ node: Hex; txHash: Hex; purposePublished?: boolean }> {
+  ): Promise<{ node: Hex; txHash: Hex; enrolled?: boolean; purposePublished?: boolean }> {
     return this.inTurn(parent, () => this.spawnInTurn(parent, params));
   }
 
@@ -246,7 +262,7 @@ export class Gate {
        *  never read as a bound. */
       purpose?: string;
     },
-  ): Promise<{ node: Hex; txHash: Hex; purposePublished?: boolean }> {
+  ): Promise<{ node: Hex; txHash: Hex; enrolled?: boolean; purposePublished?: boolean }> {
     const wallet = this.walletFor(parent);
     const inherited = (await this.mandate(parent)) as {
       lifetimeCap6: bigint;
@@ -254,24 +270,36 @@ export class Gate {
       maxDepth: number;
     };
 
-    const { request } = await this.publicClient.simulateContract({
-      address: this.config.registry,
-      abi: MandateRegistryAbi,
-      functionName: "spawn",
-      args: [
-        parent,
-        {
-          operator: params.operator,
-          budget6: params.budget6,
-          lifetimeCap6: params.lifetimeCap6 ?? inherited.lifetimeCap6,
-          windowSeconds: inherited.windowSeconds,
-          trancheCap6: params.trancheCap6,
-          concentrationBps: params.concentrationBps,
-          maxDepth: inherited.maxDepth,
-        },
-      ],
-      account: wallet.account!,
-    });
+    /* Marked, so a caller can tell the two failures apart. A simulation that
+       reverts broadcast nothing and never will: the child's key, written a
+       moment ago, names an address no mandate will ever carry. Everything
+       after the simulation may have landed even when it throws — a dropped
+       connection while waiting for a receipt is not a spawn that did not
+       happen — and discarding a key on that reading is how a live mandate
+       loses the only key that can operate it. */
+    let request;
+    try {
+      ({ request } = await this.publicClient.simulateContract({
+        address: this.config.registry,
+        abi: MandateRegistryAbi,
+        functionName: "spawn",
+        args: [
+          parent,
+          {
+            operator: params.operator,
+            budget6: params.budget6,
+            lifetimeCap6: params.lifetimeCap6 ?? inherited.lifetimeCap6,
+            windowSeconds: inherited.windowSeconds,
+            trancheCap6: params.trancheCap6,
+            concentrationBps: params.concentrationBps,
+            maxDepth: inherited.maxDepth,
+          },
+        ],
+        account: wallet.account!,
+      }));
+    } catch (error) {
+      throw new SpawnRefused((error as Error).message, { cause: error });
+    }
 
     const txHash = await wallet.writeContract(request);
     const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash });
@@ -293,11 +321,22 @@ export class Gate {
             this.bindOperator(node, params.operator);
             /* A child born mid-run needs an identity before its first refusal
                can be published — `attest` will not file conduct against a node
-               with no ERC-8004 identity, and it should not. */
-            await this.enrol(node);
+               with no ERC-8004 identity, and it should not.
+               
+               This is the step that fails on a fresh tree, and it fails for a
+               dull reason: the key was generated a second ago and holds no
+               gas. Reported rather than swallowed, because everything after it
+               depends on it. */
+            const enrolled = (await this.enrol(node)) !== null;
             if (params.purpose) {
-              return { node, txHash, purposePublished: await this.describe(node, params.purpose) };
+              return {
+                node,
+                txHash,
+                enrolled,
+                purposePublished: enrolled ? await this.describe(node, params.purpose) : false,
+              };
             }
+            return { node, txHash, enrolled };
           }
           return { node, txHash, ...(params.purpose ? { purposePublished: false } : {}) };
         }
@@ -364,6 +403,38 @@ export class Gate {
    * Write a node's stated purpose onto its identity. Best-effort, like `enrol`:
    * a purpose that fails to publish costs a description and no control.
    */
+  /**
+   * Publish the purposes this key file remembers and the chain has not.
+   *
+   * A child spawned by an operator with no gas is enrolled by nobody, so its
+   * purpose is written to the key file and never to its identity — and
+   * `describe` only ever ran at spawn, so funding that operator afterwards
+   * healed nothing. The name existed in a file on one laptop and the agent
+   * stayed anonymous everywhere else.
+   *
+   * Called at start, after enrolment, so a restart is the whole recovery
+   * rather than half of it. It reads before it writes: a node whose identity
+   * already carries its purpose costs one call and no transaction.
+   */
+  async describeRemembered(remembered: Map<string, string>): Promise<number> {
+    if (!this.recorder.enabled || remembered.size === 0) return 0;
+    let published = 0;
+    for (const node of this.nodes()) {
+      const purpose = remembered.get(node.toLowerCase());
+      if (!purpose) continue;
+      try {
+        const already = await this.recorder.statedPurpose(node);
+        /* `null` is a node with no identity — enrolment has already had its
+           turn this start, so there is nothing to write onto. */
+        if (already === null || already === purpose) continue;
+        if (await this.describe(node, purpose)) published += 1;
+      } catch (error) {
+        console.error(`${node}'s purpose stays unpublished: ${(error as Error).message}`);
+      }
+    }
+    return published;
+  }
+
   async describe(node: Hex, purpose: string): Promise<boolean> {
     if (!this.recorder.enabled) return false;
     try {

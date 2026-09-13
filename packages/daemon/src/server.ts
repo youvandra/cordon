@@ -15,6 +15,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { Hex } from "viem";
 import { generatePrivateKey } from "viem/accounts";
+import { SpawnRefused } from "./gate.ts";
 import type { Gate } from "./gate.ts";
 import type { Settler } from "./settle.ts";
 import { cordonFetch, httpTransport, type Transport } from "./fetch.ts";
@@ -118,6 +119,40 @@ export function createDaemon(deps: ServerDeps) {
         } catch (error) {
           return json(res, 400, { error: (error as Error).message });
         }
+        /* Every bound the contract will not accept as zero, checked here.
+           These used to be `?? 0`, and zero is the one value each of them
+           rejects — so a body missing `concentrationBps` generated a key,
+           wrote it to the key file, sent the transaction and came back with
+           seven hundred characters of `ConcentrationOutOfRange(0)` and a
+           contract-call trace. Zero is not "unlimited" for any of them, and a
+           caller who left one out should be told which. */
+        const bound = (name: string, raw: unknown): bigint | { error: string } => {
+          if (raw === undefined) return { error: `${name} is required; zero is not unlimited and the contract refuses it` };
+          let value: bigint;
+          try {
+            value = BigInt(String(raw));
+          } catch {
+            return { error: `${name} is not a whole number of base units: ${String(raw)}` };
+          }
+          return value <= 0n ? { error: `${name} must be more than zero` } : value;
+        };
+        const budget6 = bound("budget6", body.budget6);
+        if (typeof budget6 === "object") return json(res, 400, budget6);
+        const trancheCap6 = bound("trancheCap6", body.trancheCap6);
+        if (typeof trancheCap6 === "object") return json(res, 400, trancheCap6);
+        let lifetimeCap6: bigint | undefined;
+        if (body.lifetimeCap6 !== undefined) {
+          const checked = bound("lifetimeCap6", body.lifetimeCap6);
+          if (typeof checked === "object") return json(res, 400, checked);
+          lifetimeCap6 = checked;
+        }
+        const concentrationBps = Number(body.concentrationBps);
+        if (!Number.isInteger(concentrationBps) || concentrationBps < 1 || concentrationBps > 10_000) {
+          return json(res, 400, {
+            error: "concentrationBps is required: a whole number of basis points from 1 to 10000",
+            why: "the share of a window any one counterparty may take. 10000 is all of it; zero is refused by the contract",
+          });
+        }
         const secret = newKey();
         const operator = deps.gate.addOperator(secret);
         /* Written down before the registry is asked. The mandate will name this
@@ -125,16 +160,37 @@ export function createDaemon(deps: ServerDeps) {
            process is a child nobody can sign for after a restart. If this write
            fails, nothing has been sent. */
         const label = deps.keyFile?.remember(secret, operator, purpose);
-        const spawned = await deps.gate.spawn(body.node as Hex, {
-          operator,
-          budget6: BigInt(String(body.budget6 ?? "0")),
-          /* Omitted means the parent's total, not none: the gate resolves it
-             from the chain rather than sending a zero the contract refuses. */
-          lifetimeCap6: body.lifetimeCap6 === undefined ? undefined : BigInt(String(body.lifetimeCap6)),
-          trancheCap6: BigInt(String(body.trancheCap6 ?? "0")),
-          concentrationBps: Number(body.concentrationBps ?? 0),
-          purpose,
-        });
+        let spawned;
+        try {
+          spawned = await deps.gate.spawn(body.node as Hex, {
+            operator,
+            budget6,
+            /* Omitted means the parent's total, not none: the gate resolves it
+               from the chain rather than sending a zero the contract refuses. */
+            lifetimeCap6,
+            trancheCap6,
+            concentrationBps,
+            purpose,
+          });
+        } catch (error) {
+          /* Only a refusal takes the key back. The registry said no before
+             anything was broadcast, so nothing on chain names this address and
+             nothing ever will — and left in the file it is a label whose node
+             id can never be filled, indistinguishable from a child still being
+             born. Every other failure keeps the key: a connection dropped
+             while waiting for a receipt is not a spawn that did not happen,
+             and a key discarded on that reading is a live mandate nobody can
+             operate again. */
+          const refused = error instanceof SpawnRefused;
+          if (refused && label) deps.keyFile?.forget(label);
+          return json(res, refused ? 400 : 502, {
+            error: (error as Error).message,
+            ...(label ? { keyDiscarded: refused, ...(refused ? {} : { label }) } : {}),
+            ...(refused
+              ? {}
+              : { why: "this may still have landed; the child's key is kept under its label" }),
+          });
+        }
         /* The node id beside the key it belongs to. A failure here leaves the
            key safe and the id missing, which is recoverable, so it is reported
            rather than thrown over a spawn that already landed. */
@@ -147,13 +203,28 @@ export function createDaemon(deps: ServerDeps) {
             nodeIdSaved = false;
           }
         }
-        /* The address is public; the key it came from is never returned or
-           logged, and is written only to the key file. */
+        /* What the caller has to do next, said here rather than left in this
+           process's stderr.
+           
+           `spawn` generates the child's operator key, and a key generated a
+           second ago holds no gas — so `enrol` cannot send, the child gets no
+           ERC-8004 identity, its purpose is never written, and later its
+           refusals are enforced on chain and rejected by `attest` with
+           `NodeNotBound`. Every one of those read as a `200` with a `false` in
+           it. The operator needs gas, and the sentence saying so belongs in
+           the answer. */
+        const needsGas = spawned.enrolled === false || (purpose ? spawned.purposePublished === false : false);
         return json(res, 200, {
           ...spawned,
           operator,
           ...(purpose ? { purpose } : {}),
           ...(label ? { label, nodeIdSaved } : {}),
+          ...(needsGas
+            ? {
+                operatorNeedsGas: true,
+                next: `send gas to ${operator}, then restart the daemon: it enrols on start and publishes any purpose this key file remembers`,
+              }
+            : {}),
         });
       }
 
