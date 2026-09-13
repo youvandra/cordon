@@ -51,3 +51,19 @@ export function usdc6(dollars: string): bigint {
   if (!Number.isFinite(value) || value < 0) return 0n;
   return BigInt(Math.round(value * 1_000_000));
 }
+
+/**
+ * A purpose cut down to something a node in the drawing can hold.
+ *
+ * The graph gives a label 240px at 12px and ellipsis, and a stated purpose is
+ * a sentence: "Social sentiment lead. Splits its window between two feed
+ * readers." truncates to a name plus half a clause, which reads worse than the
+ * name alone. So the first sentence is the label, and the rest is on the card
+ * in the side panel. A purpose that is one long sentence falls back to the
+ * ellipsis it would have had anyway.
+ */
+export function shortPurpose(text: string): string {
+  const stop = text.search(/[.;:—]\s/);
+  const head = stop > 0 ? text.slice(0, stop) : text;
+  return head.trim();
+}

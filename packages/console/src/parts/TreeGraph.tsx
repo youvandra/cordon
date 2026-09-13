@@ -22,6 +22,8 @@ import { formatUsdc } from "@cordon/fixtures";
 export interface GraphNode {
   id: string;
   label: string;
+  /** Whether `label` is a node id, so the drawing knows to set it in mono. */
+  labelIsId?: boolean;
   parent: string | null;
   /** Its own window: how much of it is gone. */
   spent6: bigint;
@@ -189,7 +191,7 @@ export function TreeGraph({
                 <span className="graph__rail" aria-hidden="true" />
 
                 <span className="graph__head">
-                  <span className="graph__label mono">{node.label}</span>
+                  <span className={`graph__label${node.labelIsId === false ? "" : " mono"}`}>{node.label}</span>
                   <span className="graph__role">
                     {node.parent === null ? "root" : `depth ${node.depth}`}
                   </span>

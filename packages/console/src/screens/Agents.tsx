@@ -9,7 +9,7 @@ import { RevokeDialog, SpawnDialog, WithdrawDialog } from "../parts/OwnerDialogs
 import { TreeGraph, type GraphNode } from "../parts/TreeGraph";
 import { useConsoleTree } from "../lib/useConsoleTree";
 import { usePurposes } from "../lib/purpose";
-import { cutLookup, isHeld, share, shortId } from "../lib/format";
+import { cutLookup, isHeld, share, shortId, shortPurpose } from "../lib/format";
 import type { ChainNode } from "../lib/tree";
 
 type Filter = "all" | "live" | "held" | "revoked";
@@ -56,7 +56,7 @@ export default function Agents() {
     /* The purpose is searched too, because it is now the thing on screen: a
        reader who can see "Social feed reader" and cannot search for it is
        being shown a name the search does not believe in. */
-    const said = purposes.get(node.node.toLowerCase())?.toLowerCase() ?? "";
+    const said = purposes.of(node.node)?.toLowerCase() ?? "";
     if (
       needle &&
       !node.node.toLowerCase().includes(needle) &&
@@ -78,7 +78,16 @@ export default function Agents() {
 
   const graph: GraphNode[] = nodes.map((node) => ({
     id: node.node,
-    label: shortId(node.node),
+    /* The drawing reads bottom-up, so a node has to be identifiable at a
+       glance or the picture is twelve identical cards. Its stated purpose does
+       that and its id does not; the id is still on the card in the panel and
+       under the row in the list. */
+    label: (() => {
+      const said = purposes.of(node.node);
+      return said ? shortPurpose(said) : shortId(node.node);
+    })(),
+    /* So the drawing does not set a sentence in the id's typeface. */
+    labelIsId: !purposes.of(node.node),
     parent: node.parent,
     spent6: node.windowSpent6,
     budget6: node.budget6,
@@ -140,7 +149,19 @@ export default function Agents() {
             rows={rows}
             rowKey={(node) => node.node}
             onRowClick={(node) => select(node.node)}
-            empty={<p className="muted table-empty">No agents match.</p>}
+            /* Why nothing matched, when the reason is ours. A search over
+               purposes that silently read nothing answers "no agents match",
+               which says this tree has no sentiment reader when what happened
+               is that the registry could not be read. */
+            empty={
+              <p className="muted table-empty">
+                {needle && purposes.failed
+                  ? "No agents match — and the registry that holds what each agent is for could not be read, so a search for a purpose cannot find one."
+                  : needle && purposes.reading
+                    ? "No agents match yet; still reading what each agent is for."
+                    : "No agents match."}
+              </p>
+            }
             columns={[
               {
                 id: "agent",
@@ -151,7 +172,7 @@ export default function Agents() {
                    already on chain. Where nothing was stated the id leads, as
                    it always did, rather than a row going blank. */
                 cell: (node) => {
-                  const said = purposes.get(node.node.toLowerCase());
+                  const said = purposes.of(node.node);
                   return (
                     <span className="agent" style={{ paddingLeft: node.depth * 18 }}>
                       <span className="cell-stack">

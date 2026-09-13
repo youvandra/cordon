@@ -88,25 +88,51 @@ export function usePurpose(node: Hex): Purpose {
 }
 
 /**
- * The same lookup for a whole list, in one pass.
+ * What a list of nodes was spawned for, read in one pass.
  *
  * A table cannot call `usePurpose` per row — the row count is data — and a
  * hook per row would also read the registry a row at a time. This gathers both
  * levels with `Promise.all` so the batching client packs each level into one
- * request, and returns what it could read. A node that has no identity, or
- * whose identity says nothing, is simply absent from the map: the caller then
- * shows what it always showed, which is the id.
+ * request.
+ *
+ * It reports whether the read failed rather than only what it found. A caller
+ * that shows the id when `of` answers nothing is right either way, but a
+ * caller that *searches* what this returns is not: a search over a map that
+ * silently stayed empty answers "no agents match", which says the tree has no
+ * sentiment reader when what happened is that the registry could not be read.
  */
-export function usePurposes(nodes: Hex[]): Map<string, string> {
-  const [found, setFound] = useState<Map<string, string>>(new Map());
+export interface Purposes {
+  /** What this node says it is for, or nothing. Case-insensitive. */
+  of(node: Hex | string): string | undefined;
+  /** True until the first answer, so "not yet" is not read as "none". */
+  reading: boolean;
+  /** True when the registry could not be read at all. */
+  failed: boolean;
+}
+
+type Read =
+  | { state: "idle" }
+  | { state: "reading" }
+  | { state: "read"; found: Map<string, string> }
+  | { state: "failed" };
+
+export function usePurposes(nodes: Hex[]): Purposes {
+  const [read, setRead] = useState<Read>({ state: "idle" });
   /* The identity of the list, not the array, so a re-render with an equal list
      does not re-read the chain. */
   const key = nodes.join(",");
 
   useEffect(() => {
     const record = DEPLOYMENT?.record as `0x${string}` | undefined;
-    if (!record || nodes.length === 0) return;
+    if (!record || nodes.length === 0) {
+      /* Not a failure and not an answer: there is nothing to describe. Left
+         `idle` so a list that briefly empties does not flash "could not be
+         read". */
+      setRead({ state: "idle" });
+      return;
+    }
     let live = true;
+    setRead({ state: "reading" });
 
     (async () => {
       try {
@@ -134,17 +160,18 @@ export function usePurposes(nodes: Hex[]): Map<string, string> {
           ),
         )) as `0x${string}`[];
 
-        const next = new Map<string, string>();
+        const found = new Map<string, string>();
         enrolled.forEach((node, i) => {
           const raw = raws[i]!;
           const text = raw === "0x" ? "" : hexToString(raw).trim();
-          if (text) next.set(node.toLowerCase(), text);
+          if (text) found.set(node.toLowerCase(), text);
         });
-        if (live) setFound(next);
+        if (live) setRead({ state: "read", found });
       } catch {
-        /* A list that cannot be described still lists. The per-node panel says
-           "could not read its identity"; a column has no room to, and a column
-           that shouted would shout twelve times. */
+        /* A list that cannot be described still lists — the ids are already on
+           screen and every figure beside them came from a different read. What
+           changes is that the caller can now say so. */
+        if (live) setRead({ state: "failed" });
       }
     })();
 
@@ -154,5 +181,10 @@ export function usePurposes(nodes: Hex[]): Map<string, string> {
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [key]);
 
-  return found;
+  const found = read.state === "read" ? read.found : null;
+  return {
+    of: (node) => found?.get(String(node).toLowerCase()),
+    reading: read.state === "reading",
+    failed: read.state === "failed",
+  };
 }

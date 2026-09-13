@@ -6,8 +6,9 @@ import { useTitle } from "../parts/Shell";
 import { Meter, PageHeader, PageSkeleton, Panel, ReadFailed } from "../parts/Page";
 import { FundDialog, SpawnDialog, WithdrawDialog } from "../parts/OwnerDialogs";
 import { useConsoleTree } from "../lib/useConsoleTree";
+import { usePurposes } from "../lib/purpose";
 import { useChainRefusals } from "../lib/refusals";
-import { cutLookup, isHeld, share, shortId, windowLabel } from "../lib/format";
+import { cutLookup, isHeld, share, shortId, shortPurpose, windowLabel } from "../lib/format";
 import type { ChainNode } from "../lib/tree";
 
 function Kpi({
@@ -47,6 +48,10 @@ export default function Overview() {
     root?.node ?? null,
   );
   const [asking, setAsking] = useState<"fund" | "spawn" | "withdraw" | null>(null);
+  /* The same read the Agents list makes. Both screens name the same agents, so
+     naming them on one and not the other is how the first screen a stranger
+     opens becomes the one that says least. */
+  const purposes = usePurposes(nodes.map((node) => node.node));
 
   if (!ready || chain.state === "looking") return <PageSkeleton />;
   if (chain.state === "unconfigured") return <ReadFailed title="No deployment configured" why="This build has no contract addresses to read." />;
@@ -180,8 +185,13 @@ export default function Overview() {
                 <li key={node.node}>
                   <Link className="list__row" to={`/console/agents?node=${node.node}`}>
                     <span className="list__main">
-                      <span className="mono list__id">{shortId(node.node)}</span>
+                      {purposes.of(node.node) ? (
+                        <span className="list__id">{shortPurpose(purposes.of(node.node)!)}</span>
+                      ) : (
+                        <span className="mono list__id">{shortId(node.node)}</span>
+                      )}
                       <span className="list__meta">
+                        {purposes.of(node.node) ? <span className="mono">{shortId(node.node)}</span> : null}
                         {node.parent === null ? "Root" : `Depth ${node.depth}`}
                         {cut ? <Tag tone="critical" size="sm">Revoked</Tag> : null}
                         {isHeld(node) ? <span className="accent-text">held by {shortId(node.boundBy)}</span> : null}
@@ -211,7 +221,11 @@ export default function Overview() {
                       <span className="list__main">
                         <span className="list__strong num">{formatUsdc(refusal.amount6)}</span>
                         <span className="list__meta">
-                          <span className="mono">{refusal.reason}</span> · {shortId(refusal.node)}
+                          {/* The reason and who was refused. A refusal reading
+                              "tranche-cap · Cheap-source probe" says what one
+                              reading "tranche-cap · 0x08bd7e…" cannot. */}
+                          <span className="mono">{refusal.reason}</span> ·{" "}
+                          {purposes.of(refusal.node) ? shortPurpose(purposes.of(refusal.node)!) : shortId(refusal.node)}
                         </span>
                       </span>
                       {refusal.released ? (

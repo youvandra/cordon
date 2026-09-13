@@ -5,9 +5,10 @@ import { ARC, ENFORCED_BY, REASON_MEANING, formatUsdc } from "@cordon/fixtures";
 import { useTitle } from "../parts/Shell";
 import { PageHeader, PageSkeleton, Panel, ReadFailed } from "../parts/Page";
 import { useConsoleTree } from "../lib/useConsoleTree";
+import { usePurposes } from "../lib/purpose";
 import { useChainRefusals, type ChainRefusal } from "../lib/refusals";
 import { useRelease } from "../lib/mandate";
-import { cutLookup, shortId } from "../lib/format";
+import { cutLookup, shortId, shortPurpose } from "../lib/format";
 import { site } from "../lib/links";
 
 type Filter = "all" | "standing" | "released";
@@ -36,6 +37,7 @@ export default function Refusals() {
     nodes.map((node) => node.node),
     root?.node ?? null,
   );
+  const purposes = usePurposes(nodes.map((node) => node.node));
   const [params, setParams] = useSearchParams();
   const [filter, setFilter] = useState<Filter>("all");
   const [releasing, setReleasing] = useState<ChainRefusal | null>(null);
@@ -129,7 +131,26 @@ export default function Refusals() {
               cell: (refusal) => <span className="num strong">{formatUsdc(refusal.amount6)}</span>,
             },
             { id: "reason", header: "Bound", cell: (refusal) => <span className="mono">{refusal.reason}</span> },
-            { id: "agent", header: "Agent", cell: (refusal) => <span className="mono muted">{shortId(refusal.node)}</span> },
+            {
+              id: "agent",
+              header: "Agent",
+              /* Who was refused, said the way the rest of the console says it:
+                 "Cheap-source probe" and not `0x08bd7e…`. This is the table a
+                 stranger reads to decide whether the refusals are real, and a
+                 column of hexadecimal tells them nothing about which agent
+                 kept hitting which bound. */
+              cell: (refusal) => {
+                const said = purposes.of(refusal.node);
+                return said ? (
+                  <span className="cell-stack">
+                    <span>{shortPurpose(said)}</span>
+                    <span className="mono small muted">{shortId(refusal.node)}</span>
+                  </span>
+                ) : (
+                  <span className="mono muted">{shortId(refusal.node)}</span>
+                );
+              },
+            },
             {
               id: "status",
               header: "Status",
