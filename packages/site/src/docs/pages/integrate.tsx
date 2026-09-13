@@ -59,18 +59,20 @@ export function Integrate() {
 
       <H2 id="mcp">1. An MCP client</H2>
       <P>
-        The block below goes in your client's config. It points the server at
-        the two files the daemon already reads — the addresses in{" "}
-        <C>.env.live</C>, the keys in the file <C>init</C> wrote — so every key
-        keeps one copy, in the file <C>init</C> guards, rather than a second one
-        in a config people paste into issues.
+        The block below goes in your client's config. The server is published
+        as <C>cordon-mcp</C>, so there is nothing to clone for this part. It
+        reads the key from the file <C>init</C> wrote, named in{" "}
+        <C>CORDON_ENV_FILE</C>, so every key keeps one copy — in the file{" "}
+        <C>init</C> guards, rather than a second one in a config people paste
+        into issues. The contract addresses default to the deployment the
+        package was built against.
       </P>
       <Code lang="json">{MCP_CONFIG}</Code>
-      <Note tone="warn" title="Absolute paths, not ~">
+      <Note tone="warn" title="An absolute path, not ~">
         An MCP client starts the server with no shell, so nothing expands{" "}
-        <C>~</C> or <C>$HOME</C> in that block — and node does not expand a
-        tilde itself. <C>--env-file=~/.cordon/cordon.env</C> fails with{" "}
-        <C>not found</C> there and in every shell.
+        <C>~</C> or <C>$HOME</C> in that block. Write the full path to the key
+        file, and Node 22 or newer has to be on the client's <C>PATH</C> for{" "}
+        <C>npx</C> to find.
       </Note>
       <P>
         A keyring holding more than one node also takes <C>CORDON_MCP_NODE</C>,

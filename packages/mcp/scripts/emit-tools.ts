@@ -98,34 +98,28 @@ function configBlock(): string {
   }
   env.CORDON_RPC = ARC.rpc;
 
-  /* `npx -y @cordon/mcp` is the shape this takes once the package is
-     published, and it is not published: a reader who copied that got a 404
-     from the registry on the one block the whole site invites them to copy.
-     What works today is the checkout they already have, so that is what the
-     block says. It goes back to npx on the day `npm publish` runs, and not a
-     day earlier. */
-  /* The key stays in the file `init` wrote, and the client is pointed at it.
-     Inlining `CORDON_KEY_ME` here gives every key a second copy, in a file
-     people paste into issues and screenshot for slides. The addresses go the
-     same way, so the block carries no value the reader has to retype.
+  /* Published as `cordon-mcp` on 13 September, so the block is npx and needs
+     no checkout. The key stays in the file `init` wrote and the server reads
+     it through CORDON_ENV_FILE: inlining `CORDON_KEY_ME` here gives every key
+     a second copy, in a file people paste into issues and screenshot for
+     slides. The addresses default to the deployment the package was built
+     against, so the block carries no value the reader has to retype.
 
-     Absolute paths, because an MCP client starts the server with no shell:
-     nothing expands `~` or `$HOME`, and node does not expand a tilde either —
-     `--env-file=~/.cordon/cordon.env` is `not found` in every case. The env
-     block keeps only what picks a node, which is the one thing a keyring of
-     several needs said out loud. */
+     An absolute path, because an MCP client starts the server with no shell:
+     nothing expands `~` or `$HOME`. The env block otherwise keeps only what
+     picks a node, which is the one thing a keyring of several needs said out
+     loud. */
   void env;
   return JSON.stringify(
     {
       mcpServers: {
         cordon: {
-          command: "node",
-          args: [
-            "--env-file=/Users/<you>/cordon/packages/daemon/.env.live",
-            "--env-file=/Users/<you>/.cordon/cordon.env",
-            "/Users/<you>/cordon/packages/mcp/src/main.ts",
-          ],
-          env: { CORDON_MCP_NODE: "0x… — the node this server speaks for" },
+          command: "npx",
+          args: ["-y", "cordon-mcp"],
+          env: {
+            CORDON_ENV_FILE: "/Users/<you>/.cordon/cordon.env",
+            CORDON_MCP_NODE: "0x… — the node this server speaks for",
+          },
         },
       },
     },

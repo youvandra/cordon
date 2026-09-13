@@ -13,10 +13,11 @@ export function Mcp() {
 
       <H2 id="install">Install</H2>
       <P>
-        Clone the repository and point the client at the entry point.{" "}
-        <C>@cordon/mcp</C> is not published to npm yet, so a config block saying{" "}
-        <C>npx -y @cordon/mcp</C> would send a reader to a 404 on the one thing
-        the site asks them to copy.
+        The server is published to npm as <C>cordon-mcp</C>, so a client runs
+        it with <C>npx</C> and nothing needs cloning for this part. It reads the
+        operator key from the file <C>init</C> wrote, named by an absolute path
+        in <C>CORDON_ENV_FILE</C>; the key never appears in the client's config.
+        Node 22 or newer.
       </P>
       <Code lang="json">{MCP_CONFIG}</Code>
       <P>

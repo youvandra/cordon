@@ -32,7 +32,7 @@ export const ABSENT_TOOLS = [
 
 /** The block to paste into an MCP client. Its environment is the one the
  *  daemon actually reads — see ENV in packages/daemon/src/config.ts. */
-export const MCP_CONFIG = "{\n  \"mcpServers\": {\n    \"cordon\": {\n      \"command\": \"node\",\n      \"args\": [\n        \"--env-file=/Users/<you>/cordon/packages/daemon/.env.live\",\n        \"--env-file=/Users/<you>/.cordon/cordon.env\",\n        \"/Users/<you>/cordon/packages/mcp/src/main.ts\"\n      ],\n      \"env\": {\n        \"CORDON_MCP_NODE\": \"0x… — the node this server speaks for\"\n      }\n    }\n  }\n}";
+export const MCP_CONFIG = "{\n  \"mcpServers\": {\n    \"cordon\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"cordon-mcp\"\n      ],\n      \"env\": {\n        \"CORDON_ENV_FILE\": \"/Users/<you>/.cordon/cordon.env\",\n        \"CORDON_MCP_NODE\": \"0x… — the node this server speaks for\"\n      }\n    }\n  }\n}";
 
 export const MCP_ENV = {
   "required": {

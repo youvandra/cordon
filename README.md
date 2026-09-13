@@ -360,35 +360,31 @@ opens onto every field the registry and the vault hold for a node.
 
 ### Put the fence in front of an MCP client
 
-`@cordon/mcp` is not published to npm yet, so the config block names the entry
-point in a checkout rather than an `npx` that would 404:
+The server is on npm as [`cordon-mcp`](https://www.npmjs.com/package/cordon-mcp),
+so this part needs no checkout:
 
 ```json
 {
   "mcpServers": {
     "cordon": {
-      "command": "node",
-      "args": ["/path/to/cordon/packages/mcp/src/main.ts"],
+      "command": "npx",
+      "args": ["-y", "cordon-mcp"],
       "env": {
-        "CORDON_VAULT": "<TreeVault, from the table above>",
-        "CORDON_REGISTRY": "<MandateRegistry, from the same table>",
-        "CORDON_NODE_ME": "0x…",
-        "CORDON_KEY_ME": "…",
-        "CORDON_RPC": "https://rpc.testnet.arc.io"
+        "CORDON_ENV_FILE": "/Users/<you>/.cordon/cordon.env",
+        "CORDON_MCP_NODE": "0x<node id>"
       }
     }
   }
 }
 ```
 
-The two addresses are the deployed ones and this file has exactly one copy of
-them — the table `deploy.sh` writes. The block with them filled in is at
-<https://getcordon.xyz/docs/mcp>, generated from the deployment file rather
-than typed.
-
-`CORDON_KEY_ME` is held by the server process. The model never sees it and has
-no tool that could use one. Where the keyring holds several nodes,
-`CORDON_MCP_NODE` names which one this server speaks for.
+`CORDON_ENV_FILE` is the key file `init` wrote, as an absolute path — an MCP
+client starts the server with no shell, so nothing expands `~` or `$HOME`. The
+server reads the operator key from it, so the key never appears in the client
+config and the model never sees it. The contract addresses default to the
+deployment the package was built against; `CORDON_VAULT`, `CORDON_REGISTRY`
+and `CORDON_RECORD` override them. `CORDON_MCP_NODE` names which node this
+server speaks for when the key file holds several. Node 22 or newer.
 
 ### From nothing to a refusal
 
@@ -955,7 +951,6 @@ JavaScript. It exits non-zero only when something claims to be up and is wrong
 
 | | |
 |---|---|
-| **Next** | publish `@cordon/mcp`, so the config block can say `npx -y @cordon/mcp` |
 | **Next** | Arc mainnet, when it launches — the contracts are the ones that would run there, with no upgrade path and no owner |
 | **Then** | buyer-side settlement search, if Circle's x402 transfer endpoints turn out to exist, so reconciliation can match a declared payee against the paid one |
 | **Then** | cross-organisation delegation, where a parent and a child belong to different people — the same mechanism, waiting on strangers to adopt it |
