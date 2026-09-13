@@ -24,6 +24,7 @@ import { hexToString } from "viem";
 import { ERC8004 } from "../../fixtures/src/index.ts";
 import { load } from "../src/config.ts";
 import { Gate } from "../src/gate.ts";
+import { cleanPurpose } from "../src/keyfile.ts";
 import { ConductRecordAbi } from "../src/abi.gen.ts";
 
 /* Keyed by node id. A node this daemon holds no key for is skipped by name
@@ -69,10 +70,15 @@ if (!config.record) {
 for (const [node, purpose] of Object.entries(PURPOSE)) {
   const short = `${node.slice(0, 12)}…`;
 
-  /* The registry's own cap, checked here rather than discovered by a revert
-     that has already cost gas. */
-  if (purpose.length > ERC8004.purposeMaxLength) {
-    console.log(`${short}  too long (${purpose.length} > ${ERC8004.purposeMaxLength}) — skipped`);
+  /* `cleanPurpose` and not a length check of this script's own. It is the one
+     place a purpose is validated — length, and control characters, which is
+     the rule that matters: a newline in a description is a line of its own in
+     the key file, and `CORDON_KEY_ROOT=…` smuggled in that way is a key the
+     next `load` believes. A second copy of half that rule is how the half it
+     left out stops being enforced. */
+  const clean = cleanPurpose(purpose);
+  if (!clean) {
+    console.log(`${short}  empty purpose — skipped`);
     continue;
   }
   if (!held.has(node.toLowerCase())) {
@@ -109,16 +115,16 @@ for (const [node, purpose] of Object.entries(PURPOSE)) {
     args: [agentId, ERC8004.purposeKey],
   })) as `0x${string}`;
   const already = raw === "0x" ? "" : hexToString(raw).trim();
-  if (already === purpose) {
+  if (already === clean) {
     console.log(`${short}  already says this — left alone`);
     continue;
   }
 
   if (dryRun) {
-    console.log(`${short}  would write to #${agentId}: ${purpose}`);
+    console.log(`${short}  would write to #${agentId}: ${clean}`);
     continue;
   }
 
-  const ok = await gate.describe(node as `0x${string}`, purpose);
-  console.log(`${short}  ${ok ? `written to #${agentId}` : "write refused"}: ${purpose}`);
+  const ok = await gate.describe(node as `0x${string}`, clean);
+  console.log(`${short}  ${ok ? `written to #${agentId}` : "write refused"}: ${clean}`);
 }
