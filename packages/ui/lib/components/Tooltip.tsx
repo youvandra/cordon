@@ -30,18 +30,61 @@ export interface TooltipProps {
  * bubble to a position that is on screen and still cut in half, which is what
  * an owner saw on the first field this pattern was used on.
  */
+/**
+ * Whether this element is the containing block for `position: fixed`
+ * descendants, and so clips them despite their being fixed.
+ *
+ * These are the properties that take a fixed element out of the viewport's
+ * coordinate space and put it in an ancestor's. Without this test the rule
+ * below would be "nothing above a fixed element clips it", which is the common
+ * case and not the whole one.
+ */
+function holdsFixedDescendants(style: CSSStyleDeclaration): boolean {
+  return (
+    style.transform !== "none" ||
+    style.perspective !== "none" ||
+    style.filter !== "none" ||
+    (style as CSSStyleDeclaration & { backdropFilter?: string }).backdropFilter !== undefined &&
+      (style as CSSStyleDeclaration & { backdropFilter?: string }).backdropFilter !== "none" ||
+    /\b(paint|layout|strict|content)\b/.test(style.contain) ||
+    /\b(transform|filter|perspective)\b/.test(style.willChange)
+  );
+}
+
 function clipBand(node: Element): { left: number; right: number } {
   let left = 0;
   let right = window.innerWidth;
+  /**
+   * True once the walk has passed a `position: fixed` ancestor and has not yet
+   * found the element that holds it.
+   *
+   * A fixed element's containing block is the viewport, so an ancestor above
+   * it with `overflow: hidden` does not clip it — and counting one anyway
+   * narrows the band to a box the bubble is not inside, then shifts the bubble
+   * to fit a boundary that was never there. `Modal` renders into a fixed
+   * layer, and `body` on this console carries `overflow: hidden`, so the walk
+   * met exactly that shape: measured, the band came back 312..712 where the
+   * browser painted 0..1024.
+   */
+  let escaped = false;
   for (let parent = node.parentElement; parent; parent = parent.parentElement) {
     const style = getComputedStyle(parent);
-    if (style.overflowX === "visible" && style.overflowY === "visible") continue;
-    const box = parent.getBoundingClientRect();
-    /* A clipper that has not been laid out yet would otherwise collapse the
-       band to nothing and pin every bubble to the left of the screen. */
-    if (box.width === 0) continue;
-    left = Math.max(left, box.left);
-    right = Math.min(right, box.right);
+    const clips = escaped ? holdsFixedDescendants(style) : true;
+
+    if (clips && (style.overflowX !== "visible" || style.overflowY !== "visible")) {
+      const box = parent.getBoundingClientRect();
+      /* A clipper that has not been laid out yet would otherwise collapse the
+         band to nothing and pin every bubble to the left of the screen. */
+      if (box.width !== 0) {
+        left = Math.max(left, box.left);
+        right = Math.min(right, box.right);
+      }
+    }
+
+    /* Whatever holds the fixed element is back in the ordinary chain, and so
+       is everything above it. */
+    if (escaped && holdsFixedDescendants(style)) escaped = false;
+    if (style.position === "fixed") escaped = true;
   }
   return { left, right };
 }
