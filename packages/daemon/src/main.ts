@@ -6,6 +6,8 @@ import { Gate } from "./gate.ts";
 import { CircleSettler } from "./settle.ts";
 import { createDaemon } from "./server.ts";
 import { keyFileAt } from "./keyfile.ts";
+import { dirname, join } from "node:path";
+import { ChainReleases } from "./released.ts";
 
 const config = load(process.env);
 const gate = new Gate(config);
@@ -14,6 +16,11 @@ const keyFile = keyFileAt(config.keyFile);
 const server = createDaemon({
   gate,
   keyFile,
+  released: new ChainReleases({
+    count: () => gate.refusalCount(),
+    read: (id) => gate.refusal(id),
+    file: join(dirname(config.keyFile), "released-spent.json"),
+  }),
   settler: new CircleSettler({
     publicClient: gate.publicClientForSettlement,
     walletFor: (node) => gate.signerFor(node),

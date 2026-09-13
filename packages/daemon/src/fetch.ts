@@ -13,6 +13,7 @@ import { parseChallenge, selectOffer, type Acceptable, type Offer } from "./chal
 import type { Gate, DrawOutcome } from "./gate.ts";
 import type { Settler } from "./settle.ts";
 import { assertPublicUrl, EgressError } from "./egress.ts";
+import type { ReleasedPurchases } from "./released.ts";
 
 export interface FetchRequest {
   node: Hex;
@@ -41,6 +42,9 @@ export type FetchResult =
        *  so it could be paid. A purchase has two transactions of ours — the
        *  draw and this — and a third that is the seller's own collection. */
       settlementTx?: string;
+      /** Present when this was paid out of an owner's release of that refusal,
+       *  and no draw was sent. */
+      releasedRefusal?: bigint;
     };
 
 export interface Transport {
@@ -53,7 +57,13 @@ export interface Transport {
 
 export async function cordonFetch(
   request: FetchRequest,
-  deps: { gate: Gate; settler: Settler; acceptable: Acceptable; transport: Transport },
+  deps: {
+    gate: Gate;
+    settler: Settler;
+    acceptable: Acceptable;
+    transport: Transport;
+    released?: ReleasedPurchases;
+  },
 ): Promise<FetchResult> {
   const { gate, settler, acceptable, transport } = deps;
   const method = request.method ?? "GET";
@@ -73,23 +83,40 @@ export async function cordonFetch(
      seller's own price. Neither is chosen by the agent, and neither is chosen
      by us — which is exactly why the tranche cap exists: a seller asking for
      $200 gets refused by the contract, not argued with here. */
-  const draw = await gate.draw(request.node, offer.payTo as Address, offer.amount);
+  /* A purchase the owner already released is paid out of that release, with
+     no draw: the release put the money in this operator's Gateway balance, and
+     a draw would only be refused by the same bound again. See `released.ts`. */
+  const releasedFrom = deps.released
+    ? await deps.released.claim(request.node, offer.payTo as Address, offer.amount)
+    : null;
+
+  const draw: DrawOutcome =
+    releasedFrom !== null
+      ? { released: true, reason: "none", refusalId: releasedFrom }
+      : await gate.draw(request.node, offer.payTo as Address, offer.amount);
 
   if (!draw.released) {
     return { paid: false, free: false, refusal: draw, offer };
   }
 
-  const settlement = await settler.settle(request.node, {
-    to: offer.payTo as Address,
-    value: offer.amount,
-    asset: offer.asset as Address,
-    network: offer.network,
-    /* The seller's own terms for the signature it will submit: the token's
-       EIP-712 name and version, and how long the authorisation must stay
-       valid. Both come from the challenge, neither from us. */
-    extra: offer.extra,
-    maxTimeoutSeconds: offer.maxTimeoutSeconds,
-  });
+  let settlement;
+  try {
+    settlement = await settler.settle(request.node, {
+      to: offer.payTo as Address,
+      value: offer.amount,
+      asset: offer.asset as Address,
+      network: offer.network,
+      /* The seller's own terms for the signature it will submit: the token's
+         EIP-712 name and version, and how long the authorisation must stay
+         valid. Both come from the challenge, neither from us. */
+      extra: offer.extra,
+      maxTimeoutSeconds: offer.maxTimeoutSeconds,
+    });
+  } catch (error) {
+    /* Nothing was paid, so the release is still the owner's to spend. */
+    if (releasedFrom !== null) deps.released!.unclaim(releasedFrom);
+    throw error;
+  }
 
   const second = await transport(request.url, {
     method,
@@ -105,6 +132,7 @@ export async function cordonFetch(
     draw,
     offer,
     settlementTx: settlement.txHash,
+    ...(releasedFrom !== null ? { releasedRefusal: releasedFrom } : {}),
   };
 }
 

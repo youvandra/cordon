@@ -214,6 +214,24 @@ export class Gate {
     return { available, boundBy };
   }
 
+  async refusalCount(): Promise<bigint> {
+    return (await this.publicClient.readContract({
+      address: this.config.vault,
+      abi: TreeVaultAbi,
+      functionName: "refusalCount",
+    })) as bigint;
+  }
+
+  /** One refusal as the vault holds it, including whether the owner released it. */
+  async refusal(id: bigint): Promise<{ node: Hex; counterparty: Address; amount6: bigint; released: boolean }> {
+    return (await this.publicClient.readContract({
+      address: this.config.vault,
+      abi: TreeVaultAbi,
+      functionName: "refusal",
+      args: [id],
+    })) as { node: Hex; counterparty: Address; amount6: bigint; released: boolean };
+  }
+
   async mandate(node: Hex) {
     return this.publicClient.readContract({
       address: this.config.registry,

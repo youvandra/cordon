@@ -60,6 +60,9 @@ export function renderPaid(outcome: DrawOutcome, offer: Offer, body: unknown): s
   const text = typeof body === "string" ? body : JSON.stringify(body, null, 2);
   return [
     `Paid ${usdc(offer.amount)} to ${offer.payTo} on ${offer.network}.`,
+    !outcome.txHash && outcome.refusalId !== undefined
+      ? `Paid out of the owner's release of refusal ${outcome.refusalId}. No draw was sent; the bound did not move.`
+      : "",
     outcome.beneficiary ? `Tranche credited to ${outcome.beneficiary}.` : "",
     outcome.txHash ? `Draw ${outcome.txHash}` : "",
     "",

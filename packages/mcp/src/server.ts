@@ -18,6 +18,7 @@ import type { Settler } from "../../daemon/src/settle.ts";
 import type { Acceptable, Offer } from "../../daemon/src/challenge.ts";
 import type { DrawOutcome } from "../../daemon/src/gate.ts";
 import { renderPaid, renderRefusal } from "./render.ts";
+import type { ReleasedPurchases } from "../../daemon/src/released.ts";
 
 export interface McpDeps {
   gate: Gate;
@@ -31,6 +32,8 @@ export interface McpDeps {
   newOperatorKey?: () => Hex;
   /** Where a spawned child's key is written before the spawn is sent. */
   keyFile?: KeyFile;
+  /** Refusals the owner released, spent before a draw is asked for. */
+  released?: ReleasedPurchases;
 }
 
 const text = (s: string) => ({ content: [{ type: "text" as const, text: s }] });
@@ -66,7 +69,7 @@ export function createMcpServer(deps: McpDeps): McpServer {
     async ({ url, method, body }) => {
       const result = await cordonFetch(
         { node: deps.node, url, method, body },
-        { gate: deps.gate, settler: deps.settler, acceptable: deps.acceptable, transport },
+        { gate: deps.gate, settler: deps.settler, acceptable: deps.acceptable, transport, released: deps.released },
       );
 
       if ("free" in result && result.free) {

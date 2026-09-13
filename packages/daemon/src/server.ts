@@ -21,6 +21,7 @@ import type { Settler } from "./settle.ts";
 import { cordonFetch, httpTransport, type Transport } from "./fetch.ts";
 import type { Acceptable } from "./challenge.ts";
 import { cleanPurpose, type KeyFile } from "./keyfile.ts";
+import type { ReleasedPurchases } from "./released.ts";
 
 export interface ServerDeps {
   gate: Gate;
@@ -32,6 +33,8 @@ export interface ServerDeps {
   /** Where a spawned child's key is written before the spawn is sent. Without
    *  one, the key lives only in this process and dies with it. */
   keyFile?: KeyFile;
+  /** Refusals the owner released, spent before a draw is asked for. */
+  released?: ReleasedPurchases;
 }
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
@@ -87,7 +90,7 @@ export function createDaemon(deps: ServerDeps) {
             headers: (body.headers as Record<string, string>) ?? undefined,
             body: typeof body.body === "string" ? body.body : undefined,
           },
-          { gate: deps.gate, settler: deps.settler, acceptable: deps.acceptable, transport },
+          { gate: deps.gate, settler: deps.settler, acceptable: deps.acceptable, transport, released: deps.released },
         );
         /* A refusal is a 200 with a refusal in it, not an HTTP error. The agent
            asked a valid question and got a real answer: no. */

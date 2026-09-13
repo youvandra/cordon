@@ -19,6 +19,8 @@ import { load } from "../../daemon/src/config.ts";
 import { Gate } from "../../daemon/src/gate.ts";
 import { CircleSettler } from "../../daemon/src/settle.ts";
 import { keyFileAt } from "../../daemon/src/keyfile.ts";
+import { ChainReleases } from "../../daemon/src/released.ts";
+import { dirname, join } from "node:path";
 import { ARC } from "../../fixtures/src/index.ts";
 import { createMcpServer } from "./server.ts";
 
@@ -43,6 +45,13 @@ if (!node) {
 const server = createMcpServer({
   gate,
   keyFile: keyFileAt(config.keyFile),
+  /* The same file the daemon keeps, so a release spent through one surface is
+     not spent again through the other. */
+  released: new ChainReleases({
+    count: () => gate.refusalCount(),
+    read: (id) => gate.refusal(id),
+    file: join(dirname(config.keyFile), "released-spent.json"),
+  }),
   settler: new CircleSettler({
     publicClient: gate.publicClientForSettlement,
     walletFor: (node) => gate.signerFor(node),
