@@ -50,6 +50,7 @@ const server = createMcpServer({
   released: new ChainReleases({
     count: () => gate.refusalCount(),
     read: (id) => gate.refusal(id),
+    live: (node) => gate.isLive(node),
     file: join(dirname(config.keyFile), "released-spent.json"),
   }),
   settler: new CircleSettler({

@@ -40,6 +40,11 @@ export interface ReleasedPurchases {
 export interface ChainReleasesOptions {
   count: () => Promise<bigint>;
   read: (id: bigint) => Promise<RefusalRow>;
+  /** `MandateRegistry.isLive` — false when this node or any ancestor is cut.
+   *  Required, because `TreeVault.release` checks only the owner: a release
+   *  signed on a cut branch still moves money, and without this check the
+   *  daemon would buy for an agent the owner already stopped. */
+  live: (node: Hex) => Promise<boolean>;
   /** Where spent refusal ids are kept. Ids are public; the file is not a secret. */
   file: string;
   /** How many of the newest refusals to look through. */
@@ -70,6 +75,11 @@ export class ChainReleases implements ReleasedPurchases {
       if (row.node.toLowerCase() !== node.toLowerCase()) continue;
       if (row.counterparty.toLowerCase() !== payTo.toLowerCase()) continue;
       if (row.amount6 !== amount6) continue;
+      /* A cut branch buys nothing, released or not. Read at the moment of the
+         purchase, not the release: revoking after releasing still stops it.
+         Not marked spent, so the money stays visible as unspent rather than
+         looking like a purchase that happened. */
+      if (!(await this.options.live(node))) return null;
 
       /* Reserved and written before anything is paid. A crash between here
          and the payment leaves a release marked spent that was not — which

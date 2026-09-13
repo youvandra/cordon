@@ -232,6 +232,16 @@ export class Gate {
     })) as { node: Hex; counterparty: Address; amount6: bigint; released: boolean };
   }
 
+  /** False when this node or any ancestor has been revoked. */
+  async isLive(node: Hex): Promise<boolean> {
+    return (await this.publicClient.readContract({
+      address: this.config.registry,
+      abi: MandateRegistryAbi,
+      functionName: "isLive",
+      args: [node],
+    })) as boolean;
+  }
+
   async mandate(node: Hex) {
     return this.publicClient.readContract({
       address: this.config.registry,

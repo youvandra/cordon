@@ -43,7 +43,8 @@ const seller: Transport = async (_url, init) =>
     ? { status: 200, headers: {}, body: { blockNumber: "1" } }
     : { status: 402, headers: {}, body: challenge };
 
-function world(rows: RefusalRow[], options: { settleFails?: () => boolean } = {}) {
+function world(rows: RefusalRow[], options: { settleFails?: () => boolean; cut?: Set<string> } = {}) {
+  const cut = options.cut ?? new Set<string>();
   const draws: Hex[] = [];
   const settled: Payment[] = [];
   const gate = {
@@ -64,11 +65,12 @@ function world(rows: RefusalRow[], options: { settleFails?: () => boolean } = {}
     new ChainReleases({
       count: async () => BigInt(rows.length),
       read: async (id) => rows[Number(id) - 1]!,
+      live: async (node) => !cut.has(node.toLowerCase()),
       file,
     });
   const released = releases();
   const deps = { gate, settler, acceptable: { networks: [NETWORK], assets: [ASSET] }, transport: seller, released };
-  return { draws, settled, deps, releases };
+  return { draws, settled, deps, releases, cut };
 }
 
 const row = (over: Partial<RefusalRow> = {}): RefusalRow => ({
@@ -115,6 +117,19 @@ test("a release for another node, payee or amount is not this purchase's", async
   assert.equal(result.paid, false);
   assert.equal(w.draws.length, 1);
   assert.equal(w.settled.length, 0);
+});
+
+test("a release on a cut branch buys nothing, even when the cut came after the release", async () => {
+  const w = world([row()]);
+  w.cut.add(NODE.toLowerCase());
+  const result = await cordonFetch({ node: NODE, url: "https://seller/arc/snapshot" }, w.deps);
+  assert.equal(w.settled.length, 0, "nothing is paid out of the release");
+  assert.equal(result.paid, false);
+  assert.equal(w.draws.length, 1, "it falls through to a draw, which the contract refuses as revoked");
+
+  w.cut.delete(NODE.toLowerCase());
+  const restored = await cordonFetch({ node: NODE, url: "https://seller/arc/snapshot" }, w.deps);
+  assert.equal(restored.paid, true, "the release was not marked spent by the refused attempt");
 });
 
 test("a settlement that fails leaves the release spendable", async () => {
