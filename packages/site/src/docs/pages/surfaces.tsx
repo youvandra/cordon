@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ABSENT_TOOLS, ATTEST, MARKETPLACE, MCP_CONFIG, MCP_TOOLS } from "@cordon/fixtures";
+import { ABSENT_TOOLS, ATTEST, DEMO_SELLER, MARKETPLACE, MCP_CONFIG, MCP_TOOLS } from "@cordon/fixtures";
 import { C, Code, H2, Lead, Note, P, Table, UL } from "../parts";
 
 export function Mcp() {
@@ -394,6 +394,80 @@ curl -H "X-PAYMENT: $(cordon-pay …)" https://attest.getcordon.xyz/attest/7
         is the difference between a payer being refused by the token and a payer
         being quoted a price they can actually pay. The key it holds submits
         settlements and does nothing else: no mandate, no vault, no record.
+      </P>
+    </>
+  );
+}
+
+export function DemoSeller() {
+  const price = Number(DEMO_SELLER.price6) / 1e6;
+  const url = `https://${DEMO_SELLER.host}${DEMO_SELLER.resourcePath}`;
+
+  return (
+    <>
+      <Lead>
+        A seller that is not Cordon. <C>{`GET ${DEMO_SELLER.resourcePath}`}</C>{" "}
+        sells a live reading of Arc testnet — the latest block, its timestamp and
+        the gas price — for ${price.toFixed(2)} over x402, so an agent behind the
+        fence has something outside the record to buy, and to be refused.
+      </Lead>
+
+      <H2 id="why">Why it exists</H2>
+      <P>
+        Circle's agent marketplace is where an outside seller would come from,
+        and it has nothing on a testnet: of the{" "}
+        {MARKETPLACE.offersTotal.toLocaleString("en-US")} offers it listed, every
+        one settles on a mainnet. A mandate on Arc testnet cannot pay any of
+        them. This stands in, on its own name, until a testnet seller exists.
+      </P>
+      <Note tone="warn" title="It is ours">
+        Run by the same box and paid to the same relayer address as{" "}
+        <Link to="/docs/attest">Attest</Link>. It is a stand-in for a third
+        party, not one — and nothing it returns is a figure Cordon enforces.
+      </Note>
+
+      <H2 id="price">Why a dollar</H2>
+      <P>
+        Far above a cent on purpose. A node whose per-purchase cap is below a
+        dollar is refused <C>tranche-cap</C>, and a node given exactly a dollar
+        pays — so which bound decided is readable off the console without
+        arithmetic.
+      </P>
+
+      <H2 id="buying">Buying through the fence</H2>
+      <Code lang="bash">{`curl -i ${url}
+# 402, with the offer in the body
+
+curl -s -X POST localhost:8402/fetch \\
+  -H 'content-type: application/json' \\
+  -d '{"node":"0x…","url":"${url}"}'`}</Code>
+      <Table
+        head={["Node's tranche cap", "What comes back"]}
+        rows={[
+          ["$1 or more, window and ancestors with room", <><C key="p">paid: true</C>, the reading, the draw and the settlement</>],
+          ["below $1", <><C key="r">paid: false</C>, <C key="t">tranche-cap</C>, a refusal id published to ERC-8004</>],
+        ]}
+      />
+      <Note tone="good" title="Rehearsed live, 13 September">
+        A node with a $1 cap paid in about fifteen seconds; a node with a $0.0005
+        cap was refused — <Link to="/refusal/13">refusal 13</Link>.
+      </Note>
+
+      <H2 id="answer">What comes back</H2>
+      <Table
+        head={["Field", "What it holds"]}
+        rows={[
+          [<C key="c">chainId</C>, "the chain read"],
+          [<C key="b">blockNumber</C>, "the latest block at the moment of sale"],
+          [<C key="t">timestamp</C>, "that block's own timestamp"],
+          [<C key="g">gasPrice</C>, "the chain's gas price, in wei"],
+        ]}
+      />
+      <P>
+        The chain is read before the price is mentioned: if it cannot be read,
+        the answer is a 503 with no offer, so nobody signs for a reading that
+        cannot be given. Payment, replay and settlement are Attest's code, not a
+        copy of it.
       </P>
     </>
   );

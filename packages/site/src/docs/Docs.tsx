@@ -6,7 +6,7 @@ import { HowItWorks, Introduction, Quickstart } from "./pages/start";
 import { DocsIndex, Integrate, Walkthrough } from "./pages/integrate";
 import { Console, Settlement, Troubleshooting } from "./pages/settlement";
 import { DrawsAndBounds, MandateTree, Refusals, TheRecord } from "./pages/concepts";
-import { Attest, Daemon, Mcp, Meter, Proxy } from "./pages/surfaces";
+import { Attest, Daemon, DemoSeller, Mcp, Meter, Proxy } from "./pages/surfaces";
 import { Configuration, Contracts, Faq, Gates } from "./pages/reference";
 
 /**
@@ -29,6 +29,7 @@ const PAGES: Record<string, ComponentType> = {
   daemon: Daemon,
   meter: Meter,
   attest: Attest,
+  "demo-seller": DemoSeller,
   console: Console,
   contracts: Contracts,
   configuration: Configuration,

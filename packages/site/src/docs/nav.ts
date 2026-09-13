@@ -108,6 +108,11 @@ export const DOC_GROUPS: DocGroup[] = [
         summary: "The record, priced: one x402 call before a seller serves an agent.",
       },
       {
+        slug: "demo-seller",
+        title: "Demo seller",
+        summary: "A $1 x402 API on Arc testnet that is not Cordon, to buy from and be refused by.",
+      },
+      {
         slug: "console",
         title: "Console",
         summary: "The owner's four screens, and which controls cost a signature.",
