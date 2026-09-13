@@ -397,6 +397,9 @@ control. **Two signatures** — approve the vault to move your USDC, then move i
 > money is in the vault, not in any agent, which is the difference between this
 > and topping up an agent's wallet.
 
+**Withdraw**, beside Fund vault, takes it back out: owner-only, one signature,
+always to the wallet that signs.
+
 **3b — put each node id into the key file.** The step people miss, and the
 daemon will not start without it. `init --nodes 4` wrote four empty lines —
 `CORDON_NODE_ROOT=`, `CORDON_NODE_WORKER1=`, `CORDON_NODE_WORKER2=`,
@@ -415,6 +418,15 @@ so a mistyped label changes nothing and the daemon still refuses to start.
 **4 — spawn a child.** **Spawn agent** on Overview or Agents. Name a second operator address from
 step 1 and a share of the parent. The contract refuses a child wider than its
 parent whoever asks — you included. Then repeat 3b for that worker's label.
+A grandchild comes from **Spawn under this agent** in that child's side panel
+on Agents.
+
+A spawn signed from your wallet cannot carry a stated purpose — only the
+operator key holds the child's identity. `POST /spawn` with `purpose`, or
+`cordon_spawn`, can: the daemon generates the child's key, writes it to
+`CORDON_KEY_FILE` before sending, and fills in the node id itself, so 3b is not
+needed for a child spawned that way. Send the new operator gas and restart the
+daemon, or the child gets no identity and its refusals are never published.
 
 > **Check:** `GET https://getcordon.xyz/api/tree/<root>` shows one more node,
 > and its bounds are inside its parent's.
@@ -492,6 +504,15 @@ price, or keep going until the window is spent.
 the bound and leaves both on the record; or **cut the branch**, after which
 that node and everything under it draws nothing.
 
+**Replacing a mandate.** A mandate cannot be widened, so a wider one is a new
+one. Revoke the root; **Withdraw** the treasury — `TreeVault.withdraw` asks who
+owns the root, not whether it is live, so a cut root still pays out, and its
+side panel on Agents keeps the button; make fresh operator keys in a second
+file, `npm run init --prefix packages/daemon -- --nodes 4 --out
+"$HOME/.cordon/cordon-2.env"`, and set `CORDON_KEY_FILE` to it; open the new
+one at `/console/new` — a revoked root's Overview links there — and fund it.
+Revoke the old root first: with two live roots, Overview shows only the first.
+
 The same walk with more prose: <https://getcordon.xyz/docs/walkthrough>.
 
 ---
@@ -523,7 +544,7 @@ node packages/mcp/scripts/emit-skill.ts   # rewrites SKILL.md
 |---|---|
 | `cordon_fetch` | `url`, and optionally a method and a body |
 | `cordon_status` | nothing — what is left, and which node is the limit |
-| `cordon_spawn` | a label and bounds, narrower than this node's |
+| `cordon_spawn` | a label — the child's stated purpose, one line, at most 140 characters, written beside its key and on its ERC-8004 identity — and bounds, narrower than this node's |
 
 `cordon_transfer`, `cordon_pay` and `cordon_send` are absent, permanently. The
 absence is part of the fence: an agent that cannot express "send money to X"

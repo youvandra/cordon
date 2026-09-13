@@ -292,6 +292,10 @@ npm run init --prefix packages/daemon -- --nodes 4`}</Code>
       <Note tone="good" title="Check">
         <C>funded6</C> in <C>/api/tree/&lt;root&gt;</C> rose by exactly that.
       </Note>
+      <P>
+        <b>Withdraw</b>, beside it, takes money back out: owner-only, one
+        signature, and always to the wallet that signs.
+      </P>
 
       <H2 id="three-b">3b. Put each node id into the key file</H2>
       <Note tone="warn" title="The step people miss">
@@ -325,8 +329,19 @@ grep '^CORDON_NODE_ROOT=' ~/.cordon/cordon.env   # confirm it took`}</Code>
         <b>Spawn agent</b>, on Overview or Agents. Name a second address from step 1 and a share of the
         parent. The child is narrower than its parent on every axis, and the
         contract refuses a wider one whoever asks — you included. Then repeat
-        step 3b for that worker's label.
+        step 3b for that worker's label. A grandchild comes from{" "}
+        <b>Spawn under this agent</b> in that child's side panel on Agents.
       </P>
+      <Note tone="info" title="A stated purpose needs the operator">
+        A spawn signed from your wallet cannot carry a purpose — only the
+        operator key holds the child's identity. <C>POST /spawn</C> with{" "}
+        <C>purpose</C>, or <C>cordon_spawn</C>, can: one line, at most 140
+        characters, written beside the key and on the child's ERC-8004
+        identity. The daemon writes that key to <C>CORDON_KEY_FILE</C> before
+        sending and fills the node id in itself, so step 3b is not needed. Send
+        the new operator gas and restart the daemon, or the child has no name
+        and its refusals are never published.
+      </Note>
 
       <H2 id="five">5. Run the daemon</H2>
       <P>
@@ -403,6 +418,28 @@ for n in json.load(sys.stdin)['nodes']:
         refusal and the release side by side on the record. Or <b>cut the
         branch</b>, after which that node and everything under it draws nothing.
       </P>
+
+      <H2 id="replace">Replacing a mandate</H2>
+      <P>
+        A mandate never widens, so a wider one is a new one. In this order:
+      </P>
+      <OL>
+        <li>Revoke the root. With two live roots, Overview shows only the first.</li>
+        <li>
+          <b>Withdraw</b> the treasury. <C>TreeVault.withdraw</C> asks who owns
+          the root, not whether it is live, so a cut root still pays out — and
+          its side panel on Agents keeps the button.
+        </li>
+        <li>
+          Make fresh operator keys in a second file, and point{" "}
+          <C>CORDON_KEY_FILE</C> at it:{" "}
+          <C>npm run init --prefix packages/daemon -- --nodes 4 --out "$HOME/.cordon/cordon-2.env"</C>
+        </li>
+        <li>
+          Open the new one at <a href="/console/new">/console/new</a> — a revoked
+          root's Overview links there — and fund it.
+        </li>
+      </OL>
 
       <H2 id="after">After that</H2>
       <Defs
