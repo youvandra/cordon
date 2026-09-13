@@ -93,20 +93,52 @@ export default function Overview() {
         }
         actions={
           mine ? (
-            <>
-              <Button variant="secondary" iconStart="plus" onClick={() => setAsking("spawn")} disabled={root.revoked}>
-                Spawn agent
-              </Button>
-              <Button variant="secondary" onClick={() => setAsking("withdraw")}>
-                Withdraw
-              </Button>
-              <Button variant="primary" onClick={() => setAsking("fund")} disabled={root.revoked}>
-                Fund vault
-              </Button>
-            </>
+            /* A revoked root keeps Withdraw and loses the two that move money
+               into it. What replaces them is the way out: `useConsoleTree`
+               falls back to a revoked root when there is no live one, so this
+               screen renders instead of the empty state that carries the only
+               other link to `/console/new` — and without this button an owner
+               who cut their own root is told the product is over. */
+            root.revoked ? (
+              <>
+                <Button variant="secondary" onClick={() => setAsking("withdraw")}>
+                  Withdraw
+                </Button>
+                <Link to="/console/new">
+                  <Button variant="primary">Open a mandate</Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Button variant="secondary" iconStart="plus" onClick={() => setAsking("spawn")}>
+                  Spawn agent
+                </Button>
+                <Button variant="secondary" onClick={() => setAsking("withdraw")}>
+                  Withdraw
+                </Button>
+                <Button variant="primary" onClick={() => setAsking("fund")}>
+                  Fund vault
+                </Button>
+              </>
+            )
           ) : null
         }
       />
+
+      {mine && root.revoked ? (
+        <Panel>
+          <p className="muted">
+            This mandate is revoked. Every agent under it draws nothing from the
+            block it was cut in, and a mandate cannot be edited — so the way to
+            different bounds is a new one. The vault keeps what it holds and
+            <strong> Withdraw</strong> still works, because
+            <code className="mono"> TreeVault.withdraw</code> asks who owns the
+            root and not whether it is live. Make an operator key with
+            <code className="mono"> npm run init</code>, then open a mandate for
+            it and fund it.
+          </p>
+        </Panel>
+      ) : null}
 
       <div className="kpis">
         <Kpi
