@@ -292,11 +292,15 @@ export function Refusals() {
       <H2 id="release">Release</H2>
       <P>
         There is a way out and it is human. The owner signs a release for one
-        specific refusal, from their own key, and the money moves. What that
-        does not do:
+        specific refusal, from their own key, and the refused amount moves to
+        that agent's operator. When the agent asks for the same purchase again —
+        same node, same payee, same price — the daemon pays it out of the
+        release and sends no draw. One release pays one purchase. What it does
+        not do:
       </P>
       <UL>
-        <li>It does not raise the bound. The same purchase is refused again a second later.</li>
+        <li>It does not pay by itself. Nothing is bought until the agent asks again.</li>
+        <li>It does not raise the bound. A second ask after the release is spent is refused as before.</li>
         <li>It does not erase the refusal. Both are on the record, side by side, forever.</li>
         <li>It cannot be done by us, by the deployer, or by any admin key, because there is none.</li>
       </UL>

@@ -538,8 +538,10 @@ price, or keep going until the window is spent.
 > under in a registry nobody here controls.
 
 **9 — decide what to do about it.** Both are yours and neither is ours:
-**release** one refusal from the console, which pays that single purchase past
-the bound and leaves both on the record; or **cut the branch**, after which
+**release** one refusal from the console, which moves the refused amount to
+that node's operator — the next time the agent asks for the same purchase, the
+daemon pays it out of the release with no new draw, once, and leaves both on
+the record; or **cut the branch**, after which
 that node and everything under it draws nothing.
 
 **Replacing a mandate.** A mandate cannot be widened, so a wider one is a new

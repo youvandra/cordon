@@ -51,7 +51,7 @@ export default function Refusals() {
     if (seen.current === id) return;
     seen.current = id;
     if (state.status === "done") {
-      notify({ id, tone: "caution", title: "Refusal released", children: "The bound did not move. The refusal and the release sit side by side on the record.", duration: 6000 });
+      notify({ id, tone: "caution", title: "Refusal released", children: "The money is with the agent's operator. When the agent asks for that purchase again, it is paid from this release with no new draw. The bound did not move.", duration: 9000 });
       setReleasing(null);
       window.setTimeout(() => window.location.reload(), 1400);
     } else {
@@ -245,7 +245,7 @@ export default function Refusals() {
         open={Boolean(releasing)}
         onClose={working ? () => undefined : () => setReleasing(null)}
         title={releasing ? `Release ${formatUsdc(releasing.amount6)}?` : "Release"}
-        description="This pays that one purchase past the bound, from your own key. The bound does not move — the same purchase is refused again a moment later — and both the refusal and the release stay on the record."
+        description="This moves the refused amount to that agent's operator, from your own key. The next time the agent asks for the same purchase, the daemon pays it out of this release with no new draw — once. The bound does not move, and both the refusal and the release stay on the record."
         size="sm"
         footer={
           <>

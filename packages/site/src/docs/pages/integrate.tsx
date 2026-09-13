@@ -414,8 +414,9 @@ for n in json.load(sys.stdin)['nodes']:
       <H2 id="nine">9. Decide what to do about it</H2>
       <P>
         Both are yours. <b>Release</b> one refusal from the console — a
-        signature that pays that single purchase past the bound, with the
-        refusal and the release side by side on the record. Or <b>cut the
+        signature that moves the refused amount to the operator. Ask for the
+        same purchase again and the daemon pays it from the release with no new
+        draw, once; the refusal and the release stay side by side on the record. Or <b>cut the
         branch</b>, after which that node and everything under it draws nothing.
       </P>
 
