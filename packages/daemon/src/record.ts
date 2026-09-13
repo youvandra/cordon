@@ -16,7 +16,7 @@
  * a recorder that is broken, unfunded or misconfigured costs the record its
  * completeness and costs the enforcement nothing.
  */
-import { stringToHex, type Address, type Chain, type Hex, type PublicClient, type WalletClient } from "viem";
+import { hexToString, stringToHex, type Address, type Chain, type Hex, type PublicClient, type WalletClient } from "viem";
 import { ERC8004 } from "../../fixtures/src/index.ts";
 import { ConductRecordAbi } from "./abi.gen.ts";
 
@@ -28,6 +28,16 @@ const IDENTITY_ABI = [
     stateMutability: "nonpayable",
     inputs: [{ name: "agentURI", type: "string" }],
     outputs: [{ name: "agentId", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "getMetadata",
+    stateMutability: "view",
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "metadataKey", type: "string" },
+    ],
+    outputs: [{ name: "", type: "bytes" }],
   },
   {
     type: "function",
@@ -158,6 +168,35 @@ export class Recorder {
     });
     await this.deps.publicClient.waitForTransactionReceipt({ hash });
     return hash;
+  }
+
+  /**
+   * What this node's identity already says it is for, if anything.
+   *
+   * Read before writing, so a daemon that republishes on every start sends a
+   * transaction only for the nodes that are actually missing one. `null` means
+   * the node has no identity at all, which is a different thing from an
+   * identity that says nothing.
+   */
+  async statedPurpose(node: Hex): Promise<string | null> {
+    const record = this.deps.record;
+    if (!record) return null;
+
+    const agentId = (await this.deps.publicClient.readContract({
+      address: record,
+      abi: ConductRecordAbi,
+      functionName: "agentIdOf",
+      args: [node],
+    })) as bigint;
+    if (agentId === 0n) return null;
+
+    const raw = (await this.deps.publicClient.readContract({
+      address: this.deps.identity,
+      abi: IDENTITY_ABI,
+      functionName: "getMetadata",
+      args: [agentId, ERC8004.purposeKey],
+    })) as Hex;
+    return raw === "0x" ? "" : hexToString(raw).trim();
   }
 
   /**

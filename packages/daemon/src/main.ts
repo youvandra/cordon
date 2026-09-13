@@ -9,10 +9,11 @@ import { keyFileAt } from "./keyfile.ts";
 
 const config = load(process.env);
 const gate = new Gate(config);
+const keyFile = keyFileAt(config.keyFile);
 
 const server = createDaemon({
   gate,
-  keyFile: keyFileAt(config.keyFile),
+  keyFile,
   settler: new CircleSettler({
     publicClient: gate.publicClientForSettlement,
     walletFor: (node) => gate.signerFor(node),
@@ -26,11 +27,25 @@ const server = createDaemon({
    ready before there is anything to write into it. */
 for (const node of gate.nodes()) await gate.enrol(node);
 
+/* And then the names. A child spawned by an operator that held no gas got
+   neither, and funding it afterwards used to heal only the first — so an agent
+   could be enrolled, publishing refusals, and still anonymous. Both are
+   recovered by the same restart now. */
+const described = await gate.describeRemembered(keyFile.purposes());
+
 server.listen(config.port, () => {
   console.log(`cordon daemon on :${config.port}`);
   console.log(`  chain    ${config.chainId} via ${config.rpcUrl}`);
   console.log(`  vault    ${config.vault}`);
   console.log(`  nodes    ${gate.nodes().join(", ")}`);
+  /* Named because its default is `$HOME/.cordon/cordon.env` whatever
+     `--env-file` says, so a second tree run from a second key file still
+     writes its spawned children into the first one — silently, until somebody
+     greps the wrong file. */
+  console.log(`  keys     ${config.keyFile} — spawned children are written here`);
+  if (described > 0) {
+    console.log(`  purpose  published for ${described} node${described === 1 ? "" : "s"} this key file remembered`);
+  }
   console.log(`  settles  ${config.networks.join(", ")}`);
   console.log(
     gate.recorder.enabled

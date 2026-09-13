@@ -24,6 +24,30 @@ export interface KeyFile {
   remember(secret: Hex, operator: Address, purpose?: string): string;
   /** Fill that label's node id once the registry has assigned one. */
   bind(label: string, node: Hex): void;
+  /**
+   * Take back a key whose spawn never landed.
+   *
+   * `remember` writes before the registry is asked, because a key that exists
+   * only in a process is a child nobody can sign for after a restart. The cost
+   * of that order is a spawn that reverts — a bad bound, a parent that refuses
+   * — leaving a key in the file under a label whose node id stays empty for
+   * good. It operates nothing and can never be filled in, and a reader cannot
+   * tell it from a child whose id has not been written yet.
+   *
+   * Only ever called on the label this process just wrote, and only when the
+   * node id was never bound.
+   */
+  forget(label: string): void;
+  /**
+   * What this file says each remembered child is for, by node id.
+   *
+   * The purpose is written here before the spawn and onto the child's ERC-8004
+   * identity after it — and the second of those needs the child's operator to
+   * hold gas, which a freshly generated key does not. When that write fails
+   * the name exists only here, and nothing reads it back. This is how a later
+   * run finds it.
+   */
+  purposes(): Map<string, string>;
 }
 
 /** A label derived from the operator, so the file says which address a key is. */
@@ -80,6 +104,46 @@ export function keyFileAt(path: string): KeyFile {
          this file being one file is meant to rule out. */
       chmodSync(path, 0o600);
       return label;
+    },
+
+    forget(label) {
+      const current = existsSync(path) ? readFileSync(path, "utf8") : "";
+      /* The whole block `remember` appended — its blank line, its comments and
+         both variables — and only while the node id is still empty, so this
+         can never take back a key that operates something. */
+      const block = new RegExp(
+        `\n*^# Spawned [^\n]*for operator [^\n]*\n(?:^#[^\n]*\n)*^CORDON_KEY_${label}=[^\n]*\n^CORDON_NODE_${label}=$\n?`,
+        "m",
+      );
+      if (!block.test(current)) return;
+      const staging = `${path}.tmp-${process.pid}`;
+      writeFileSync(staging, current.replace(block, "\n"), { mode: 0o600 });
+      chmodSync(staging, 0o600);
+      renameSync(staging, path);
+    },
+
+    purposes() {
+      const found = new Map<string, string>();
+      if (!existsSync(path)) return found;
+      const lines = readFileSync(path, "utf8").split("\n");
+      let said: string | undefined;
+      for (const line of lines) {
+        const purpose = /^# Purpose: (.+)$/.exec(line);
+        if (purpose) {
+          said = purpose[1]!.trim();
+          continue;
+        }
+        const node = /^CORDON_NODE_[A-Za-z0-9_]+=(0x[0-9a-fA-F]{64})$/.exec(line);
+        if (node) {
+          if (said) found.set(node[1]!.toLowerCase(), said);
+          said = undefined;
+          continue;
+        }
+        /* A key line sits between the comment and the node id, so it must not
+           clear what the comment said. Anything else does. */
+        if (!/^CORDON_KEY_/.test(line) && line.trim() !== "" && !line.startsWith("#")) said = undefined;
+      }
+      return found;
     },
 
     bind(label, node) {
