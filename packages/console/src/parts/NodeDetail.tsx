@@ -71,8 +71,12 @@ export function NodeDetail({ node, all, cut }: { node: ChainNode; all: ChainNode
             purpose.state === "read" ? (
               <span className="cell-stack">
                 <span>{purpose.text}</span>
+                {/* Not "stated at spawn": the same call writes it afterwards,
+                    and every purpose on this tree was written that way — the
+                    nodes predate the field. What is true of all of them is who
+                    signed it, which is the operator and nobody else. */}
                 <span className="small muted">
-                  Stated at spawn on identity #{purpose.agentId.toString()}. A description, not a bound.
+                  Stated by its operator on identity #{purpose.agentId.toString()}. A description, not a bound.
                 </span>
               </span>
             ) : (

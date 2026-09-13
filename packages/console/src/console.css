@@ -499,6 +499,30 @@ html.entrance-done .cordon-card {
   white-space: nowrap;
 }
 
+/* The stated purpose, leading its row. It is a sentence, and a sentence in a
+   table column either wraps the row to three lines or is cut — cut is the one
+   that keeps twelve rows scannable, and the whole of it is in the side panel a
+   click away. `min-width: 0` because a grid item's default `auto` refuses to
+   shrink below its content and the ellipsis never appears without it. */
+.agent__line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.agent__purpose {
+  color: var(--cordon-ink-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent .cell-stack {
+  gap: 2px;
+  min-width: 0;
+}
+
 .cell-stack {
   display: grid;
   gap: 5px;

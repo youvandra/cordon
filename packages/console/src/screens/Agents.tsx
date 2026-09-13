@@ -8,6 +8,7 @@ import { NodeDetail } from "../parts/NodeDetail";
 import { RevokeDialog, SpawnDialog, WithdrawDialog } from "../parts/OwnerDialogs";
 import { TreeGraph, type GraphNode } from "../parts/TreeGraph";
 import { useConsoleTree } from "../lib/useConsoleTree";
+import { usePurposes } from "../lib/purpose";
 import { cutLookup, isHeld, share, shortId } from "../lib/format";
 import type { ChainNode } from "../lib/tree";
 
@@ -23,6 +24,9 @@ export default function Agents() {
   const [spawnParent, setSpawnParent] = useState<ChainNode | null>(null);
   const [revoking, setRevoking] = useState<ChainNode | null>(null);
   const [withdrawing, setWithdrawing] = useState<ChainNode | null>(null);
+  /* Read for every row at once, before the early returns below can skip it:
+     a hook may not be called conditionally. */
+  const purposes = usePurposes(nodes.map((node) => node.node));
 
   const selectedId = params.get("node");
   const select = (id: string | null) => {
@@ -49,7 +53,18 @@ export default function Agents() {
     if (filter === "live" && cut) return false;
     if (filter === "revoked" && !cut) return false;
     if (filter === "held" && !isHeld(node)) return false;
-    if (needle && !node.node.toLowerCase().includes(needle) && !node.operator.toLowerCase().includes(needle)) return false;
+    /* The purpose is searched too, because it is now the thing on screen: a
+       reader who can see "Social feed reader" and cannot search for it is
+       being shown a name the search does not believe in. */
+    const said = purposes.get(node.node.toLowerCase())?.toLowerCase() ?? "";
+    if (
+      needle &&
+      !node.node.toLowerCase().includes(needle) &&
+      !node.operator.toLowerCase().includes(needle) &&
+      !said.includes(needle)
+    ) {
+      return false;
+    }
     return true;
   });
 
@@ -90,7 +105,7 @@ export default function Agents() {
         <SearchField
           className="toolbar__search"
           size="sm"
-          placeholder="Search by node or operator"
+          placeholder="Search by purpose, node or operator"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -130,13 +145,26 @@ export default function Agents() {
               {
                 id: "agent",
                 header: "Agent",
-                cell: (node) => (
-                  <span className="agent" style={{ paddingLeft: node.depth * 18 }}>
-                    <span className="mono agent__id">{shortId(node.node)}</span>
-                    {node.parent === null ? <Tag size="sm">Root</Tag> : null}
-                    {isCut(node.node) ? <Tag tone="critical" size="sm">Revoked</Tag> : null}
-                  </span>
-                ),
+                /* What it is leads, and the id follows it. A tree of twelve
+                   hexadecimal ids is unreadable by design — none of them means
+                   anything to a person — and the purpose its spawner stated is
+                   already on chain. Where nothing was stated the id leads, as
+                   it always did, rather than a row going blank. */
+                cell: (node) => {
+                  const said = purposes.get(node.node.toLowerCase());
+                  return (
+                    <span className="agent" style={{ paddingLeft: node.depth * 18 }}>
+                      <span className="cell-stack">
+                        <span className="agent__line">
+                          {said ? <span className="agent__purpose">{said}</span> : <span className="mono agent__id">{shortId(node.node)}</span>}
+                          {node.parent === null ? <Tag size="sm">Root</Tag> : null}
+                          {isCut(node.node) ? <Tag tone="critical" size="sm">Revoked</Tag> : null}
+                        </span>
+                        {said ? <span className="mono small muted">{shortId(node.node)}</span> : null}
+                      </span>
+                    </span>
+                  );
+                },
               },
               {
                 id: "available",
