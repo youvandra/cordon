@@ -310,6 +310,32 @@ export const ATTEST = {
   maxTimeoutSeconds: 300,
 } as const;
 
+/* ------------------------------------------------------------------ */
+/* The demo seller — a paid API that is not the record                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Circle's marketplace lists nothing on a testnet — 929 services read on
+ * 13 September, every one on a mainnet — so a Cordon mandate on Arc testnet
+ * has no outside seller it can pay. This stands in for one: an x402 API that
+ * sells a live reading of Arc itself, on its own name, so a demo buys from
+ * something that is not Cordon's own record.
+ *
+ * One dollar on purpose. It is far above every tranche cap in the demo tree,
+ * so the bound that refuses it is the obvious one, and a node opened to buy it
+ * has to be given a cap anyone can read off the console.
+ */
+export const DEMO_SELLER = {
+  /** Base units, 6 dp. $1.00. */
+  price6: 1_000_000n,
+  scheme: "exact",
+  x402Version: 2,
+  resourcePath: "/arc/snapshot",
+  host: "demo-seller.getcordon.xyz",
+  minLeadSeconds: 15,
+  maxTimeoutSeconds: 300,
+} as const;
+
 export const ENDPOINTS = [
   { price: 0.0024, seller: "AIsa API", path: "api.aisa.one/apis/v2/scholar/search/explain" },
   { price: 0.008, seller: "AIsa API", path: "api.aisa.one/apis/v2/coingecko/simple/price" },

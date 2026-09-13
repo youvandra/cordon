@@ -1,0 +1,39 @@
+[Unit]
+# The demo seller: a live reading of Arc over x402 at $1, so a demo buys from
+# something that is not Cordon's own record.
+#
+# It holds the attest endpoint's key, read from the same file, and does the
+# same one thing with it — submit an EIP-3009 authorisation a payer signed.
+Description=Cordon demo seller (Arc reading over x402, on 127.0.0.1:8406)
+Documentation=https://getcordon.xyz/docs/surfaces
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/cordon/packages/attest
+Environment=NODE_ENV=production
+Environment=CORDON_CHAIN_ID=5042002
+Environment=CORDON_DEMO_PORT=8406
+EnvironmentFile=/home/ubuntu/cordon/.env.attest
+ExecStart=/usr/bin/node src/demo-main.ts
+Restart=on-failure
+RestartSec=5s
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cordon-demo-seller
+
+[Install]
+WantedBy=multi-user.target
