@@ -415,10 +415,9 @@ export function DemoSeller() {
       <H2 id="why">Why it exists</H2>
       <P>
         Circle's agent marketplace is where an outside seller would come from,
-        and it has nothing on a testnet: of the{" "}
-        {MARKETPLACE.offersTotal.toLocaleString("en-US")} offers it listed, every
-        one settles on a mainnet. A mandate on Arc testnet cannot pay any of
-        them. This stands in, on its own name, until a testnet seller exists.
+        and it has nothing on a testnet: read in full on 13 September, not one
+        service it listed settled on a testnet chain. A mandate on Arc testnet
+        cannot pay any of them. This stands in, on its own name, until a testnet seller exists.
       </P>
       <Note tone="warn" title="It is ours">
         Run by the same box and paid to the same relayer address as{" "}
