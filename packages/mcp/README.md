@@ -7,22 +7,27 @@ bounded by a contract it cannot reach.
 {
   "mcpServers": {
     "cordon": {
-      "command": "node",
-      "args": ["/path/to/cordon/packages/mcp/src/main.ts"],
+      "command": "npx",
+      "args": ["-y", "@cordon/mcp"],
       "env": {
-        "CORDON_VAULT": "0x…",
-        "CORDON_REGISTRY": "0x…",
-        "CORDON_NODE_ME": "0x…",
-        "CORDON_KEY_ME": "…",
-        "CORDON_RPC": "https://rpc.testnet.arc.io"
+        "CORDON_ENV_FILE": "/Users/<you>/.cordon/cordon.env",
+        "CORDON_MCP_NODE": "0x<node id>"
       }
     }
   }
 }
 ```
 
-Not `npx -y @cordon/mcp`: this package is private and unpublished, and a block
-that sends a reader to a 404 is worse than one that names a path.
+`CORDON_ENV_FILE` is the key file `cordon-init` wrote, as an absolute path —
+an MCP client starts the server with no shell, so nothing expands `~` or
+`$HOME`. The key is read from that file and never appears in the client
+config. The contract addresses default to the Arc testnet deployment this
+version was built against; `CORDON_VAULT`, `CORDON_REGISTRY` and
+`CORDON_RECORD` override them. Several files can be listed, comma-separated.
+
+Node 22 or newer. The operator keys, the mandate and the daemon setup are in
+the [repository](https://github.com/youvandra/cordon) and at
+<https://getcordon.xyz/docs/walkthrough>.
 
 Where the keyring holds several nodes, `CORDON_MCP_NODE` names the one this
 server speaks for. Without it the server takes whichever key parsed first,

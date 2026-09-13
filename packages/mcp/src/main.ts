@@ -21,8 +21,36 @@ import { CircleSettler } from "../../daemon/src/settle.ts";
 import { keyFileAt } from "../../daemon/src/keyfile.ts";
 import { ChainReleases } from "../../daemon/src/released.ts";
 import { dirname, join } from "node:path";
-import { ARC } from "../../fixtures/src/index.ts";
+import { ARC, DEPLOYMENT } from "../../fixtures/src/index.ts";
 import { createMcpServer } from "./server.ts";
+
+/* `npx` cannot pass node's own `--env-file`, so a published server reads the
+   same files itself. Comma-separated, in order; like `--env-file`, a variable
+   already set is never overwritten. The key stays in the file `init` guards
+   and never has to be pasted into a client config. */
+const envFiles = (process.env.CORDON_ENV_FILE ?? "")
+  .split(",")
+  .map((file) => file.trim())
+  .filter(Boolean);
+for (const file of envFiles) {
+  try {
+    process.loadEnvFile(file);
+  } catch (error) {
+    console.error(`cordon: CORDON_ENV_FILE names ${file}, which could not be read: ${(error as Error).message}`);
+    process.exit(1);
+  }
+}
+/* A spawned child's key is written to the file the keys came from, not to a
+   default that may be a different tree's. */
+if (envFiles.length > 0) process.env.CORDON_KEY_FILE ??= envFiles[envFiles.length - 1];
+
+/* The deployment this build was made against, so a config block needs no
+   addresses. An explicit variable still wins. */
+if (DEPLOYMENT) {
+  process.env.CORDON_VAULT ??= DEPLOYMENT.vault;
+  process.env.CORDON_REGISTRY ??= DEPLOYMENT.registry;
+  process.env.CORDON_RECORD ??= DEPLOYMENT.record;
+}
 
 const config = load(process.env);
 const gate = new Gate(config);

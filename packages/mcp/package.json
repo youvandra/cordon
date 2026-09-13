@@ -1,20 +1,42 @@
 {
   "name": "@cordon/mcp",
-  "private": true,
   "version": "0.1.0",
+  "description": "Cordon inside an MCP client: an agent that can buy things and cannot move money, bounded by contracts on Arc.",
+  "license": "MIT",
+  "author": "Youvandra Febrial",
+  "homepage": "https://getcordon.xyz",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/youvandra/cordon.git",
+    "directory": "packages/mcp"
+  },
+  "keywords": ["mcp", "x402", "agents", "arc", "circle", "usdc", "erc-8004"],
   "type": "module",
-  "bin": { "cordon-mcp": "src/main.ts" },
+  "bin": {
+    "cordon-mcp": "dist/cordon-mcp.js"
+  },
+  "files": ["dist", "SKILL.md", "README.md"],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc --noEmit",
+    "bundle": "esbuild src/main.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/cordon-mcp.js --external:viem --external:@modelcontextprotocol/sdk --external:zod",
+    "prepack": "npm run bundle",
     "test": "node --test \"test/*.test.ts\"",
     "start": "node src/main.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
-    "viem": "^2.21.55"
+    "viem": "^2.21.55",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "esbuild": "^0.25.12",
     "typescript": "^5.7.2"
   }
 }
