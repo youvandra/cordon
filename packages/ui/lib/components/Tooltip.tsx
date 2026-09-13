@@ -19,6 +19,33 @@ export interface TooltipProps {
   className?: string;
 }
 
+/**
+ * The horizontal band the bubble has to stay inside.
+ *
+ * The window is only the outermost of these. A tooltip inside a scroller or a
+ * modal is clipped by that box long before it reaches the edge of the screen —
+ * `Modal` sets `overflow: hidden` on its surface and `overflow-y: auto` on its
+ * body, and a `overflow-y` that is not `visible` computes `overflow-x` to the
+ * same thing, so both clip sideways. Clamping to the window there moves the
+ * bubble to a position that is on screen and still cut in half, which is what
+ * an owner saw on the first field this pattern was used on.
+ */
+function clipBand(node: Element): { left: number; right: number } {
+  let left = 0;
+  let right = window.innerWidth;
+  for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+    const style = getComputedStyle(parent);
+    if (style.overflowX === "visible" && style.overflowY === "visible") continue;
+    const box = parent.getBoundingClientRect();
+    /* A clipper that has not been laid out yet would otherwise collapse the
+       band to nothing and pin every bubble to the left of the screen. */
+    if (box.width === 0) continue;
+    left = Math.max(left, box.left);
+    right = Math.min(right, box.right);
+  }
+  return { left, right };
+}
+
 export function Tooltip({ content, placement = "top", delay = 140, children, className }: TooltipProps) {
   const [open, setOpen] = useState(false);
   const timer = useRef<number | undefined>(undefined);
@@ -69,19 +96,20 @@ export function Tooltip({ content, placement = "top", delay = 140, children, cla
     if (box.width === 0 && box.height === 0) return;
 
     const margin = 8;
+    const band = clipBand(node);
     /* Measured against where it sits now, so this converges: the shift is
        applied to the same element it was measured on, and an element already
-       inside the window measures an overflow of zero. */
-    const pastLeft = margin - box.left;
-    const pastRight = box.right - (window.innerWidth - margin);
+       inside the band measures an overflow of zero. */
+    const pastLeft = band.left + margin - box.left;
+    const pastRight = box.right - (band.right - margin);
 
     let nudge = 0;
     if (pastLeft > 0) nudge = pastLeft;
     else if (pastRight > 0) nudge = -pastRight;
 
-    /* A bubble wider than the window cannot be made to fit by moving it, and
+    /* A bubble wider than the band cannot be made to fit by moving it, and
        pinning it to the left edge is the readable half of that. */
-    if (box.width > window.innerWidth - margin * 2) nudge = margin - box.left;
+    if (box.width > band.right - band.left - margin * 2) nudge = band.left + margin - box.left;
 
     if (Math.abs(nudge) >= 1) setShift((was) => was + nudge);
   }, [open, content]);
