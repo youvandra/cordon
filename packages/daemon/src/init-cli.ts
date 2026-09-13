@@ -6,7 +6,7 @@
  */
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { ARC } from "../../fixtures/src/index.ts";
+import { ARC, DEPLOYMENT } from "../../fixtures/src/index.ts";
 
 /** Where the owner surface lives. Overridable for a console served elsewhere. */
 const CONSOLE_URL = process.env.CORDON_CONSOLE_URL ?? "https://getcordon.xyz/console";
@@ -47,10 +47,38 @@ try {
   console.log("The agent holds no key at all; that is the point of the product.");
   console.log("");
   console.log("Then, once the owner has opened a mandate for an operator, put its");
-  console.log(`node id in CORDON_NODE_<label> in that file and start the daemon:`);
+  console.log(`node id in CORDON_NODE_<label> in that file.`);
   console.log("");
-  console.log(`  set -a; . ${path}; set +a`);
-  console.log("  npm start --prefix packages/daemon");
+  /* The addresses, not a sentence pointing at where the addresses live. This
+     command used to end at `npm start`, which cannot work: the keys are only
+     half of what the daemon needs, and following it to the letter answers
+     `CORDON_VAULT is not set` with nothing on screen saying where to find one. */
+  if (DEPLOYMENT) {
+    console.log("The daemon needs the contracts too. Write them beside the keys —");
+    console.log("this file holds addresses only, which is why it is not 0600:");
+    console.log("");
+    console.log("  cat > packages/daemon/.env.live <<'ENV'");
+    console.log(`  CORDON_VAULT=${DEPLOYMENT.vault}`);
+    console.log(`  CORDON_REGISTRY=${DEPLOYMENT.registry}`);
+    console.log(`  CORDON_RECORD=${DEPLOYMENT.record}`);
+    console.log(`  CORDON_RPC=${ARC.rpc}`);
+    console.log(`  CORDON_PORT=8402`);
+    /* Named explicitly because its default is `$HOME`, whatever the two files
+       above say: a second tree started from a second key file still writes its
+       spawned children into the first one. */
+    console.log(`  CORDON_KEY_FILE=${path}`);
+    console.log("  ENV");
+  } else {
+    console.log("This build carries no deployment, so the contract addresses for");
+    console.log("CORDON_VAULT, CORDON_REGISTRY and CORDON_RECORD have to come from");
+    console.log("whoever deployed them.");
+  }
+  console.log("");
+  console.log("Then start it:");
+  console.log("");
+  console.log("  node --env-file=packages/daemon/.env.live \\");
+  console.log(`       --env-file=${path} \\`);
+  console.log("       packages/daemon/src/main.ts");
 } catch (error) {
   console.error((error as Error).message);
   process.exit(1);
