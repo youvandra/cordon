@@ -45,7 +45,16 @@ const PURPOSE: Record<string, string> = {
     "Second feed reader. Cut after its operator turned up holding funds from outside the tree.",
   "0xce62536fab40faf475d24967b38348df257c3d5d6e28b45f60b19ba48f83340c":
     "Retired execution agent. Revoked; draws nothing.",
+  "0x92d7ae3dbcc740cdcdc5fb8cd911fc9bebcbd35b742e5d517941f8660d51d6de":
+    "Hostile-drill agent. A $0.001 tranche against real prices, so every purchase it tries is refused.",
 };
+
+/* `0x7ef80927…` is the one node with an operator we hold and no entry here.
+   Its key is DRILL's, already in the file under that label, and the config
+   pairs one key with one node id — so reaching it means writing the same
+   private key under a second label, and two labels over one key is how a
+   revoke of one comes to look like the other. It has no identity, no history
+   and a $0.10 window; the trade is not worth it. */
 
 const dryRun = process.argv.includes("--dry-run");
 const config = load(process.env);
