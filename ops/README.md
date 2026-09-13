@@ -1,6 +1,6 @@
 # Serving Cordon
 
-Four surfaces, one box, two names.
+Five surfaces, one box, three names.
 
 | What | Where | How |
 |---|---|---|
@@ -8,6 +8,12 @@ Four surfaces, one box, two names.
 | console | `https://getcordon.xyz/console/` | static, `/var/www/cordon/console`, built with base `/console/` |
 | meter read API | `https://getcordon.xyz/api/` | `cordon-meter.service` on `127.0.0.1:8404`, proxied |
 | attest | `https://attest.getcordon.xyz/` | `cordon-attest.service` on `127.0.0.1:8405`, proxied |
+| demo seller | `https://demo-seller.getcordon.xyz/` | `cordon-demo-seller.service` on `127.0.0.1:8406`, proxied |
+
+The demo seller sells a live reading of Arc at $1 so a demo buys from
+something that is not the record — Circle's marketplace has no testnet seller.
+It runs out of `packages/attest` with attest's key, from the same
+`.env.attest`, so it adds no key to the box.
 
 The site and the console share one origin on purpose. The console asks the
 owner's wallet to sign typed data naming the contract, so a separate API host
@@ -33,6 +39,7 @@ Two records, both A, both pointing at the box.
 | A | `@` | `<box IP>` |
 | A | `www` | `<box IP>` |
 | A | `attest` | `<box IP>` |
+| A | `demo-seller` | `<box IP>` |
 
 `www` exists only to redirect to the bare name, which is the name the contract
 writes. No AAAA: the box has no routable IPv6 address, and an AAAA that does
@@ -99,6 +106,34 @@ sudo systemctl enable --now cordon-meter cordon-attest
 journalctl -u cordon-attest -n 40 --no-pager
 ```
 
+### The demo seller
+
+Its 443 block names a certificate that does not exist yet, so `nginx -t`
+fails on the full vhost before `certbot` has run — and on this box a failed
+reload is nine sites, not one. Answer ACME with a port-80 block first:
+
+```bash
+sudo tee /etc/nginx/sites-available/cordon-demo-seller >/dev/null <<'EOF'
+server {
+    listen 80;
+    server_name demo-seller.getcordon.xyz;
+    location ^~ /.well-known/acme-challenge/ { root /var/www/cordon; default_type "text/plain"; }
+    location / { return 404; }
+}
+EOF
+sudo ln -sf /etc/nginx/sites-available/cordon-demo-seller /etc/nginx/sites-enabled/cordon-demo-seller
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot certonly --webroot -w /var/www/cordon -d demo-seller.getcordon.xyz
+
+sudo cp ops/nginx/demo-seller.getcordon.xyz.conf /etc/nginx/sites-available/cordon-demo-seller
+sudo nginx -t && sudo systemctl reload nginx
+sudo systemctl enable --now cordon-demo-seller    # the unit was copied with cordon-*.service above
+curl -s https://demo-seller.getcordon.xyz/health
+```
+
+It shares the `cordon_attest` rate-limit zone. `CORDON_DEMO_PAYTO` in
+`.env.attest` sends its sales to an address other than attest's.
+
 `attest` will refuse to start if the USDC view cannot verify the EIP-712
 domain it would publish. On Arc it can — checked against the live chain, see
 the EIP-3009 notes — so a refusal there means the deployment or the RPC, not
@@ -163,9 +198,9 @@ curl -s https://getcordon.xyz/console/ | grep -o 'assets/index-[^"]*\.js' |
 
 ## What this box does not run
 
-**No daemon.** `cordon-meter` and `cordon-attest` are the only Cordon units
-here, and neither holds an operator key — the meter reads and the attest
-endpoint sells a reading. Nothing on this box can draw from the vault or pay a
+**No daemon.** `cordon-meter`, `cordon-attest` and `cordon-demo-seller` are
+the only Cordon units here, and none holds an operator key — the meter reads,
+and the other two sell a reading. Nothing on this box can draw from the vault or pay a
 seller.
 
 That is deliberate: an operator key on a web-facing box is a key on a

@@ -17,6 +17,7 @@ set -uo pipefail
 
 SITE="${CORDON_SITE:-https://getcordon.xyz}"
 ATTEST="${CORDON_ATTEST:-https://attest.getcordon.xyz}"
+DEMO_SELLER="${CORDON_DEMO_SELLER:-https://demo-seller.getcordon.xyz}"
 CHAIN_ID="${CORDON_CHAIN_ID:-5042002}"
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 
@@ -147,6 +148,25 @@ case "$status" in
   502|000) pending "attest is not running ($status) — it needs CORDON_ATTEST_KEY" ;;
   *)   bad "attest answered $status" ;;
 esac
+
+status="$(code "$DEMO_SELLER/health")"
+case "$status" in
+  200) ok "demo seller answers /health" ;;
+  502|000) pending "demo seller is not running ($status) — cordon-demo-seller reads .env.attest" ;;
+  *)   bad "demo seller answered $status" ;;
+esac
+
+# The price is read from fixtures rather than repeated here, so a price change
+# that reaches the fixture and not the running process shows up as wrong.
+if [ "$status" = 200 ]; then
+  want="$(grep -A3 'export const DEMO_SELLER' "$REPO/packages/fixtures/src/index.ts" | grep -o 'price6: [0-9_]*' | tr -d '_' | grep -o '[0-9]*$')"
+  offer="$(curl -s -m 20 "$DEMO_SELLER/arc/snapshot")"
+  case "$offer" in
+    *'"amount": "'"$want"'"'*) ok "demo seller offers /arc/snapshot at $want, the fixture's price" ;;
+    *'"accepts"'*) bad "demo seller's offer is not the fixture's price ($want)" ;;
+    *) bad "demo seller did not answer /arc/snapshot with an offer" ;;
+  esac
+fi
 
 echo
 [ "$fail" = 0 ] && echo "nothing is wrong; what is pending is pending on purpose" || echo "something above is wrong"
