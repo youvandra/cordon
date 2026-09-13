@@ -178,7 +178,7 @@ export function Daemon() {
           [
             <C key="p">POST /spawn</C>,
             <span key="pb" className="mono">{`{ node, budget6, trancheCap6, concentrationBps, lifetimeCap6?, purpose? }`}</span>,
-            "the child mandate, its operator address and its key-file label. The key is generated here and never returned; an operator in the body is refused. A purpose is one line, kept beside the key and written to the child's ERC-8004 identity — a description, not a bound",
+            "the child mandate, its operator address and its key-file label. Every bound but lifetimeCap6 is required — zero is not \u201Cunlimited\u201D for any of them and the contract refuses it. The key is generated here and never returned; an operator in the body is refused. That key holds no gas, so send it some and restart: until it is enrolled the child has no identity, which means no name and no published refusals. A purpose is one line, kept beside the key and written to the child\u2019s ERC-8004 identity \u2014 a description, not a bound",
           ],
         ]}
       />

@@ -540,7 +540,7 @@ unregistered.
 |---|---|
 | `GET /status` | every node this daemon holds a key for, its headroom and its mandate |
 | `POST /fetch` | `{ node, url, method?, body? }` — fetch, and pay if the seller asks |
-| `POST /spawn` | `{ node, budget6, trancheCap6, … }` — a child, narrower than its parent |
+| `POST /spawn` | `{ node, budget6, trancheCap6, concentrationBps, lifetimeCap6?, purpose? }` — a child, narrower than its parent. Every bound but `lifetimeCap6` is required: zero is not "unlimited" for any of them, and the contract refuses it. The daemon generates the child's key, so **send that operator gas and restart** — an operator with none cannot enrol the child, and a child with no ERC-8004 identity has no name and no published refusals |
 | *absent* | there is no transfer endpoint, and there will not be one |
 
 A purchase and a refusal are both `200`. A refusal is an answer, not a failure,

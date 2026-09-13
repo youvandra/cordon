@@ -9,6 +9,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { cleanPurpose, keyFileAt, labelForOperator } from "../src/keyfile.ts";
 import { ERC8004 } from "../../fixtures/src/index.ts";
 import { createDaemon } from "../src/server.ts";
+import { SpawnRefused } from "../src/gate.ts";
 import type { Gate } from "../src/gate.ts";
 import type { Settler } from "../src/settle.ts";
 
@@ -192,4 +193,89 @@ test("a stated purpose reaches the key file, the gate and the answer", async () 
   assert.equal(body.purpose, "buys weather data");
   assert.equal(body.purposePublished, true);
   assert.match(readFileSync(path, "utf8"), /^# Purpose: buys weather data$/m);
+});
+
+/**
+ * The four things a fresh tree got wrong, found by running the documented
+ * setup from an empty wallet rather than by reading it.
+ */
+
+test("a spawn the registry refused before broadcasting takes its key back", async () => {
+  const path = freshPath();
+
+  const { status, text } = await postSpawn(
+    stubGate(async () => {
+      throw new SpawnRefused("execution reverted: ConcentrationOutOfRange(0)");
+    }),
+    path,
+  );
+
+  assert.equal(status, 400);
+  assert.equal((JSON.parse(text) as { keyDiscarded: boolean }).keyDiscarded, true);
+  const text2 = readFileSync(path, "utf8");
+  assert.doesNotMatch(text2, new RegExp(`CORDON_KEY_${LABEL}=`), "the key is gone");
+  assert.doesNotMatch(text2, new RegExp(`CORDON_NODE_${LABEL}=`), "and so is its empty node id");
+});
+
+test("a failure after the transaction was sent keeps the key, because it may have landed", async () => {
+  const path = freshPath();
+
+  const { status, text } = await postSpawn(
+    stubGate(async () => {
+      throw new Error("socket hang up while waiting for the receipt");
+    }),
+    path,
+  );
+
+  assert.equal(status, 502);
+  assert.equal((JSON.parse(text) as { keyDiscarded: boolean }).keyDiscarded, false);
+  assert.match(readFileSync(path, "utf8"), new RegExp(`^CORDON_KEY_${LABEL}=${SECRET}$`, "m"));
+});
+
+test("a bound the contract refuses as zero is named, and no key is written for it", async () => {
+  for (const [field, body] of [
+    ["concentrationBps", { concentrationBps: undefined }],
+    ["budget6", { budget6: undefined }],
+    ["trancheCap6", { trancheCap6: undefined }],
+  ] as const) {
+    const path = freshPath();
+    const { status, text } = await postSpawn(
+      stubGate(async () => {
+        throw new Error("the registry should never have been asked");
+      }),
+      path,
+      body,
+    );
+    assert.equal(status, 400, `${field} reached the registry`);
+    assert.match(text, new RegExp(field), `the answer does not name ${field}: ${text}`);
+    assert.doesNotMatch(text, /ConcentrationOutOfRange|Contract Call/, "a contract trace reached the caller");
+    assert.equal(existsSync(path), false, `a key was written for a body that never left the daemon`);
+  }
+});
+
+test("the key file reads back the purposes it was told, by node id", () => {
+  const path = freshPath();
+  const file = keyFileAt(path);
+
+  const label = file.remember(SECRET, OPERATOR, "buys weather data for the planner");
+  assert.equal(file.purposes().size, 0, "a child with no node id yet describes nothing");
+
+  file.bind(label, NODE);
+  assert.equal(file.purposes().get(NODE.toLowerCase()), "buys weather data for the planner");
+});
+
+test("a key remembered without a purpose does not inherit the one above it", () => {
+  const path = freshPath();
+  const file = keyFileAt(path);
+
+  const first = file.remember(SECRET, OPERATOR, "buys weather data for the planner");
+  file.bind(first, NODE);
+
+  const other = "0x8f2a559490d1dbb2ef6d0ed1d8bbdf5a22e7a3b28e5c8c2b1f6b0c9d7e4a3b21" as Hex;
+  const second = file.remember(other, privateKeyToAccount(other).address);
+  file.bind(second, PARENT);
+
+  const said = file.purposes();
+  assert.equal(said.get(NODE.toLowerCase()), "buys weather data for the planner");
+  assert.equal(said.get(PARENT.toLowerCase()), undefined, "the second child took the first one's name");
 });
