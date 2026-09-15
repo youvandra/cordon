@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Hero } from "../sections/Hero";
 import { Claim } from "../sections/Claim";
 import { Counterfactual } from "../sections/Counterfactual";
+import { Purchase } from "../sections/Purchase";
 import { Arc } from "../sections/Arc";
 import { Record } from "../sections/Record";
 import { Start } from "../sections/Start";
@@ -25,6 +26,7 @@ export default function Landing() {
       <Hero />
       <Claim />
       <Counterfactual />
+      <Purchase />
       <Arc />
       <Record />
       <Start />

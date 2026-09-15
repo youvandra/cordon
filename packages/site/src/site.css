@@ -1135,3 +1135,220 @@ main { flex: 1 1 auto; }
    tables read as one with a stray heading in the middle. */
 .evalscenario + .evalscenario { margin-top: var(--cordon-space-6); }
 .evalscenario > .eyebrow { margin: 0 0 var(--cordon-space-2); }
+
+/* ---- one purchase: agent to seller --------------------------------------
+   The lane is plain layout with percentages, not a measured drawing, so it is
+   complete before any frame runs. The span and the pulse are the only things
+   that move, and both are drawn at their destination when nothing animates. */
+.buy {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: var(--cordon-gap);
+  align-items: start;
+}
+.buy__panel { display: flex; flex-direction: column; padding: var(--cordon-space-6); }
+
+.buy__head { display: flex; align-items: center; justify-content: space-between; gap: var(--cordon-space-4); }
+.buy__switch {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--cordon-radius-pill);
+  background: rgba(34, 34, 34, 0.05);
+}
+.buy__tab,
+.buy__play,
+.buy__step {
+  font: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+}
+.buy__tab {
+  padding: 7px 14px;
+  border-radius: var(--cordon-radius-pill);
+  color: var(--cordon-copy-dim);
+  font-size: 13px;
+  letter-spacing: -0.012em;
+  transition: color 0.18s var(--cordon-ease-settle), background 0.18s var(--cordon-ease-settle);
+}
+.buy__tab:hover { color: var(--cordon-ink); }
+.buy__tab[aria-selected="true"] { color: var(--cordon-ink-strong); background: #fff; box-shadow: 0 1px 2px rgba(34, 34, 34, 0.08); }
+.buy__play { color: var(--cordon-copy-dim); font-size: 12.5px; padding: 6px 4px; }
+.buy__play:hover { color: var(--cordon-ink); }
+
+.buy__lane { position: relative; margin: var(--cordon-space-8) 0 var(--cordon-space-6); }
+.buy__rail,
+.buy__span {
+  position: absolute;
+  top: 23px;
+  height: 2px;
+  border-radius: 2px;
+}
+.buy__rail { left: 12.5%; right: 12.5%; background: rgba(140, 19, 32, 0.12); }
+.buy__span { background: var(--cordon-accent); }
+.buy__span[data-refused] {
+  background: repeating-linear-gradient(90deg, #8c1320 0 5px, transparent 5px 9px);
+}
+.buy__pulse {
+  position: absolute;
+  top: 24px;
+  /* Under the stations: parked on one, the glyph covers it; between two, it
+     is the only thing on the rail. */
+  z-index: 0;
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  border-radius: 999px;
+  background: var(--cordon-accent);
+  box-shadow: 0 0 0 4px rgba(173, 49, 77, 0.16), 0 0 14px rgba(173, 49, 77, 0.5);
+}
+.buy__pulse[data-refused] { background: #8c1320; box-shadow: 0 0 0 4px rgba(140, 19, 32, 0.16); }
+
+.buy__stations {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.buy__station { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
+.buy__glyph {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 8px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid rgba(140, 19, 32, 0.16);
+  color: var(--cordon-copy-dim);
+  transition: color 0.3s var(--cordon-ease-settle), border-color 0.3s var(--cordon-ease-settle), box-shadow 0.3s var(--cordon-ease-settle);
+}
+.buy__glyph svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.buy__glyph svg .fill { fill: currentColor; stroke: none; }
+.buy__name { color: var(--cordon-ink-strong); font-size: 13.5px; font-weight: 500; letter-spacing: -0.012em; }
+.buy__sub { color: var(--cordon-copy-dim); font-size: 11.5px; }
+
+.buy__station[data-lit] .buy__glyph {
+  color: var(--cordon-accent);
+  border-color: rgba(173, 49, 77, 0.5);
+  box-shadow: 0 0 0 5px rgba(173, 49, 77, 0.08);
+}
+.buy__glyph { position: relative; }
+.buy__mark {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  background: var(--cordon-accent);
+}
+.buy__mark svg { width: 12px; height: 12px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.buy__station[data-mark="no"] .buy__mark { background: #8c1320; }
+.buy__station[data-mark] .buy__sub { color: var(--cordon-accent); font-weight: 500; }
+.buy__station[data-mark="no"] .buy__sub { color: #8c1320; }
+.buy__station[data-mark="ok"] .buy__glyph { color: var(--cordon-accent); border-color: rgba(173, 49, 77, 0.5); }
+.buy__station:nth-child(3)[data-mark="no"] .buy__glyph {
+  color: #fff;
+  background: #8c1320;
+  border-color: #8c1320;
+  box-shadow: 0 0 0 5px rgba(140, 19, 32, 0.12);
+}
+.buy__station[data-muted] .buy__glyph,
+.buy__station[data-muted] .buy__name { opacity: 0.45; }
+.buy__station[data-muted] .buy__sub { color: #8c1320; }
+
+/* The leg to the seller, severed once the contract has said no. The rail stops
+   at Arc, so this draws on empty space and needs no background to hide it. */
+.buy__cut {
+  position: absolute;
+  top: 19px;
+  height: 10px;
+  background:
+    linear-gradient(135deg, transparent 42%, #8c1320 42%, #8c1320 58%, transparent 58%) center / 10px 10px no-repeat,
+    linear-gradient(45deg, transparent 42%, #8c1320 42%, #8c1320 58%, transparent 58%) center / 10px 10px no-repeat;
+}
+@media (max-width: 460px) {
+  .buy__cut { top: 15px; }
+}
+
+.buy__readout {
+  min-height: 176px;
+  padding-top: var(--cordon-space-5);
+  border-top: 1px solid var(--cordon-hairline-soft);
+}
+.buy__readout-top { display: flex; align-items: center; gap: var(--cordon-space-3); }
+.buy__count { color: var(--cordon-accent); font-family: "JetBrains Mono", var(--cordon-font-mono); font-size: 12px; }
+.buy__verdict {
+  color: var(--cordon-accent);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.buy__verdict[data-tone="refused"] { color: #8c1320; }
+.buy__title {
+  margin: var(--cordon-space-3) 0 0;
+  color: var(--cordon-ink-strong);
+  font-size: clamp(19px, 2vw, 23px);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+.buy__body { max-width: 52ch; margin: var(--cordon-space-2) 0 0; color: var(--cordon-copy); font-size: 14.5px; line-height: 1.55; }
+.buy__proof { display: flex; flex-wrap: wrap; gap: var(--cordon-space-3); margin-top: var(--cordon-space-4); }
+.buy__code,
+.buy__tx {
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.buy__code { color: var(--cordon-ink); background: rgba(34, 34, 34, 0.05); }
+.buy__tx { color: var(--cordon-accent); background: rgba(173, 49, 77, 0.07); text-decoration: none; }
+.buy__tx:hover { background: rgba(173, 49, 77, 0.13); }
+
+.buy__steps { margin: 0; padding: 0; list-style: none; }
+.buy__step {
+  display: flex;
+  align-items: baseline;
+  gap: var(--cordon-space-4);
+  width: 100%;
+  padding: var(--cordon-space-4) 0;
+  border-top: 1px solid var(--cordon-hairline-soft);
+  color: var(--cordon-copy-dim);
+  font-size: 14.5px;
+  line-height: 1.45;
+  text-align: left;
+  transition: color 0.2s var(--cordon-ease-settle);
+}
+.buy__step:hover { color: var(--cordon-ink); }
+.buy__step[data-state="done"] { color: var(--cordon-copy); }
+.buy__step[data-state="active"] { color: var(--cordon-ink-strong); }
+.buy__step-index {
+  flex: none;
+  color: rgba(34, 34, 34, 0.3);
+  font-family: "JetBrains Mono", var(--cordon-font-mono);
+  font-size: 12px;
+}
+.buy__step[data-state="active"] .buy__step-index,
+.buy__step[data-state="done"] .buy__step-index { color: var(--cordon-accent); }
+.buy__step[data-state="active"][data-tone="refused"] .buy__step-index { color: #8c1320; }
+
+@media (max-width: 900px) {
+  .buy { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 460px) {
+  .buy__panel { padding: var(--cordon-space-5); }
+  .buy__head { flex-wrap: wrap; }
+  .buy__tab { padding: 7px 11px; font-size: 12.5px; }
+  .buy__glyph { width: 40px; height: 40px; }
+  .buy__rail, .buy__span { top: 19px; }
+  .buy__pulse { top: 20px; }
+  .buy__readout { min-height: 208px; }
+}
