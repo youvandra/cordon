@@ -85,6 +85,13 @@ touched.
   need no chain run as `test:unit`; the two files that need anvil moved to
   `test/chain`.
 
+- **A looping agent could write an unbounded number of refusal transactions.**
+  A refusal spends no USDC, but it costs gas, which is outside the mandate
+  entirely — and it filled the conduct record with the same sentence. A refusal
+  identical to one already on chain and still standing is now answered from
+  that one. Only a duplicate is ever suppressed, and the memory expires with
+  the window, because a refusal against a fresh budget is a new fact.
+
 ### Corrected
 
 - **"An agent that can buy things and cannot move money" was not true**, and it
