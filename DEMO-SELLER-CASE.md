@@ -230,8 +230,14 @@ bilang masih ada orangnya atau nggak.
    Resolve itu barang publik yang bikin klaim owner kredibel, bukan alat yang
    nguntungin penjual.
 
-3. **Layer ENS-nya masih deskriptif, bukan enforcement** (F-10 di
-   `AUDIT-INDEPENDENT.md`). Hapus seluruh layer ENS, uangnya tetap aman. Itu tes
-   yang dipakai juri ENS. Perbaikannya lebih kecil dari yang sudah dibangun:
-   resolver wildcard ENSIP-10 yang menjawab `cordon.live` dan `cordon.headroom`
-   dari kontrak saat di-resolve.
+3. **Layer ENS-nya sekarang enforcement, bukan deskripsi** — `CordonResolver`
+   (ENSIP-10, gate G8, 9 test). `cordon.live` dan `cordon.headroom` dihitung
+   dari kontrak saat di-resolve, jadi tidak ada nilai tersimpan yang bisa drift,
+   dan revoke sampai ke ENS di transaksi yang sama. Ini yang bisa didemokan
+   langsung: revoke satu leluhur, lalu `getText` nama cucunya — dia menjawab
+   `revoked` tanpa ada satu pun tulisan ke resolver.
+
+   Kalimat demonya: *"Delete my ENS layer and the money is still safe — that's
+   the test you'd apply, and I'd have failed it yesterday. Now the name answers
+   from the contract while you're asking, so a revocation reaches the namespace
+   in the transaction that revokes."*

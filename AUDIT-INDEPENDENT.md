@@ -17,10 +17,15 @@ Tanggal audit: 25 Sep 2026. Commit: `a53e862`. Branch: `claude/sleepy-ride-ln2l8
 > **F-9** (`MAX_TREE_DEPTH = 8`), **F-11** (console resolve lewat universal
 > resolver ENSv2), **F-13** dan **F-14**.
 >
-> Yang **belum**: **F-8** (biaya gas — masih harus dijawab secara naratif, bukan
-> kode), **F-10** (`CordonResolver` ENSIP-10 — pekerjaan terbesar dan yang
-> paling menentukan track ENS), **F-12** (pin koneksi egress, batasi
-> `cordon_fetch`).
+> **F-10 juga ditutup** — `CordonResolver` (ENSIP-10) sudah ada, 9 test, gate G8.
+> Suite kontrak sekarang **113 hijau**. Layer ENS-nya tidak lagi dekoratif:
+> `cordon.live` dan `cordon.headroom` dihitung dari kontrak saat di-resolve,
+> jadi revoke sampai ke ENS di transaksi yang sama dan tidak ada nilai
+> tersimpan yang bisa drift.
+>
+> Yang **belum**: **F-8** (biaya gas — harus dijawab secara naratif, bukan kode;
+> tabel gasnya ada di bawah dan itu bahan demo, bukan bug), dan **F-12** (pin
+> koneksi egress, batasi `method`/`body` di `cordon_fetch`).
 
 ---
 
@@ -283,7 +288,7 @@ Self-harm, bukan attack (nggak ada yang bisa memaksa leluhur orang lain jadi
 dalam). Tapi ini footgun konfigurasi yang bikin tree mati secara ekonomi, dan
 plafonnya satu baris: `if (p.maxDepth > MAX_TREE_DEPTH) revert`.
 
-### F-10 · ENS dan mandate cuma disatukan oleh konvensi
+### F-10 · ENS dan mandate cuma disatukan oleh konvensi — DITUTUP
 **Severity: High — dan ini yang paling penting buat track ENS.** Detail di §4.
 
 Ringkas: seluruh state ENS ditulis oleh forge script one-shot yang baca
@@ -301,6 +306,27 @@ Ringkas: seluruh state ENS ditulis oleh forge script one-shot yang baca
 Repo-nya tahu ini dan jawabannya *"read the contract, not the record"* — itu
 guidance yang benar, **dan sekaligus pengakuan bahwa layer ENS-nya dekoratif
 untuk keselamatan.** Itu persis yang bikin juri ENS nggak kasih hadiah.
+
+**Sudah diperbaiki: `src/CordonResolver.sol`.** Resolver ENSIP-10 yang
+*menghitung* record-nya, bukan menyimpannya. `text(node, "cordon.live")`
+memanggil `registry.revokedAt` saat menjawab; `cordon.headroom` memanggil
+`vault.headroom`. Tidak ada nilai tersimpan, jadi tidak ada yang bisa drift:
+
+- **revoke sampai ke ENS di transaksi yang sama** — test `G8` me-revoke leluhur
+  dalam satu transaksi yang tidak menyebut resolver, nama, maupun agent-nya, dan
+  nama itu langsung menjawab `revoked` dan `0.000000`. Tidak ada `unregister`
+  per-descendant yang harus diingat.
+- **`getText` biasa jadi authorization check** — panggilan yang sudah ada di
+  setiap library ENS di setiap bahasa. Tanpa SDK Cordon, tanpa izin dari kita.
+- **wildcard: satu resolver melayani seluruh pohon**, jadi spawn tidak
+  memerlukan transaksi ENS sama sekali — hanya `bind`, dan itu hak owner, bukan
+  operator.
+
+Tes tiga hal yang mudah hilang: nama yang belum di-`bind` menjawab **kosong**
+untuk setiap key dan tidak pernah `"0"` (nol itu angka, dan penjual akan
+mempercayainya); key tak dikenal menjawab kosong alih-alih revert; dan namehash
+dari wire-format diuji terhadap namehash EIP-137 yang dihitung pembaca, karena
+wildcard hanya aman selama keduanya sepakat.
 
 ### F-11 · `ENSV2.universalResolver` dideklarasikan, tidak pernah dipakai
 `packages/fixtures/src/index.ts:191`. Satu-satunya kemunculan di seluruh repo.
