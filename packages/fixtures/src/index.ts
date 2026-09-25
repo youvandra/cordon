@@ -284,6 +284,39 @@ export const ERC8004 = {
   purposeMaxLength: 140,
 } as const;
 
+/**
+ * An ERC-7930 interoperable address: the registry an ERC-8004 identity lives
+ * in, encoded the way ENSIP-25 keys it.
+ *
+ * Version, chain type, the length of the chain reference and the reference
+ * itself, then the length of the address and the address. It is built rather
+ * than written down because a key one byte out looks *absent* rather than
+ * wrong — and an absent registration reads as an agent that never claimed its
+ * identity, which is a sentence about the agent that nobody meant to say.
+ *
+ * It lives here, beside the registries it encodes, because the daemon's check
+ * and the console's Resolve screen both key records with it. Two copies of an
+ * encoding is one copy that can drift into answering `absent` while the other
+ * answers `registered`, about the same agent.
+ */
+export function erc7930(chainId: number, address: string): string {
+  if (!Number.isInteger(chainId) || chainId <= 0) {
+    throw new Error(`chain id must be a positive integer, got ${chainId}`);
+  }
+  if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
+    throw new Error(`not a 20-byte address: ${address}`);
+  }
+  let ref = chainId.toString(16);
+  if (ref.length % 2) ref = `0${ref}`;
+  const refLen = (ref.length / 2).toString(16).padStart(2, "0");
+  return `0x00010000${refLen}${ref}14${address.slice(2).toLowerCase()}`;
+}
+
+/** The whole ENSIP-25 text key, registry and agent id together. */
+export function registrationKey(chainId: number, registry: string, agentId: bigint): string {
+  return `agent-registration[${erc7930(chainId, registry)}][${agentId}]`;
+}
+
 /** Published ecosystem baseline. arxiv 2606.26028. We are the exception to it. */
 export const REGISTRY_BASELINE = {
   source: "arxiv 2606.26028",

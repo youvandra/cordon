@@ -18,7 +18,7 @@ import { useEffect, useState } from "react";
 import { createPublicClient, http, parseAbi, isAddress, type Address, type Hex } from "viem";
 import { normalize } from "viem/ens";
 import { sepolia } from "viem/chains";
-import { SEPOLIA, ERC8004, DEPLOYMENTS } from "@cordon/fixtures";
+import { SEPOLIA, ERC8004, DEPLOYMENTS, registrationKey } from "@cordon/fixtures";
 
 const REGISTRY_ABI = parseAbi([
   "function isLive(bytes32) view returns (bool)",
@@ -35,21 +35,6 @@ const client = createPublicClient({ chain: sepolia, transport: http(SEPOLIA.rpc)
 
 /** The Sepolia deployment, or nothing. `pending` is a value here too. */
 const HERE = DEPLOYMENTS[SEPOLIA.chainId] ?? null;
-
-/**
- * The ERC-7930 interoperable address ENSIP-25 keys a registration by.
- *
- * Version, chain type, the length of the chain reference and the reference,
- * then the length of the address and the address. Built rather than written
- * down: a key one byte out looks absent, and an absent registration reads as
- * an agent that never claimed its identity.
- */
-function erc7930(chainId: number, address: string): string {
-  let ref = chainId.toString(16);
-  if (ref.length % 2) ref = `0${ref}`;
-  const refLen = (ref.length / 2).toString(16).padStart(2, "0");
-  return `0x00010000${refLen}${ref}14${address.slice(2).toLowerCase()}`;
-}
 
 export interface Rung {
   node: Hex;
@@ -191,7 +176,7 @@ export function useResolvedAgent(subject: string): Lookup {
             address: HERE.record as Address, abi: RECORD_ABI, functionName: "agentIdOf", args: [node as Hex],
           })) as bigint;
           if (agentId > 0n) {
-            const key = `agent-registration[${erc7930(SEPOLIA.chainId, ERC8004.identity)}][${agentId}]`;
+            const key = registrationKey(SEPOLIA.chainId, ERC8004.identity, agentId);
             attested = Boolean(await client.getEnsText({ name: normalize(name), key }));
           }
         }
