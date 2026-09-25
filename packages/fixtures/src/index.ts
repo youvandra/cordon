@@ -129,6 +129,49 @@ export const SEPOLIA = {
 } as const;
 
 /**
+ * Every chain Cordon runs on, keyed by chain id.
+ *
+ * Anything that builds a viem chain reads its native token from here. The
+ * alternative was what this repo had: four `defineChain` sites, each holding
+ * `{ name: "USDC", decimals: 18 }` because Arc was the only chain there was.
+ * Pointed at Sepolia, those four sites each declared that ETH is USDC — a
+ * fact no contract enforces, sitting where a formatter reads it.
+ *
+ * Keyed by id rather than exported as a list because the callers all start
+ * from a chain id: the meter is told one, the deployment file is named after
+ * one, and `--chain` is how an operator names one.
+ */
+export const CHAINS = {
+  [ARC.chainId]: ARC,
+  [SEPOLIA.chainId]: SEPOLIA,
+} as const;
+
+/** What a surface needs to name a chain and its gas. Both chains above answer
+ *  it, and a third would have to before it could be added. */
+export interface ChainFacts {
+  chainId: number;
+  name: string;
+  rpc: string;
+  explorer: string;
+  nativeDecimals: number;
+  nativeName: string;
+  nativeSymbol: string;
+  erc20: string;
+  erc20Decimals: number;
+}
+
+/**
+ * The chain behind an id, or `undefined` where Cordon does not know it.
+ *
+ * `undefined` rather than a default: a meter handed an unknown chain id that
+ * silently formats its gas as Arc's USDC produces a ledger that reads right
+ * and is about another chain's money.
+ */
+export function chainFacts(chainId: number): ChainFacts | undefined {
+  return (CHAINS as Record<number, ChainFacts>)[chainId];
+}
+
+/**
  * ENSv2, on its only deployment.
  *
  * Addresses of contracts nobody here deployed, so they sit beside the USDC and

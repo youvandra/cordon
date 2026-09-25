@@ -10,6 +10,9 @@ interface ImportMetaEnv {
   readonly VITE_SITE_URL?: string;
   /** Where the meter answers. Unset means the record pages read fixtures. */
   readonly VITE_METER_URL?: string;
+  /** A second meter, for the other chain Cordon is deployed on. Record ids
+   *  are per contract, so one URL cannot answer for both. */
+  readonly VITE_METER_ARC_URL?: string;
 }
 
 interface ImportMeta {

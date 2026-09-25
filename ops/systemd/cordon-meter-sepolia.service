@@ -1,0 +1,47 @@
+[Unit]
+# The event indexer for Sepolia, where the names live. A second unit rather
+# than a second mode: a ledger holds one chain, `sync` exits when it is handed
+# events from another, and the two chains' refusal ids collide — so they are
+# two processes, two snapshots and two ports, and each answer says which chain
+# it is about.
+Description=Cordon meter, Sepolia (events into a ledger, read-only API on 127.0.0.1:8407)
+Documentation=https://getcordon.xyz/docs/surfaces
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/cordon/packages/meter
+Environment=NODE_ENV=production
+Environment=CORDON_CHAIN_ID=11155111
+Environment=CORDON_METER_PORT=8407
+# Deployment addresses are not here. The process reads
+# packages/contracts/deployments/11155111.json and exits 2 when it is absent,
+# which is the behaviour we want: a meter pointed at a hand-typed address
+# produces a ledger that looks right and is about another tree.
+#
+# Its own file, because Arc's `.env.meter` names Arc's RPC and its window
+# sizes. Handed to this unit, `CORDON_RPC` would point a Sepolia meter at Arc.
+EnvironmentFile=-/home/ubuntu/cordon/.env.meter.sepolia
+ExecStart=/usr/bin/node src/main.ts
+Restart=on-failure
+RestartSec=5s
+
+# A read-only indexer needs nothing from this box but the network and its own
+# snapshot file.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/cordon/packages/meter
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cordon-meter-sepolia
+
+[Install]
+WantedBy=multi-user.target

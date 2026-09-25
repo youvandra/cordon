@@ -6,7 +6,8 @@ Five surfaces, one box, three names.
 |---|---|---|
 | site | `https://getcordon.xyz/` | static, `/var/www/cordon` |
 | console | `https://getcordon.xyz/console/` | static, `/var/www/cordon/console`, built with base `/console/` |
-| meter read API | `https://getcordon.xyz/api/` | `cordon-meter.service` on `127.0.0.1:8404`, proxied |
+| meter read API, Sepolia | `https://getcordon.xyz/api/` | `cordon-meter-sepolia.service` on `127.0.0.1:8407`, proxied |
+| meter read API, Arc | `https://getcordon.xyz/api/arc/` | `cordon-meter.service` on `127.0.0.1:8404`, proxied |
 | attest | `https://attest.getcordon.xyz/` | `cordon-attest.service` on `127.0.0.1:8405`, proxied |
 | demo seller | `https://demo-seller.getcordon.xyz/` | `cordon-demo-seller.service` on `127.0.0.1:8406`, proxied |
 
@@ -102,7 +103,7 @@ curl -sI --compressed https://getcordon.xyz/console/ | grep -i content-encoding
 umask 077 && ${EDITOR:-nano} ~/cordon/.env.attest    # CORDON_ATTEST_KEY=0x…
 sudo cp ops/systemd/cordon-*.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now cordon-meter cordon-attest
+sudo systemctl enable --now cordon-meter cordon-meter-sepolia cordon-attest
 journalctl -u cordon-attest -n 40 --no-pager
 ```
 
@@ -276,6 +277,33 @@ overrides it for a meter somewhere else:
 ```bash
 CORDON_METER_URL=https://meter.example.com ./ops/bin/cordon-publish.sh
 ```
+
+### Two chains, one id space
+
+Cordon is deployed on Arc and on Sepolia, and `RECORD_BASE` is the same
+constant on both. So Arc's refusal 7 and Sepolia's refusal 7 are two different
+events that write the same URL, and one meter behind `/api` can answer for
+only one of them.
+
+There are two meters. `/api` is **Sepolia** — the chain the names are on, the
+chain the console reads, and the chain a demo runs. `/api/arc` is Arc, kept so
+that every record Arc ever wrote still resolves. The site asks the first, and
+asks the second when the first has no such id; every meter answer carries its
+own `chainId`, so the page names the chain that replied rather than assuming
+one. `CORDON_METER_ARC_URL` overrides the second the way `CORDON_METER_URL`
+overrides the first.
+
+Each meter keeps its own snapshot (`ledger.<chainId>.json`) and its own
+environment file. `~/.cordon/.env.meter` names Arc's RPC and Arc's window
+sizes; a Sepolia meter handed that file asks Arc for Sepolia's blocks, so it
+reads `~/cordon/.env.meter.sepolia` instead. Sepolia's public endpoint answers
+the default windows, so that file may hold nothing but a comment — or an
+endpoint with a key, if the public one starts refusing.
+
+The console is pointed at one chain by `packages/console/src/lib/chain.ts` and
+throws away a meter answer whose `chainId` is not that chain's, then reads the
+chain itself in windows. That is why the Refusals screen kept working while
+`/api` was still Arc — slowly, against a public RPC, in a demo.
 
 The meter already sends `access-control-allow-origin: *` — a record only its
 owner can fetch is not a record.

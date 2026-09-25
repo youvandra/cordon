@@ -14,7 +14,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPublicClient, defineChain, http, type Address, type PublicClient } from "viem";
-import { ARC, GATEWAY } from "../../fixtures/src/index.ts";
+import { ARC, GATEWAY, chainFacts } from "../../fixtures/src/index.ts";
 import { deserialize, writeSnapshot } from "./snapshot.ts";
 import { sync } from "./sync.ts";
 import { createReadApi } from "./server.ts";
@@ -61,7 +61,12 @@ function parse(argv: string[]): Args {
   const chainId = Number(args.chain ?? process.env.CORDON_CHAIN_ID ?? ARC.chainId);
   return {
     chainId,
-    rpc: args.rpc ?? process.env.CORDON_RPC ?? ARC.rpc,
+    /* The chain's own endpoint, where Cordon knows the chain. Defaulting to
+       Arc's for every id meant a meter told `--chain 11155111` asked Arc for
+       Sepolia's blocks; `sync` catches the mismatch and exits, so this was
+       a confusing failure rather than a wrong ledger — but it is still a
+       default that names the wrong chain. */
+    rpc: args.rpc ?? process.env.CORDON_RPC ?? chainFacts(chainId)?.rpc ?? ARC.rpc,
     /* Left undefined here and resolved from the deployment below, because
        the honest default is the block the contracts were created in and that
        file is the only place it is written down. */
@@ -110,6 +115,10 @@ function contractsFor(chainId: number): {
     registry: file.registry,
     vault: file.vault,
     record: file.record,
+    /* Both are recorded per chain by the deploy script. The fallbacks are for
+       deployments written before it exported them, which only ever existed on
+       Arc — so they are Arc's, and a chain that reaches them without its own
+       file is a chain whose deployment record is too old to trust here. */
     gateway: (file.gateway ?? GATEWAY.wallet) as Address,
     usdc: (file.usdc ?? ARC.erc20) as Address,
     fromBlock: BigInt(file.fromBlock ?? "0"),
@@ -122,24 +131,54 @@ const { fromBlock: deployedAt, ...contracts } = contractsFor(args.chainId);
    operator may want, and it cannot invent history that was never there. */
 const fromBlock = args.fromBlock === undefined ? deployedAt : BigInt(args.fromBlock);
 
+/**
+ * The chain this meter was pointed at, from the one place chains are written
+ * down.
+ *
+ * Absent means an id Cordon has no facts for, and the meter stops. It used to
+ * carry on with Arc's: gas named USDC at 18 decimals, on a chain whose gas is
+ * ETH. Nothing downstream reads `nativeCurrency` today, which is exactly why
+ * it would have sat there being wrong until something did.
+ */
+const facts = chainFacts(args.chainId);
+if (!facts) {
+  console.error(`chain ${args.chainId} is not one this build knows`);
+  console.error("chains live in packages/fixtures/src/index.ts and nowhere else");
+  process.exit(2);
+}
+
 const chain = defineChain({
-  id: args.chainId,
-  name: `chain-${args.chainId}`,
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: ARC.nativeDecimals },
+  id: facts.chainId,
+  name: facts.name,
+  nativeCurrency: {
+    name: facts.nativeName,
+    symbol: facts.nativeSymbol,
+    decimals: facts.nativeDecimals,
+  },
   rpcUrls: { default: { http: [args.rpc] } },
   /* Declared so reconciliation's one read per operator becomes one request for
      all of them. It runs every tick against an endpoint that rate limits. */
   contracts: { multicall3: { address: ARC.multicall3 as `0x${string}` } },
 });
-/* viem caches `getBlockNumber` for the polling interval, and its default is
-   4,000ms — written for chains where a block is minutes away. On Arc, where
-   finality is sub-second, that makes the ledger up to four seconds behind a
-   chain that has already settled, for no reason a reader would guess. */
+
+/**
+ * How often to ask for the head, in milliseconds.
+ *
+ * viem caches `getBlockNumber` for this long, and its default of 4,000ms is
+ * written for chains where a block is minutes away. On Arc, where finality is
+ * sub-second, that leaves the ledger up to four seconds behind a chain that
+ * has already settled. Sepolia's blocks are twelve seconds apart, and asking
+ * a public endpoint forty times per block is how an indexer gets its address
+ * rate limited — so the pace follows the chain rather than the code that was
+ * written when there was only one.
+ */
+const POLL_MS = args.chainId === ARC.chainId ? 250 : 4_000;
+
 const client = createPublicClient({
   chain,
   transport: http(args.rpc),
-  pollingInterval: 250,
-  cacheTime: 250,
+  pollingInterval: POLL_MS,
+  cacheTime: POLL_MS,
   batch: { multicall: true },
 }) as PublicClient;
 

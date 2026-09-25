@@ -47,8 +47,13 @@ cd "$REPO"
 # the preview tree and says so — which is the honest default for a laptop and
 # the wrong one for the host whose name is written into every record.
 export VITE_METER_URL="${CORDON_METER_URL:-/api}"
+# Arc's meter, under its own path. Record ids belong to the contract that
+# wrote them, so the two chains share the /refusal/<id> URL space and one
+# meter can only answer for one of them. The site asks this one when the
+# first has no such id, and prints the chain whichever answered reports.
+export VITE_METER_ARC_URL="${CORDON_METER_ARC_URL:-/api/arc}"
 
-log "building site with meter at $VITE_METER_URL"
+log "building site with meters at $VITE_METER_URL and $VITE_METER_ARC_URL"
 npm run build --prefix packages/site
 log "building console"
 npm run build --prefix packages/console

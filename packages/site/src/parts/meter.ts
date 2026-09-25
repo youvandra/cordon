@@ -22,6 +22,29 @@ import { useEffect, useState } from "react";
 export const METER_URL: string | undefined =
   (import.meta.env.VITE_METER_URL as string | undefined) || undefined;
 
+/**
+ * The second meter, where one is served.
+ *
+ * `ConductRecord.RECORD_BASE` is a Solidity constant, so every record on every
+ * chain points at `https://getcordon.xyz/refusal/<decimal id>`. Those ids are
+ * per contract: Arc's refusal 5 and Sepolia's refusal 5 are different events
+ * that share a URL. Cordon now runs on both chains, so one meter behind that
+ * path answers half the records and, worse, could answer the other half with
+ * the wrong chain's event.
+ *
+ * So a record id is asked of each meter in turn and the first that holds it
+ * wins. Every answer carries its own `chainId`, which is what the page prints
+ * — the reader is told which chain replied rather than asked to assume.
+ */
+export const METER_ARC_URL: string | undefined =
+  (import.meta.env.VITE_METER_ARC_URL as string | undefined) || undefined;
+
+/** Asked in this order. The first is the chain the console and the demo are
+ *  on, so the common case is one request. */
+const METERS: string[] = [METER_URL, METER_ARC_URL].filter(
+  (url): url is string => typeof url === "string" && url.length > 0,
+);
+
 /** The range every meter answer carries, so a reader knows how far it saw. */
 export interface Range {
   chainId: number;
@@ -95,10 +118,9 @@ export type Loaded<T> =
   | { state: "live"; data: T }
   | { state: "missing" };
 
-async function read<T>(path: string): Promise<Loaded<T>> {
-  if (!METER_URL) return { state: "unconfigured" };
+async function askOne<T>(base: string, path: string): Promise<Loaded<T>> {
   try {
-    const response = await fetch(`${METER_URL}${path}`, {
+    const response = await fetch(`${base}${path}`, {
       headers: { accept: "application/json" },
       signal: AbortSignal.timeout(8_000),
     });
@@ -109,6 +131,18 @@ async function read<T>(path: string): Promise<Loaded<T>> {
        back to the fixture, and the page says which one it is showing. */
     return { state: "missing" };
   }
+}
+
+async function read<T>(path: string): Promise<Loaded<T>> {
+  if (METERS.length === 0) return { state: "unconfigured" };
+  /* In turn, and stopping at the first that holds it. A record id belongs to
+     one chain's contract, so at most one of these has it — asking them all in
+     parallel would buy nothing but load on an endpoint that rate limits. */
+  for (const base of METERS) {
+    const answer = await askOne<T>(base, path);
+    if (answer.state === "live") return answer;
+  }
+  return { state: "missing" };
 }
 
 function useMeter<T>(path: string | null): Loaded<T> {
