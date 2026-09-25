@@ -55,6 +55,46 @@ export interface Transport {
   }>;
 }
 
+/**
+ * The methods a purchase can be made with, and why the list is short.
+ *
+ * `cordon_fetch` is the whole tool list, and the argument for that is that an
+ * agent cannot express "send money to X" — only "fetch this URL". That claim is
+ * about money and it holds: the payee comes from the seller's own 402 challenge
+ * and there is no transfer tool.
+ *
+ * It was quietly standing in for a second claim it never made. The tool takes a
+ * method and a body, so it is a general HTTP client, and a general HTTP client
+ * is an egress channel: an agent that has learned something can POST it
+ * anywhere public, and the money fence has nothing to say about that. Closing
+ * the private-address half in `egress.ts` did nothing for it, because the
+ * destination is a perfectly ordinary public host.
+ *
+ * So the verb is bounded too. A purchase is a read that answers 402 and is
+ * retried with a signature — GET and HEAD cover that, and POST is kept because
+ * real priced endpoints take a query in the body, which is a request for work
+ * rather than a way to publish. What is refused is everything whose purpose is
+ * to leave state behind on somebody else's server: PUT, PATCH, DELETE and the
+ * rest. An agent with a legitimate need for one of those is asking for a tool
+ * this daemon does not have, and should be told rather than served.
+ */
+const PURCHASE_METHODS = new Set(["GET", "HEAD", "POST"]);
+
+export class MethodRefused extends Error {}
+
+export function assertPurchaseMethod(raw: string): string {
+  const method = raw.toUpperCase();
+  if (!PURCHASE_METHODS.has(method)) {
+    throw new MethodRefused(
+      `${method} is not a method this daemon fetches with. A purchase is a request ` +
+        `answered with 402 and retried with a signature, so GET, HEAD and POST are ` +
+        `what that needs. A verb whose point is to leave state on someone else's ` +
+        `server is an egress channel, and this tool is not one.`,
+    );
+  }
+  return method;
+}
+
 export async function cordonFetch(
   request: FetchRequest,
   deps: {
@@ -66,7 +106,7 @@ export async function cordonFetch(
   },
 ): Promise<FetchResult> {
   const { gate, settler, acceptable, transport } = deps;
-  const method = request.method ?? "GET";
+  const method = assertPurchaseMethod(request.method ?? "GET");
   const headers = { ...request.headers };
 
   const first = await transport(request.url, { method, headers, body: request.body });

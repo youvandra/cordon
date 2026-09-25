@@ -23,9 +23,15 @@ Tanggal audit: 25 Sep 2026. Commit: `a53e862`. Branch: `claude/sleepy-ride-ln2l8
 > jadi revoke sampai ke ENS di transaksi yang sama dan tidak ada nilai
 > tersimpan yang bisa drift.
 >
+> **F-12 separuh ditutup** — `cordon_fetch` sekarang cuma menerima GET, HEAD dan
+> POST. Verb yang tujuannya meninggalkan state di server orang lain (PUT, PATCH,
+> DELETE) ditolak, karena itu kanal egress dan pagar uang tidak punya apa pun
+> untuk dikatakan soal itu. Yang **masih terbuka**: pinning koneksi ke address
+> yang sudah dicek (TOCTOU DNS rebinding), yang butuh dispatcher undici — satu
+> dependensi baru, dan `egress.ts` sudah jujur menuliskannya sebagai terbuka.
+>
 > Yang **belum**: **F-8** (biaya gas — harus dijawab secara naratif, bukan kode;
-> tabel gasnya ada di bawah dan itu bahan demo, bukan bug), dan **F-12** (pin
-> koneksi egress, batasi `method`/`body` di `cordon_fetch`).
+> tabel gasnya ada di bawah dan itu bahan demo, bukan bug).
 
 ---
 

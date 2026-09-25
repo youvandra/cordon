@@ -14,6 +14,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import { assertPublicUrl, EgressError, isPrivateAddress } from "../src/egress.ts";
+import { assertPurchaseMethod, MethodRefused } from "../src/fetch.ts";
 import { createHttpTransport, type Transport } from "../src/fetch.ts";
 
 /** DNS, without DNS. Every test says what the name answers with. */
@@ -186,4 +187,31 @@ test("a seller that redirects forever is stopped rather than followed", async ()
   } finally {
     await close(seller.server);
   }
+});
+
+/* ---------------------------------------------------------------- */
+/* The verb, not just the address                                    */
+/* ---------------------------------------------------------------- */
+
+test("a purchase may be a GET, a HEAD or a POST", () => {
+  for (const method of ["GET", "HEAD", "POST", "get", "post"]) {
+    assert.equal(assertPurchaseMethod(method), method.toUpperCase());
+  }
+});
+
+test("a verb whose point is to leave state elsewhere is refused", () => {
+  /* The money fence has nothing to say about a PUT to a public host: the payee
+     comes from the seller's challenge either way. What a general HTTP client
+     gives an agent is somewhere to put what it has learned, and that is the
+     half `egress.ts` could not close by checking addresses. */
+  for (const method of ["PUT", "PATCH", "DELETE", "OPTIONS", "TRACE", "CONNECT"]) {
+    assert.throws(() => assertPurchaseMethod(method), MethodRefused);
+  }
+});
+
+test("the refusal says what a purchase is, not just that it was refused", () => {
+  assert.throws(
+    () => assertPurchaseMethod("DELETE"),
+    (error: Error) => /answered with 402/.test(error.message) && /egress channel/.test(error.message),
+  );
 });
