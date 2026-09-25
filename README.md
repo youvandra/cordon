@@ -12,6 +12,15 @@ of them can see — and no agent in the tree holds a key.
 [![x402](https://img.shields.io/badge/x402-exact-6E56CF)](#settlement-and-the-rail)
 [![ERC-8004](https://img.shields.io/badge/ERC--8004-identity%20%2B%20reputation-B5342A)](#the-record)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue)](#licence)
+[![Version](https://img.shields.io/badge/version-0.2.0-6E56CF)](CHANGELOG.md)
+
+> **0.2.0 is being built at ETHGlobal Tokyo 2026**, on the Continuity track, and
+> gives every agent in the tree a resolvable ENSv2 name. `v0.1.0` is the tag on
+> the last commit that predates the event, so
+> [`v0.1.0...main`](https://github.com/youvandra/cordon/compare/v0.1.0...main) is
+> the weekend's work and nothing else. What it changes is in
+> [CHANGELOG.md](CHANGELOG.md); everything the entry reuses was built before it
+> and is listed there too.
 
 | | |
 |---|---|
