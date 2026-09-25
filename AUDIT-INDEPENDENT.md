@@ -5,6 +5,23 @@ Yang dinilai: kode yang ada, dan apa yang terjadi kalau kode itu dijalankan.
 
 Tanggal audit: 25 Sep 2026. Commit: `a53e862`. Branch: `claude/sleepy-ride-ln2l80`.
 
+> **Status per 26 Sep 2026, 07:40 JST.** Sembilan temuan sudah ditutup dan
+> diverifikasi hijau — **104 test kontrak + 184 test TypeScript, nol gagal.**
+> Yang sudah selesai: **F-1** (release ke branch mati, plus test tripwire-nya
+> ditulis ulang), **F-2** (`releasedSpent` + `delivered`, console baca yang
+> benar), **F-3** (`forge build` keluar dari hook test), **F-4** (CI penuh),
+> **F-5** (gate di-record ulang: G1 66→70, G6 14→16, plus penjaga anti-partial-run
+> dan gerbang CI anti-drift), **F-6** (root manifest + workspaces, satu
+> `npm test`), **F-7** (`DEFAULT_CHAIN` → Sepolia di semua proses, tiga
+> `defineChain` pakai `chainFacts`, poll per-chain, Anvil masuk `CHAINS`),
+> **F-9** (`MAX_TREE_DEPTH = 8`), **F-11** (console resolve lewat universal
+> resolver ENSv2), **F-13** dan **F-14**.
+>
+> Yang **belum**: **F-8** (biaya gas — masih harus dijawab secara naratif, bukan
+> kode), **F-10** (`CordonResolver` ENSIP-10 — pekerjaan terbesar dan yang
+> paling menentukan track ENS), **F-12** (pin koneksi egress, batasi
+> `cordon_fetch`).
+
 ---
 
 ## 0. Apa yang benar-benar aku jalankan
@@ -87,6 +104,19 @@ escalation. Tapi owner yang me-release refusal ber-reason `Revoked` sedang
 mendanai branch yang dia sendiri bunuh, dan nggak ada satu baris pun yang
 memberitahu dia.
 
+**Koreksi, setelah memperbaikinya.** Perilaku ini **disengaja dan ada
+test-nya** — `test_a_cut_branch_can_still_be_paid_by_the_owner_that_cut_it`,
+dan docstring-nya menulis ketegangannya secara eksplisit lalu meminta:
+*"so that if the contracts are redeployed with a revocation check in `release`,
+it fails and has to be rewritten deliberately."* Jadi ini bukan lubang yang
+tidak terdokumentasi; ini tripwire yang sengaja dipasang. Menyebutnya "High
+severity" tanpa menyebut itu tidak adil terhadap penulisnya.
+
+Perubahannya tetap dibuat — karena itu yang diminta tripwire-nya, secara sadar —
+dan test-nya ditulis ulang, bukan dihapus. Yang berubah bukan kewenangan owner,
+tapi caranya: buka mandate lagi dan tanda tangani, bukan menjangkau lewat
+refusal yang dihasilkan revoke-nya sendiri.
+
 **Fix (1 baris):**
 ```solidity
 if (registry.revokedAt(r.node) != bytes32(0)) revert BranchIsCut(refusalId);
@@ -153,12 +183,24 @@ Untuk proyek yang seluruh kredibilitasnya berdiri di atas "gate G1–G7 hijau",
 tidak ada satu pun mesin yang memverifikasi itu. Dan efeknya sudah kelihatan
 — lihat F-5.
 
-### F-5 · Angka gate sudah drift
+### F-5 · Angka gate sudah drift — dan recorder-nya tidak punya penjaga
 `packages/fixtures/src/gates.gen.ts` bilang `G1: tests 66, recordedAt 2026-09-11`.
 Hitungan hari ini: **G1 = 69 tests.** Arahnya under-claim (bagus, jujur), tapi
 buktinya jelas: pipeline "recorded, never typed" — yang merupakan integrity story
 proyek ini — **sudah tidak dijalankan lagi**, dan tanpa CI nggak ada yang
 menjalankannya.
+
+**Dan ada yang lebih dalam.** `scripts/record-gate.mjs` tidak pernah memeriksa
+bahwa run-nya mencakup seluruh file yang cocok dengan glob-nya. Forge yang
+berhenti di tengah — compile gagal, solc tidak terjangkau, satu suite terlewat —
+tetap memancarkan JSON valid untuk suite yang sempat dijalankan, dan setiap
+angka di dalamnya `Success`. Jadi recorder bisa menulis gate **hijau dengan
+seperempat test-nya**, dan situs mencetak angka itu sebagai ukuran gate-nya.
+Hitungan yang diam-diam rendah lebih buruk daripada yang absen: `pending`
+kelihatan, "66 tests" tidak.
+
+Angka sebenarnya setelah di-record ulang: **G1 = 70** (tercatat 66),
+**G6 = 16** (tercatat 14).
 
 ### F-6 · Tidak ada root `package.json` → tidak ada satu perintah untuk run
 **Severity: Medium (judging risk).** 9 lockfile terpisah, 9 `npm ci`, 9 `npm test`,

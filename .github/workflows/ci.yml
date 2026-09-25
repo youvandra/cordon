@@ -51,6 +51,22 @@ jobs:
       - name: forge test
         run: forge test --root packages/contracts -vv
 
+      # Re-record every contract gate from this run and fail if the committed
+      # numbers disagree. This is the check that was missing: gates.gen.ts is
+      # what the site prints as each gate's size, it was recorded by hand, and
+      # it had drifted to 66 G1 tests against a suite of 70.
+      - name: Gate counts are what the run produced
+        working-directory: packages/contracts
+        run: |
+          node scripts/record-gate.mjs G1 'test/G1_*'
+          node scripts/record-gate.mjs G4 'test/G4_*'
+          node scripts/record-gate.mjs G5 'test/G5_*'
+          node scripts/record-gate.mjs G6 'test/G6_*'
+      - name: No gate drift
+        run: |
+          git diff --exit-code -- packages/fixtures/src/gates.gen.ts \
+            || { echo "::error::gates.gen.ts is stale — commit the re-recorded counts"; exit 1; }
+
       # Refusals are returns, not reverts, and every bound is priced on the hot
       # path. A gas report in the log is how a regression in either gets noticed.
       - name: Gas report
