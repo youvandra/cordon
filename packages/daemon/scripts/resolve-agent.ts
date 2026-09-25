@@ -56,7 +56,12 @@ if (isAddress(subject)) {
   payer = subject;
   const found = await client.getEnsName({ address: subject });
   if (!found) {
-    console.log(`${subject} has no name. Nothing about it can be checked.`);
+    /* Either it never had one, or the name it had has stopped resolving —
+       because it was unregistered, or because a name above it was. ENS gives
+       the same answer to both, and so does a seller: there is nothing here to
+       check, so there is nothing to serve on. */
+    console.log(`${subject} has no name that resolves back to it.`);
+    console.log("Refuse it. Nothing about this address can be verified.");
     process.exit(1);
   }
   name = found;
