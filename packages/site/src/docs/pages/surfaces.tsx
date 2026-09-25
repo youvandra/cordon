@@ -33,6 +33,22 @@ export function Mcp() {
         <Link to="/docs/integrate#skill">Integrate with your agent</Link>{" "}
         carries the short version.
       </P>
+      <Note tone="info" title="The rail follows the chain">
+        Circle's Gateway exists on Arc and nowhere else Cordon runs, and the
+        settler built around it waits on an API that has never heard of another
+        chain. So the server picks the rail from the chain it is pointed at
+        rather than from configuration: Gateway on Arc, and on anything else the
+        direct rail, which charges nothing on top and so puts no floor under a
+        purchase. Both are bounded identically, because a draw is decided before
+        a settler is reached.
+      </Note>
+      <Note tone="warn" title="A published build carries the addresses it was built against">
+        The contract addresses default to the deployment the published version
+        was made from. Pointing it at another chain means setting{" "}
+        <C>CORDON_VAULT</C>, <C>CORDON_REGISTRY</C> and <C>CORDON_RECORD</C>{" "}
+        explicitly — an explicit variable always wins, and the file the key
+        lives in is read before they are applied.
+      </Note>
 
       <H2 id="tools">Tools</H2>
       <Table

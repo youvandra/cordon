@@ -392,6 +392,43 @@ export function Troubleshooting() {
         the refusal is on chain either way — but nothing reaches the ERC-8004
         registry until <C>CORDON_RECORD</C> names the seat.
       </P>
+
+      <H2 id="not-activated">EvmError: NotActivated, from a live registry</H2>
+      <Code>{`ETH_REGISTRY::register(...) ← [NotActivated] EvmError: NotActivated`}</Code>
+      <P>
+        Nothing is wrong with the registry. This project compiles to Shanghai,
+        the ENSv2 contracts need a later opcode, and forge simulates a whole
+        call under one EVM version — so the simulator is the thing configured
+        for an older chain. Pass <C>--evm-version cancun</C> on the command
+        line rather than changing <C>foundry.toml</C>, which would rebuild every
+        contract here with a different pipeline.
+      </P>
+
+      <H2 id="cast-resolves-names">A record that stores an address where a name belongs</H2>
+      <P>
+        <C>cast send</C> resolves any argument that looks like an ENS name into
+        an address before it encodes the call. Setting a primary name this way
+        stores the address: the transaction succeeds, the event fires, and the
+        record is wrong. Reverse resolution then keeps answering that the
+        address has no name, which points nowhere near the cause.
+      </P>
+      <Code lang="bash">{`# builds the calldata offline, where there is no RPC to resolve against
+cast calldata 'setName(bytes32,string)' $NODE 'worker1.probe.acme.eth'
+cast send $RESOLVER 0x7737…                      # sends it verbatim`}</Code>
+      <P>
+        A forge script is immune, because the encoding happens in Solidity.
+      </P>
+
+      <H2 id="two-ensv2-deployments">A name that resolves to nothing on the chain it was registered on</H2>
+      <P>
+        Sepolia carries more than one complete ENSv2 deployment, because the
+        contracts are an early preview and are redeployed as they change while
+        a chain keeps every deployment it is given. Only one is reachable from
+        the root registry, and a name registered in any other resolves to
+        nothing. Check which one the root points at before registering
+        anything:
+      </P>
+      <Code lang="bash">{`cast call $ROOT_REGISTRY 'getSubregistry(string)(address)' eth --rpc-url $RPC`}</Code>
     </>
   );
 }
