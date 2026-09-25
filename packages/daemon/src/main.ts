@@ -15,6 +15,7 @@ const keyFile = keyFileAt(config.keyFile);
 
 const server = createDaemon({
   gate,
+  token: config.token,
   keyFile,
   released: new ChainReleases({
     count: () => gate.refusalCount(),
@@ -41,8 +42,8 @@ for (const node of gate.nodes()) await gate.enrol(node);
    recovered by the same restart now. */
 const described = await gate.describeRemembered(keyFile.purposes());
 
-server.listen(config.port, () => {
-  console.log(`cordon daemon on :${config.port}`);
+server.listen(config.port, config.bind, () => {
+  console.log(`cordon daemon on ${config.bind}:${config.port}`);
   console.log(`  chain    ${config.chainId} via ${config.rpcUrl}`);
   console.log(`  vault    ${config.vault}`);
   console.log(`  nodes    ${gate.nodes().join(", ")}`);
@@ -51,6 +52,12 @@ server.listen(config.port, () => {
      writes its spawned children into the first one — silently, until somebody
      greps the wrong file. */
   console.log(`  keys     ${config.keyFile} — spawned children are written here`);
+  /* Said out loud because the failure it guards is silent: a daemon nobody
+     has to authenticate to looks exactly like one they do, until somebody
+     else's request spends. */
+  console.log(
+    `  auth     ${config.token ? "bearer token required" : "none — reachable only from this machine"}`,
+  );
   if (described > 0) {
     console.log(`  purpose  published for ${described} node${described === 1 ? "" : "s"} this key file remembered`);
   }

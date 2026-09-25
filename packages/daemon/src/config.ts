@@ -34,6 +34,24 @@ export interface Config {
   assets: string[];
   port: number;
   /**
+   * The interface to listen on. Loopback unless told otherwise.
+   *
+   * This process holds the only keys in the system and its endpoints spend
+   * money, so a default of 0.0.0.0 puts the wallet on the public internet the
+   * moment the box has an open port. `attest` and `meter` already default to
+   * loopback; this one did not, and it is the only one of the three that can
+   * pay somebody.
+   */
+  bind: string;
+  /**
+   * A shared secret every request must carry, or nothing.
+   *
+   * Optional on loopback, where the operating system is the boundary, and
+   * required the moment `bind` is anything else — see `load`. A daemon exposed
+   * to a network without one is a wallet anyone who can route to it may spend.
+   */
+  token?: string;
+  /**
    * How often to poll for a receipt, in milliseconds.
    *
    * viem's default is 4,000, which is written for chains where a block is
@@ -48,6 +66,19 @@ export interface Config {
 }
 
 class ConfigError extends Error {}
+
+/**
+ * Whether an address keeps the daemon on this machine.
+ *
+ * `::` and `0.0.0.0` are the wildcards and are the case this exists to catch;
+ * everything else that is not a loopback address is some specific interface,
+ * which is still off-machine. Anything unparseable is treated as exposed,
+ * because the safe direction here is to ask for a token that was not needed.
+ */
+function isLoopback(bind: string): boolean {
+  const host = bind.trim().replace(/^\[|\]$/g, "").toLowerCase();
+  return host === "localhost" || host === "::1" || /^127\./.test(host);
+}
 
 /**
  * What the daemon reads, declared once.
@@ -74,6 +105,8 @@ export const ENV = {
     CORDON_NETWORKS: "CAIP-2 ids this daemon will settle on",
     CORDON_ASSETS: "assets it will pay in",
     CORDON_PORT: "defaults to 8402",
+    CORDON_BIND: "the interface to listen on; defaults to 127.0.0.1. Anything else requires CORDON_TOKEN",
+    CORDON_TOKEN: "a shared secret every request must send as `Authorization: Bearer <token>`. Optional on loopback, required off it",
     CORDON_POLL_MS: "receipt polling interval; defaults to 250, matched to Arc's finality rather than to viem's 4,000",
     CORDON_KEY_FILE: "where a spawned child's key is written, before the spawn is sent; defaults to ~/.cordon/cordon.env",
   },
@@ -111,6 +144,19 @@ export function load(env = process.env): Config {
   }
   if (keys.length === 0) throw new ConfigError("no CORDON_NODE_<label> is set");
 
+  /* Off loopback, a token is not a hardening step, it is the whole boundary.
+     Refusing to start is the same answer this file gives to every other
+     missing value, and for the same reason: a daemon that starts anyway is
+     one that discovers the problem when somebody else's request spends. */
+  const bind = env.CORDON_BIND ?? "127.0.0.1";
+  const token = env.CORDON_TOKEN || undefined;
+  if (!isLoopback(bind) && !token) {
+    throw new ConfigError(
+      `CORDON_BIND is ${bind}, which is reachable from off this machine, and CORDON_TOKEN is not set. ` +
+        `This process holds the operator keys: bind to 127.0.0.1, or set a token.`,
+    );
+  }
+
   return {
     rpcUrl: env.CORDON_RPC ?? ARC.rpc,
     chainId: Number(env.CORDON_CHAIN_ID ?? ARC.chainId),
@@ -122,6 +168,8 @@ export function load(env = process.env): Config {
     networks: (env.CORDON_NETWORKS ?? `eip155:${ARC.chainId}`).split(",").map((s) => s.trim()),
     assets: (env.CORDON_ASSETS ?? ARC.erc20).split(",").map((s) => s.trim()),
     port: Number(env.CORDON_PORT ?? 8402),
+    bind,
+    token,
     pollMs: Number(env.CORDON_POLL_MS ?? 250),
     keys,
     keyFile: env.CORDON_KEY_FILE ?? join(homedir(), ".cordon", "cordon.env"),

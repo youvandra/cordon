@@ -13,6 +13,7 @@
  * unattributed tranche this design exists to remove.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { timingSafeEqual } from "node:crypto";
 import type { Hex } from "viem";
 import { generatePrivateKey } from "viem/accounts";
 import { SpawnRefused } from "./gate.ts";
@@ -35,6 +36,25 @@ export interface ServerDeps {
   keyFile?: KeyFile;
   /** Refusals the owner released, spent before a draw is asked for. */
   released?: ReleasedPurchases;
+  /** The shared secret every request must carry. Absent means loopback only,
+   *  which `config.load` is what actually enforces. */
+  token?: string;
+}
+
+/**
+ * Whether a request carries the token, compared in constant time.
+ *
+ * A byte-by-byte comparison that returns early tells a caller how much of the
+ * token it guessed, which over enough requests is the token. `timingSafeEqual`
+ * needs equal lengths, so the length is checked first — that leaks the length
+ * and nothing else, which is a fact about the token nobody had to guess.
+ */
+function carriesToken(req: IncomingMessage, token: string): boolean {
+  const header = req.headers.authorization;
+  if (typeof header !== "string" || !header.startsWith("Bearer ")) return false;
+  const offered = Buffer.from(header.slice("Bearer ".length));
+  const expected = Buffer.from(token);
+  return offered.length === expected.length && timingSafeEqual(offered, expected);
 }
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
@@ -62,6 +82,13 @@ export function createDaemon(deps: ServerDeps) {
 
   return createServer(async (req, res) => {
     try {
+      /* Before the route, before the body is read. Every endpoint here either
+         spends money or describes a tree that says where the money is, so
+         there is no surface worth answering unauthenticated. */
+      if (deps.token && !carriesToken(req, deps.token)) {
+        return json(res, 401, { error: "a bearer token is required" });
+      }
+
       const url = new URL(req.url ?? "/", "http://localhost");
 
       if (req.method === "GET" && url.pathname === "/status") {
