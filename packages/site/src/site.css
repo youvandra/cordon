@@ -1352,3 +1352,17 @@ main { flex: 1 1 auto; }
   .buy__pulse { top: 20px; }
   .buy__readout { min-height: 208px; }
 }
+
+/* The one code block on the landing: a name, resolved. Monospaced because it
+   is a thing a reader could type, and quiet because the words beside it are
+   the argument. */
+.panel__code {
+  margin: 12px 0 0;
+  padding: 0;
+  overflow-x: auto;
+  color: var(--cordon-copy);
+  font-family: var(--cordon-font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: pre;
+}

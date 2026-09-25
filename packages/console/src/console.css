@@ -1116,3 +1116,9 @@ html.entrance-done .cordon-card {
   font-size: 13px;
   line-height: 1.5;
 }
+
+.resolve__badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

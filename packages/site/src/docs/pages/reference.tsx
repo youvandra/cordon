@@ -71,10 +71,50 @@ export function Contracts() {
         pays the gas, the entry written is the one the vault already holds.
       </P>
 
+      <H2 id="localgateway">LocalGateway</H2>
+      <P>
+        The settlement rail on a chain where Circle's Gateway is absent. The
+        vault reaches its gateway through an interface and calls it in exactly
+        two places, so a chain without one is served by satisfying that
+        interface rather than by editing a rehearsed contract and the twelve
+        test files that build a vault.
+      </P>
+      <Table
+        head={["Function", "Who", "Does"]}
+        rows={[
+          [
+            <C key="d">depositFor(token, depositor, value)</C>,
+            "the vault",
+            "move the tranche into the operator's own balance",
+          ],
+          [
+            <C key="b">availableBalance(token, depositor)</C>,
+            "anyone",
+            "what that balance holds",
+          ],
+        ]}
+      />
+      <Note tone="warn" title="It counts money from anywhere">
+        <C>availableBalance</C> answers with the depositor's whole USDC balance,
+        because on this rail the deposit is the balance. On Arc the same call
+        answers with a Gateway balance, which only a deposit can raise — so a
+        reader reconciling an operator's holdings against what the vault
+        released is reading a wider number here.
+      </Note>
+      <P>
+        No owner, no admin, no pause. It holds nothing, so there is nothing to
+        seize or to stop, and a seat that could do either would put an off-chain
+        control in a path whose whole claim is that it has none. What the vault
+        decides — caps, windows, concentration, the ancestor debit, the refusal
+        — is upstream of this and identical on both chains.
+      </P>
+
       <H2 id="erc-8004">ERC-8004</H2>
       <P>
         Nothing to deploy. Identity and Reputation are live at deterministic
-        addresses on Arc and on forty other chains.
+        addresses on Arc, on Sepolia, and on forty other chains — which is the
+        whole reason the record goes there. A registry we deployed would be a
+        silo; this one is read by everyone.
       </P>
       <Code>{`Identity    ${ERC8004.identity}
 Reputation  ${ERC8004.reputation}`}</Code>
@@ -82,7 +122,8 @@ Reputation  ${ERC8004.reputation}`}</Code>
       <H2 id="deployments">Deployments</H2>
       <P>
         Addresses live in <C>packages/contracts/deployments/&lt;chainId&gt;.json</C>{" "}
-        and nowhere else. That file is written by the deploy script from the
+        and nowhere else — one file per chain, because Cordon now runs on more
+        than one. That file is written by the deploy script from the
         broadcast, never typed by hand: a mistyped address is the kind of defect
         that looks like a working system right up until the first draw.
       </P>

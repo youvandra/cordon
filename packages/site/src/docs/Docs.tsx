@@ -6,6 +6,7 @@ import { HowItWorks, Introduction, Quickstart } from "./pages/start";
 import { DocsIndex, Integrate, Walkthrough } from "./pages/integrate";
 import { Console, Settlement, Troubleshooting } from "./pages/settlement";
 import { DrawsAndBounds, MandateTree, Refusals, TheRecord } from "./pages/concepts";
+import { Names } from "./pages/names";
 import { Attest, Daemon, DemoSeller, Mcp, Meter, Proxy } from "./pages/surfaces";
 import { Configuration, Contracts, Faq, Gates } from "./pages/reference";
 
@@ -23,6 +24,7 @@ const PAGES: Record<string, ComponentType> = {
   "draws-and-bounds": DrawsAndBounds,
   refusals: Refusals,
   "the-record": TheRecord,
+  names: Names,
   settlement: Settlement,
   mcp: Mcp,
   proxy: Proxy,

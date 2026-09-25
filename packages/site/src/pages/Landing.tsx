@@ -5,6 +5,7 @@ import { Counterfactual } from "../sections/Counterfactual";
 import { Purchase } from "../sections/Purchase";
 import { Arc } from "../sections/Arc";
 import { Record } from "../sections/Record";
+import { Names } from "../sections/Names";
 import { Start } from "../sections/Start";
 
 /**
@@ -29,6 +30,7 @@ export default function Landing() {
       <Purchase />
       <Arc />
       <Record />
+      <Names />
       <Start />
     </>
   );

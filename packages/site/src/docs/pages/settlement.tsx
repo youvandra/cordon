@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ARC, ATTEST, GATEWAY, MARKETPLACE, SETTLEMENT, formatUsdc } from "@cordon/fixtures";
+import { ARC, ATTEST, GATEWAY, MARKETPLACE, SETTLEMENT, formatUsdc, SEPOLIA } from "@cordon/fixtures";
 import { C, Code, H2, H3, Lead, Note, OL, P, Table } from "../parts";
 
 const tx = (hash: string) => `${ARC.explorer}/tx/${hash}`;
@@ -110,6 +110,29 @@ export function Settlement() {
         Most of that catalogue is inside the band this floor sits in.
       </P>
 
+      <H2 id="the-direct-rail">The rail on a chain with no Gateway</H2>
+      <P>
+        Gateway exists on Arc and nowhere else Cordon runs. On{" "}
+        {SEPOLIA.name} — where ENSv2 lives, so where the names live — the vault
+        deposits into the operator's own token balance and the first half of
+        everything above has nothing to do. No burn intent, no expiration
+        height, no API call, and no wait for an indexer to notice a deposit that
+        is already on chain.
+      </P>
+      <P>
+        What remains is the half that was always the payment: an EIP-3009
+        authorisation the seller submits itself. And because nothing is charged
+        on top of the value, <b>there is no floor</b>. A purchase of one base
+        unit settles.
+      </P>
+      <Note tone="info" title="The two rails disagree, and a test says so">
+        The same purchase is put to both: Circle refuses it for arithmetic, and
+        the direct settler completes it. x402 prices live below a cent, and this
+        is the rail that can carry them. The bounds are untouched either way —
+        caps, windows, concentration and the ancestor debit are all decided
+        before a settler is reached.
+      </Note>
+
       <H2 id="what-cannot-be-enforced">What the rail will not let us enforce</H2>
       <P>
         The seller is named in <C>{GATEWAY.sellerField}</C>, a field inside a
@@ -178,6 +201,10 @@ export function Console() {
       </Lead>
 
       <H2 id="two-ways-in">Two ways in</H2>
+      <P>
+        Three, counting <Link to="/docs/names">Resolve</Link>, which belongs to
+        neither: it answers a stranger about somebody else's agent.
+      </P>
       <Table
         head={["", "Without a wallet", "With a wallet"]}
         rows={[
@@ -228,6 +255,35 @@ export function Console() {
         purchase past the bound. Releasing raises nothing: the same purchase is
         refused again a second later.
       </P>
+
+      <H2 id="resolve">Resolve</H2>
+      <P>
+        The one screen here that belongs to a stranger. Every other surface
+        answers to an owner who already knows their tree; this one takes a name
+        or the address a payment authorisation carries and answers the question a
+        seller has: may this agent pay, and who is behind it. It needs no wallet
+        and grants no permission — resolution is public.
+      </P>
+      <P>
+        The layout separates what is enforced from what is claimed, because that
+        distinction is the product. The budget, the liveness and what may still
+        be drawn come from the contract and carry the enforced badge. The
+        endpoint and the description are text records, in a panel that says no
+        contract reads them. The identity sits between the two: the agent id
+        comes from the chain, and a badge says whether the name attests to it.
+      </P>
+      <P>
+        Below that, the authority chain, drawn rather than listed. Every rung
+        above an agent is an operator who could cut it off, the rung whose bound
+        is the binding one is tagged — often not the agent's own — and the owner
+        at the end funded the tree. See <Link to="/docs/names">names and
+        authority</Link>.
+      </P>
+      <Note tone="info" title="It reads Sepolia">
+        ENSv2 is deployed on one chain, so this screen reads that chain while
+        the rest of the console answers for the Arc tree. The bar at the top
+        names whichever chain the screen in front of you is reading.
+      </Note>
 
       <H2 id="new-mandate">New mandate</H2>
       <P>

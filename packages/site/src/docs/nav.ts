@@ -73,9 +73,14 @@ export const DOC_GROUPS: DocGroup[] = [
         summary: "Conduct written into a shared registry, linked to the transaction.",
       },
       {
+        slug: "names",
+        title: "Names and authority",
+        summary: "An agent's ENS name, what resolving it tells a stranger, and how roles mirror the mandate.",
+      },
+      {
         slug: "settlement",
         title: "Settlement and the rail",
-        summary: "How a payment actually moves, what Circle charges, and the floor that puts under a purchase.",
+        summary: "How a payment actually moves, what Circle charges on Arc, and the rail with no floor.",
       },
     ],
   },

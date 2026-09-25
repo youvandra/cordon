@@ -20,6 +20,17 @@ import { shortId } from "../lib/format";
  * endpoint and the description come from text records, are the owner's own
  * words, and say so.
  */
+/** Where a reader can go and check any of this for themselves. */
+const ENS_APP = "https://manager.ens.dev";
+
+function Out({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a className="mono breakable" href={href} target="_blank" rel="noreferrer">
+      {children}
+    </a>
+  );
+}
+
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="detail__row">
@@ -141,16 +152,29 @@ export default function Resolve() {
           <Panel
             title={lookup.agent.name}
             action={
-              lookup.agent.live ? (
-                <Tag tone="positive">live</Tag>
-              ) : (
-                <Tag tone="critical">cut</Tag>
-              )
+              <span className="resolve__badges">
+                {lookup.agent.live ? (
+                  <Tag tone="positive">live</Tag>
+                ) : (
+                  <Tag tone="critical">cut</Tag>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    window.open(`${ENS_APP}/${lookup.agent.name}`, "_blank", "noreferrer")
+                  }
+                >
+                  Open in ENS
+                </Button>
+              </span>
             }
           >
             <dl className="detail">
               <Fact label="Address">
-                <span className="mono">{lookup.agent.address}</span>
+                <Out href={`${SEPOLIA.explorer}/address/${lookup.agent.address}`}>
+                  {lookup.agent.address}
+                </Out>
               </Fact>
               <Fact label="Budget">
                 <Enforced>{formatUsdc(lookup.agent.budget6)}</Enforced>
@@ -168,6 +192,10 @@ export default function Resolve() {
               ) : null}
               <Fact label="Mandate">
                 <span className="mono">{shortId(lookup.agent.node)}</span>
+                <span className="muted"> in </span>
+                <Out href={`${SEPOLIA.explorer}/address/${lookup.agent.registry}`}>
+                  {shortAddress(lookup.agent.registry)}
+                </Out>
               </Fact>
               <Fact label="Identity">
                 {lookup.agent.agentId === null ? (
