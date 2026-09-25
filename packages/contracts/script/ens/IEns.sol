@@ -55,3 +55,72 @@ interface IPermissionedRegistry {
     function getSubregistry(string calldata label) external view returns (address);
     function getResolver(string calldata label) external view returns (address);
 }
+
+/**
+ * The factory a name's own registry is deployed through.
+ *
+ * `ensdomains/verifiable-factory`, read 25 Sep 2026. The proxy address is
+ * CREATE2 from `keccak256(abi.encode(msg.sender, salt))`, so two callers may
+ * reuse a salt without colliding.
+ */
+interface IVerifiableFactory {
+    function deployProxy(address implementation, uint256 salt, bytes memory data)
+        external
+        returns (address proxy);
+
+    function predictProxyAddress(address deployer, uint256 salt)
+        external
+        view
+        returns (address proxy);
+}
+
+interface IUserRegistry {
+    function initialize(address rootAccount, uint256 roleBitmap) external;
+
+    function register(
+        string memory label,
+        address owner,
+        address registry,
+        address resolver,
+        uint256 roleBitmap,
+        uint64 expiry
+    ) external returns (uint256);
+
+    function unregister(uint256 anyId) external;
+
+    function getSubregistry(string calldata label) external view returns (address);
+    function getResolver(string calldata label) external view returns (address);
+    function ownerOf(uint256 tokenId) external view returns (address);
+}
+
+interface IOwnedRegistry {
+    function setSubregistry(uint256 anyId, address registry) external;
+    function setResolver(uint256 anyId, address resolver) external;
+    function ownerOf(uint256 tokenId) external view returns (address);
+}
+
+/**
+ * ENSv2's Enhanced Access Control roles, copied from
+ * `contracts/src/registry/libraries/RegistryRolesLib.sol` on 25 Sep 2026.
+ *
+ * Each role has an `_ADMIN` counterpart, shifted left by 128, which authorises
+ * granting the role itself. Holding a role without its admin means holding it
+ * and being unable to pass it on — which is the distinction the whole
+ * permission model rests on.
+ */
+library EnsRoles {
+    uint256 internal constant REGISTRAR = 1 << 0;
+    uint256 internal constant REGISTER_RESERVED = 1 << 4;
+    uint256 internal constant SET_PARENT = 1 << 8;
+    uint256 internal constant UNREGISTER = 1 << 12;
+    uint256 internal constant RENEW = 1 << 16;
+    uint256 internal constant SET_SUBREGISTRY = 1 << 20;
+    uint256 internal constant SET_RESOLVER = 1 << 24;
+    uint256 internal constant SET_URI = 1 << 36;
+    uint256 internal constant CAN_NAME = 1 << 120;
+    uint256 internal constant UPGRADE = 1 << 124;
+
+    function admin(uint256 role) internal pure returns (uint256) {
+        return role << 128;
+    }
+}
