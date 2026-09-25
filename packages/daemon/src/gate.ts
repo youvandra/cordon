@@ -28,6 +28,7 @@ import { Recorder } from "./record.ts";
    second copy of this list is a second thing that can fall behind the
    contract. Re-exported so nothing that already imports them has to move. */
 import { REASONS, UNRECOGNISED, type Reason } from "../../fixtures/src/index.ts";
+import { RefusalRepeats } from "./repeats.ts";
 import { serialiseByKey } from "../../fixtures/src/serial.ts";
 
 export { REASONS, UNRECOGNISED };
@@ -81,6 +82,10 @@ export class Gate {
    * said it was in bounds. Keyed by node, so two nodes still draw at once.
    */
   private readonly inTurn = serialiseByKey();
+  /** Identical refusals already on chain, so the loop pays for one. */
+  private readonly repeats = new RefusalRepeats();
+  /** `windowSeconds` per node, which is immutable once the mandate exists. */
+  private readonly windowCache = new Map<string, number>();
   /**
    * The record. It borrows this gate's signer rather than holding a copy of a
    * key, so there is still exactly one place in the process where an operator
@@ -240,6 +245,32 @@ export class Gate {
       functionName: "isLive",
       args: [node],
     })) as boolean;
+  }
+
+  /**
+   * How long a refusal for this node stays the current answer.
+   *
+   * The window, because that is exactly when the budget it was refused
+   * against is replaced — a refusal in a fresh window is a new fact. Read
+   * once per node and kept: `windowSeconds` is set when the mandate is opened
+   * and no function raises it.
+   *
+   * A read that fails returns 0, which suppresses nothing. A daemon that
+   * cannot reach the registry should send the transaction, not invent a
+   * silence.
+   */
+  private async windowMs(node: Hex): Promise<number> {
+    const key = node.toLowerCase();
+    const cached = this.windowCache.get(key);
+    if (cached !== undefined) return cached;
+    try {
+      const m = (await this.mandate(node)) as { windowSeconds: bigint };
+      const ms = Number(m.windowSeconds) * 1000;
+      this.windowCache.set(key, ms);
+      return ms;
+    } catch {
+      return 0;
+    }
   }
 
   async mandate(node: Hex) {
@@ -402,7 +433,25 @@ export class Gate {
       account: wallet.account!,
     });
 
-    const [wouldRelease] = result as [boolean, bigint, number];
+    const [wouldRelease, , reasonCode] = result as [boolean, bigint, number];
+
+    /* An identical refusal already on chain and still standing is answered
+       from the one on chain. The first is the record; the fiftieth is a gas
+       bill and a conduct record full of the same sentence. Nothing here can
+       turn a refusal into a release — only a duplicate into the original. */
+    if (!wouldRelease) {
+      const bound = { node, counterparty, amount, reason: REASONS[reasonCode] ?? UNRECOGNISED };
+      const already = this.repeats.recall(bound);
+      if (already) {
+        return {
+          released: false,
+          reason: already.reason as Reason,
+          breachedAt: already.breachedAt,
+          refusalId: already.refusalId,
+          txHash: already.txHash,
+        };
+      }
+    }
 
     /* The simulation decides whether this is worth publishing afterwards, and
        nothing else. What the draw did is read out of its own events below.
@@ -422,6 +471,18 @@ export class Gate {
          `publish` reads `outcome.released`, so a draw that turned out to be
          released in the end publishes nothing. */
       await this.publish(node, outcome);
+      if (outcome.refusalId !== undefined && outcome.txHash !== undefined) {
+        this.repeats.remember(
+          { node, counterparty, amount, reason: outcome.reason },
+          {
+            refusalId: outcome.refusalId,
+            txHash: outcome.txHash,
+            reason: outcome.reason,
+            breachedAt: outcome.breachedAt,
+          },
+          await this.windowMs(node),
+        );
+      }
     }
 
     return outcome;
