@@ -7,6 +7,7 @@ import { Meter, PageHeader, PageSkeleton, Panel, ReadFailed } from "../parts/Pag
 import { FundDialog, SpawnDialog, WithdrawDialog } from "../parts/OwnerDialogs";
 import { useConsoleTree } from "../lib/useConsoleTree";
 import { usePurposes } from "../lib/purpose";
+import { useAgentNames } from "../lib/names";
 import { useChainRefusals } from "../lib/refusals";
 import { cutLookup, isHeld, share, shortId, shortPurpose, windowLabel } from "../lib/format";
 import type { ChainNode } from "../lib/tree";
@@ -52,6 +53,12 @@ export default function Overview() {
      naming them on one and not the other is how the first screen a stranger
      opens becomes the one that says least. */
   const purposes = usePurposes(nodes.map((node) => node.node));
+  const names = useAgentNames(nodes.map((node) => node.operator));
+  /* Its name, then what it said it was for, then its id. */
+  const called = (node: string) => {
+    const match = nodes.find((n) => n.node.toLowerCase() === node.toLowerCase());
+    return (match && names.of(match.operator)) ?? purposes.of(node);
+  };
 
   if (!ready || chain.state === "looking") return <PageSkeleton />;
   if (chain.state === "unconfigured") return <ReadFailed title="No deployment configured" why="This build has no contract addresses to read." />;
@@ -185,13 +192,13 @@ export default function Overview() {
                 <li key={node.node}>
                   <Link className="list__row" to={`/console/agents?node=${node.node}`}>
                     <span className="list__main">
-                      {purposes.of(node.node) ? (
-                        <span className="list__id">{shortPurpose(purposes.of(node.node)!)}</span>
+                      {called(node.node) ? (
+                        <span className="list__id">{shortPurpose(called(node.node)!)}</span>
                       ) : (
                         <span className="mono list__id">{shortId(node.node)}</span>
                       )}
                       <span className="list__meta">
-                        {purposes.of(node.node) ? <span className="mono">{shortId(node.node)}</span> : null}
+                        {called(node.node) ? <span className="mono">{shortId(node.node)}</span> : null}
                         {node.parent === null ? "Root" : `Depth ${node.depth}`}
                         {cut ? <Tag tone="critical" size="sm">Revoked</Tag> : null}
                         {isHeld(node) ? <span className="accent-text">held by {shortId(node.boundBy)}</span> : null}
@@ -225,7 +232,7 @@ export default function Overview() {
                               "tranche-cap · Cheap-source probe" says what one
                               reading "tranche-cap · 0x08bd7e…" cannot. */}
                           <span className="mono">{refusal.reason}</span> ·{" "}
-                          {purposes.of(refusal.node) ? shortPurpose(purposes.of(refusal.node)!) : shortId(refusal.node)}
+                          {called(refusal.node) ? shortPurpose(called(refusal.node)!) : shortId(refusal.node)}
                         </span>
                       </span>
                       {refusal.released ? (

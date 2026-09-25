@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button, DataTable, Modal, Segmented, Sheet, Tag, useNotify } from "cordon-ui";
-import { ARC, ENFORCED_BY, REASON_MEANING, formatUsdc } from "@cordon/fixtures";
+import { ENFORCED_BY, REASON_MEANING, formatUsdc } from "@cordon/fixtures";
+import { CHAIN, explorerFor } from "../lib/chain";
 import { useTitle } from "../parts/Shell";
 import { PageHeader, PageSkeleton, Panel, ReadFailed } from "../parts/Page";
 import { useConsoleTree } from "../lib/useConsoleTree";
 import { usePurposes } from "../lib/purpose";
+import { useAgentNames } from "../lib/names";
 import { useChainRefusals, type ChainRefusal } from "../lib/refusals";
 import { useRelease } from "../lib/mandate";
 import { cutLookup, shortId, shortPurpose } from "../lib/format";
@@ -24,7 +26,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 function TxLink({ hash }: { hash: string }) {
   return (
-    <a className="mono" href={`${ARC.explorer}/tx/${hash}`} target="_blank" rel="noreferrer">
+    <a className="mono" href={explorerFor.tx(hash)} target="_blank" rel="noreferrer">
       {shortId(hash, 8, 6)} ↗
     </a>
   );
@@ -38,6 +40,13 @@ export default function Refusals() {
     root?.node ?? null,
   );
   const purposes = usePurposes(nodes.map((node) => node.node));
+  const names = useAgentNames(nodes.map((node) => node.operator));
+  /* Its name, then what it said it was for, then its id — the same order every
+     screen here uses, because a reader who learns one learns all of them. */
+  const called = (node: string) => {
+    const match = nodes.find((n) => n.node.toLowerCase() === node.toLowerCase());
+    return (match && names.of(match.operator)) ?? purposes.of(node);
+  };
   const [params, setParams] = useSearchParams();
   const [filter, setFilter] = useState<Filter>("all");
   const [releasing, setReleasing] = useState<ChainRefusal | null>(null);
@@ -140,7 +149,7 @@ export default function Refusals() {
                  column of hexadecimal tells them nothing about which agent
                  kept hitting which bound. */
               cell: (refusal) => {
-                const said = purposes.of(refusal.node);
+                const said = called(refusal.node);
                 return said ? (
                   <span className="cell-stack">
                     <span>{shortPurpose(said)}</span>
@@ -201,7 +210,7 @@ export default function Refusals() {
         side="right"
         size={460}
         title={selected ? `Refusal #${String(selected.id)}` : "Refusal"}
-        description={selected ? `Block ${String(selected.blockNumber)} · ${ARC.name}` : undefined}
+        description={selected ? `Block ${String(selected.blockNumber)} · ${CHAIN.name}` : undefined}
         footer={
           mine && selected && !selected.released ? (
             <Button variant="danger" onClick={() => setReleasing(selected)}>

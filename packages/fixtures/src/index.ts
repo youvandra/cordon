@@ -29,6 +29,8 @@ export const ARC = {
   faucet: "https://faucet.circle.com",
   /** Gas token is USDC, native, 18 decimals. */
   nativeDecimals: 18,
+  nativeName: "USDC",
+  nativeSymbol: "USDC",
   /**
    * The ERC-20 view of the same balance. balanceOf truncates below 1e-6.
    *
@@ -111,6 +113,8 @@ export const SEPOLIA = {
   usdcFaucet: "https://faucet.circle.com",
   /** ETH's, and it has nothing to do with USDC on this chain. */
   nativeDecimals: 18,
+  nativeName: "Ether",
+  nativeSymbol: "ETH",
   /**
    * USDC, and the only view of it. A real FiatTokenV2 with EIP-3009, so x402
    * `exact` settles here: probed on 20 Sep 2026 for `version() -> "2"`,
@@ -474,12 +478,35 @@ export const ENDPOINTS = [
  * No key is implied by either. The owner signs from their own wallet, and
  * nothing here can.
  */
-export const DEMO = {
-  owner: "0x736159a06C89Ea5b12eD88BE658741edCa64324D",
-  root: "0xd08820db0e1cd58426ba9dc8e78513b05d244b42cdaf841070b0a00d49b901ad",
-  /** Its ERC-8004 identity, which is what the public record pages address. */
-  agentId: "894124",
-} as const;
+export interface DemoTree {
+  owner: string;
+  root: string;
+  /** An ERC-8004 identity in the tree, which is what the record pages address. */
+  agentId: string;
+}
+
+/**
+ * One per chain, because a tree is opened on a chain and an owner who signed
+ * on one has signed nothing on the other. A console pointed at a chain and
+ * reading the other chain's owner finds no mandate and says the tree is
+ * missing, which is true of the address it asked about and misleading about
+ * everything else.
+ */
+export const DEMOS: Record<number, DemoTree> = {
+  5042002: {
+    owner: "0x736159a06C89Ea5b12eD88BE658741edCa64324D",
+    root: "0xd08820db0e1cd58426ba9dc8e78513b05d244b42cdaf841070b0a00d49b901ad",
+    agentId: "894124",
+  },
+  11155111: {
+    owner: "0x9F846D2054689a439DA8D0619f37F6c70Db03597",
+    root: "0x7a64b3d4db9223e41fa3e5ddd3c4512a44f47a9d48218f5a7224b1cf80dc18ff",
+    agentId: "10521",
+  },
+};
+
+/** The Arc tree, for the surfaces that were written before there were two. */
+export const DEMO = DEMOS[5042002]!;
 
 export const PENDING_ADDRESS = "pending — written by the deploy script";
 

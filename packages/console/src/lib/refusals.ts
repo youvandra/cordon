@@ -13,7 +13,8 @@
  */
 import { useEffect, useState } from "react";
 import { createPublicClient, http, parseAbiItem, type Address, type Hex } from "viem";
-import { ARC, DEPLOYMENT, REASONS, UNRECOGNISED } from "@cordon/fixtures";
+import { REASONS, UNRECOGNISED } from "@cordon/fixtures";
+import { CHAIN, DEPLOYED as ON_CHAIN } from "./chain";
 import { arc, why } from "./mandate";
 
 /** What one screen asks for. The meter's own cap is the authority above it. */
@@ -155,8 +156,24 @@ async function fromMeter(root: Hex | null): Promise<{ rows: ChainRefusal[]; tota
       headers: { accept: "application/json" },
     });
     if (!response.ok) return null;
-    const body = (await response.json()) as { refusals?: MeterRefusal[]; total?: number };
+    const body = (await response.json()) as {
+      refusals?: MeterRefusal[];
+      total?: number;
+      chainId?: number;
+    };
     if (!body.refusals) return null;
+    /**
+     * A meter that indexed a different chain answers this with `200` and an
+     * empty list, and taking that at face value prints "nothing has been
+     * refused" over a tree whose refusals are on chain and were never asked
+     * for. It was doing exactly that: the deployed meter indexes Arc, the
+     * console moved to Sepolia, and the screen went quiet rather than wrong-
+     * looking, which is worse.
+     *
+     * The meter says which chain it read. Believe it, and fall through to
+     * reading the chain ourselves when it is not ours.
+     */
+    if (body.chainId !== undefined && body.chainId !== CHAIN.chainId) return null;
     const rows = body.refusals.map((row) => ({
       id: BigInt(row.id),
       node: row.node,
@@ -184,16 +201,16 @@ export function useChainRefusals(nodes: Hex[], root?: Hex | null): ChainRefusals
   const key = nodes.join(",");
 
   useEffect(() => {
-    if (!DEPLOYMENT || nodes.length === 0) {
+    if (!ON_CHAIN || nodes.length === 0) {
       setFound({ state: "unconfigured" });
       return;
     }
     let live = true;
     setFound({ state: "looking" });
 
-    const client = createPublicClient({ chain: arc, transport: http(ARC.rpc) });
-    const vault = DEPLOYMENT.vault as `0x${string}`;
-    const fromBlock = BigInt(DEPLOYMENT.fromBlock);
+    const client = createPublicClient({ chain: arc, transport: http(CHAIN.rpc) });
+    const vault = ON_CHAIN.vault as `0x${string}`;
+    const fromBlock = BigInt(ON_CHAIN.fromBlock);
 
     (async () => {
       const indexed = await fromMeter(root ?? null);

@@ -16,27 +16,20 @@ import {
   createPublicClient,
   createWalletClient,
   custom,
-  defineChain,
   encodeAbiParameters,
   http,
   keccak256,
   type Hex,
 } from "viem";
 import { useWallets } from "@privy-io/react-auth";
-import { ARC, DEPLOYMENT, formatUsdc } from "@cordon/fixtures";
+import { formatUsdc } from "@cordon/fixtures";
+import { CHAIN, DEPLOYED as ON_CHAIN, chain } from "./chain";
 import { parseAbi } from "viem";
 import { MandateRegistryAbi } from "../../../daemon/src/abi.gen.ts";
 
-export const arc = defineChain({
-  id: ARC.chainId,
-  name: ARC.name,
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: ARC.nativeDecimals },
-  rpcUrls: { default: { http: [ARC.rpc] } },
-  blockExplorers: { default: { name: "arcscan", url: ARC.explorer } },
-  /* Declared so viem may pack a batch of `eth_call`s into one request. A tree
-     is read view by view, and a public endpoint counts requests. */
-  contracts: { multicall3: { address: ARC.multicall3 as `0x${string}` } },
-});
+/* The chain is named in one place now. Re-exported under its old name so the
+   screens that import it keep working and keep meaning the same thing. */
+export const arc = chain;
 
 export interface MandateParams {
   operator: `0x${string}`;
@@ -62,13 +55,13 @@ export type OpenState =
  * there is none and the file says so with `null`. viem wants the narrower
  * type, and this is the one place that crossing happens.
  */
-export const REGISTRY = DEPLOYMENT?.registry as `0x${string}` | undefined;
+export const REGISTRY = ON_CHAIN?.registry as `0x${string}` | undefined;
 
 /** Both addresses, or nothing. Reading a tree needs the vault as well. */
-export const DEPLOYED = DEPLOYMENT
+export const DEPLOYED = ON_CHAIN
   ? {
-      registry: DEPLOYMENT.registry as `0x${string}`,
-      vault: DEPLOYMENT.vault as `0x${string}`,
+      registry: ON_CHAIN.registry as `0x${string}`,
+      vault: ON_CHAIN.vault as `0x${string}`,
     }
   : undefined;
 
@@ -116,7 +109,7 @@ export function useOpenMandate(expected?: string | null) {
       try {
         /* Privy wallets follow whatever chain they were last on, and a
            signature sent to the wrong chain is not an error anyone can read. */
-        await wallet.switchChain(ARC.chainId);
+        await wallet.switchChain(CHAIN.chainId);
         const provider = await wallet.getEthereumProvider();
         const account = wallet.address as `0x${string}`;
         const walletClient = createWalletClient({ account, chain: arc, transport: custom(provider) });
@@ -179,7 +172,7 @@ export function rootNodeId(owner: `0x${string}`, nonce: number, registry: `0x${s
   return keccak256(
     encodeAbiParameters(
       [{ type: "uint256" }, { type: "address" }, { type: "address" }, { type: "uint96" }],
-      [BigInt(ARC.chainId), registry, owner, BigInt(nonce)],
+      [BigInt(CHAIN.chainId), registry, owner, BigInt(nonce)],
     ),
   );
 }
@@ -249,7 +242,7 @@ export function useExistingMandate(owner: string | null): Existing {
 
     /* Its own transport rather than the wallet's: this runs before anyone has
        been asked to sign anything, and a read should not need a wallet. */
-    const client = createPublicClient({ chain: arc, transport: http(ARC.rpc) });
+    const client = createPublicClient({ chain: arc, transport: http(CHAIN.rpc) });
 
     (async () => {
       for (let nonce = 0; nonce < SCAN; nonce++) {
@@ -322,7 +315,7 @@ export type ActionState =
 async function signerFor(wallets: ReturnType<typeof useWallets>["wallets"], expected: string) {
   const wallet = wallets.find((w) => w.address.toLowerCase() === expected.toLowerCase());
   if (!wallet) throw new Error("the wallet shown here is not one this page can sign with");
-  await wallet.switchChain(ARC.chainId);
+  await wallet.switchChain(CHAIN.chainId);
   const provider = await wallet.getEthereumProvider();
   const account = wallet.address as `0x${string}`;
   return {
@@ -380,7 +373,7 @@ export function useFundVault(expected: string | null) {
       }
       try {
         const { account, wallet, reader } = await signerFor(wallets, expected);
-        const usdc = ARC.erc20 as `0x${string}`;
+        const usdc = CHAIN.erc20 as `0x${string}`;
 
         const held = (await reader.readContract({
           address: usdc, abi: ERC20, functionName: "balanceOf", args: [account],
@@ -441,7 +434,7 @@ export function useTreasury(root: Hex | null): Treasury {
     }
     let live = true;
     setTreasury({ state: "looking" });
-    const client = createPublicClient({ chain: arc, transport: http(ARC.rpc) });
+    const client = createPublicClient({ chain: arc, transport: http(CHAIN.rpc) });
     client
       .readContract({ address: DEPLOYED.vault, abi: VAULT, functionName: "treasury6", args: [root] })
       .then((amount6) => {

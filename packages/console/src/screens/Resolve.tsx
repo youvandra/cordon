@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button, Enforced, Tag, TextField } from "cordon-ui";
-import { SEPOLIA, formatUsdc, shortAddress } from "@cordon/fixtures";
+import { formatUsdc, shortAddress } from "@cordon/fixtures";
+import { CHAIN, explorerFor } from "../lib/chain";
 import { useTitle } from "../parts/Shell";
 import { PageHeader, Panel, ReadFailed } from "../parts/Page";
 import { useResolvedAgent, type Rung } from "../lib/resolveName";
@@ -98,7 +99,7 @@ export default function Resolve() {
         subtitle={
           <>
             A name, or the address in a payment. The name says which contract to
-            ask; the contract says what the agent may still spend. On {SEPOLIA.name},
+            ask; the contract says what the agent may still spend. On {CHAIN.name},
             where ENSv2 lives.
           </>
         }
@@ -172,7 +173,7 @@ export default function Resolve() {
           >
             <dl className="detail">
               <Fact label="Address">
-                <Out href={`${SEPOLIA.explorer}/address/${lookup.agent.address}`}>
+                <Out href={explorerFor.address(lookup.agent.address)}>
                   {lookup.agent.address}
                 </Out>
               </Fact>
@@ -193,7 +194,7 @@ export default function Resolve() {
               <Fact label="Mandate">
                 <span className="mono">{shortId(lookup.agent.node)}</span>
                 <span className="muted"> in </span>
-                <Out href={`${SEPOLIA.explorer}/address/${lookup.agent.registry}`}>
+                <Out href={explorerFor.address(lookup.agent.registry)}>
                   {shortAddress(lookup.agent.registry)}
                 </Out>
               </Fact>

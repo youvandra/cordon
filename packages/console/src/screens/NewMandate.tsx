@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, EmptyState, Field, Select, TextField, useNotify } from "cordon-ui";
-import { ARC, MANDATE, formatUsdc, isAddress } from "@cordon/fixtures";
+import { MANDATE, formatUsdc, isAddress } from "@cordon/fixtures";
+import { CHAIN } from "../lib/chain";
 import { useTitle } from "../parts/Shell";
 import { PageHeader, PageSkeleton, Panel, ReadFailed } from "../parts/Page";
 import { useWallet } from "../lib/wallet";
@@ -193,7 +194,7 @@ export default function NewMandate() {
             <Button variant="primary" block loading={busy} disabled={!valid || busy} onClick={sign}>
               {state.status === "signing" ? "Confirm in your wallet…" : state.status === "sent" ? "Waiting for the receipt…" : "Sign mandate"}
             </Button>
-            <p className="compose__foot">One signature on {ARC.name}. A mandate narrows — it never widens.</p>
+            <p className="compose__foot">One signature on {CHAIN.name}. A mandate narrows — it never widens.</p>
           </Panel>
         </aside>
       </div>

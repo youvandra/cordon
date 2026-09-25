@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Tag } from "cordon-ui";
-import { ARC, ENFORCED_BY, formatUsdc } from "@cordon/fixtures";
+import { ENFORCED_BY, formatUsdc } from "@cordon/fixtures";
+import { explorerFor } from "../lib/chain";
 import type { ChainNode } from "../lib/tree";
 import { share, shortId, windowLabel } from "../lib/format";
 import { usePurpose } from "../lib/purpose";
@@ -103,7 +104,7 @@ export function NodeDetail({ node, all, cut }: { node: ChainNode; all: ChainNode
         <Row
           label="Operator"
           value={
-            <a className="mono breakable" href={`${ARC.explorer}/address/${node.operator}`} target="_blank" rel="noreferrer">
+            <a className="mono breakable" href={explorerFor.address(node.operator)} target="_blank" rel="noreferrer">
               {node.operator}
             </a>
           }

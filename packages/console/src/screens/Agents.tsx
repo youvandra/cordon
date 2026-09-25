@@ -9,6 +9,7 @@ import { RevokeDialog, SpawnDialog, WithdrawDialog } from "../parts/OwnerDialogs
 import { TreeGraph, type GraphNode } from "../parts/TreeGraph";
 import { useConsoleTree } from "../lib/useConsoleTree";
 import { usePurposes } from "../lib/purpose";
+import { useAgentNames } from "../lib/names";
 import { cutLookup, isHeld, share, shortId, shortPurpose } from "../lib/format";
 import type { ChainNode } from "../lib/tree";
 
@@ -27,6 +28,13 @@ export default function Agents() {
   /* Read for every row at once, before the early returns below can skip it:
      a hook may not be called conditionally. */
   const purposes = usePurposes(nodes.map((node) => node.node));
+  /* An agent's ENS name, where it has one. A name beats a stated purpose
+     because a reader can take it away and resolve it themselves, and it beats
+     an id because an id means nothing to a person. */
+  const names = useAgentNames(nodes.map((node) => node.operator));
+  /** What to call this agent: its name, then what it said it was for, then its id. */
+  const label = (node: { node: `0x${string}`; operator: `0x${string}` }) =>
+    names.of(node.operator) ?? purposes.of(node.node);
 
   const selectedId = params.get("node");
   const select = (id: string | null) => {
@@ -56,7 +64,7 @@ export default function Agents() {
     /* The purpose is searched too, because it is now the thing on screen: a
        reader who can see "Social feed reader" and cannot search for it is
        being shown a name the search does not believe in. */
-    const said = purposes.of(node.node)?.toLowerCase() ?? "";
+    const said = `${names.of(node.operator) ?? ""} ${purposes.of(node.node) ?? ""}`.toLowerCase();
     if (
       needle &&
       !node.node.toLowerCase().includes(needle) &&
@@ -83,11 +91,11 @@ export default function Agents() {
        that and its id does not; the id is still on the card in the panel and
        under the row in the list. */
     label: (() => {
-      const said = purposes.of(node.node);
+      const said = label(node);
       return said ? shortPurpose(said) : shortId(node.node);
     })(),
     /* So the drawing does not set a sentence in the id's typeface. */
-    labelIsId: !purposes.of(node.node),
+    labelIsId: !label(node),
     parent: node.parent,
     spent6: node.windowSpent6,
     budget6: node.budget6,
@@ -172,7 +180,7 @@ export default function Agents() {
                    already on chain. Where nothing was stated the id leads, as
                    it always did, rather than a row going blank. */
                 cell: (node) => {
-                  const said = purposes.of(node.node);
+                  const said = label(node);
                   return (
                     <span className="agent" style={{ paddingLeft: node.depth * 18 }}>
                       <span className="cell-stack">

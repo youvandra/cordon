@@ -1,4 +1,4 @@
-import { DEMO } from "@cordon/fixtures";
+import { DEMO_TREE } from "./chain";
 import { useWallet } from "./wallet";
 import { useChainTree, type ChainNode } from "./tree";
 
@@ -12,7 +12,7 @@ import { useChainTree, type ChainNode } from "./tree";
 export function useConsoleTree() {
   const { address, real, ready } = useWallet();
   const mine = real && Boolean(address);
-  const owner = mine ? address! : DEMO.owner;
+  const owner = mine ? address! : (DEMO_TREE?.owner ?? "");
   const chain = useChainTree(owner);
   const nodes: ChainNode[] = chain.state === "read" ? chain.nodes : [];
   /* The fallback is why Overview must offer a way out of a revoked root: with

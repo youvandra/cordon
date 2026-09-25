@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPublicClient, hexToString, http, type Hex } from "viem";
-import { ARC, DEPLOYMENT, ERC8004 } from "@cordon/fixtures";
+import { ERC8004 } from "@cordon/fixtures";
+import { CHAIN, DEPLOYED as ON_CHAIN } from "./chain";
 import { ConductRecordAbi } from "../../../daemon/src/abi.gen.ts";
 import { arc } from "./mandate";
 
@@ -38,7 +39,7 @@ let client: ReturnType<typeof createPublicClient> | null = null;
 const reader = () =>
   (client ??= createPublicClient({
     chain: arc,
-    transport: http(ARC.rpc, { batch: true }),
+    transport: http(CHAIN.rpc, { batch: true }),
     batch: { multicall: true },
   }));
 
@@ -46,7 +47,7 @@ export function usePurpose(node: Hex): Purpose {
   const [purpose, setPurpose] = useState<Purpose>({ state: "looking" });
 
   useEffect(() => {
-    const record = DEPLOYMENT?.record as `0x${string}` | undefined;
+    const record = ON_CHAIN?.record as `0x${string}` | undefined;
     if (!record) {
       setPurpose({ state: "none" });
       return;
@@ -123,7 +124,7 @@ export function usePurposes(nodes: Hex[]): Purposes {
   const key = nodes.join(",");
 
   useEffect(() => {
-    const record = DEPLOYMENT?.record as `0x${string}` | undefined;
+    const record = ON_CHAIN?.record as `0x${string}` | undefined;
     if (!record || nodes.length === 0) {
       /* Not a failure and not an answer: there is nothing to describe. Left
          `idle` so a list that briefly empties does not flash "could not be

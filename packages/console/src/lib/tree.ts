@@ -34,7 +34,7 @@
  */
 import { useEffect, useState } from "react";
 import { createPublicClient, http, type Hex } from "viem";
-import { ARC } from "@cordon/fixtures";
+import { CHAIN } from "./chain";
 import { MandateRegistryAbi, TreeVaultAbi } from "../../../daemon/src/abi.gen.ts";
 import { DEPLOYED, arc, rootNodeId, childNodeId, why } from "./mandate";
 
@@ -106,7 +106,7 @@ export function useChainTree(owner: string | null): ChainTree {
        `Promise.all` rather than awaited one at a time. */
     const client = createPublicClient({
       chain: arc,
-      transport: http(ARC.rpc, { batch: true }),
+      transport: http(CHAIN.rpc, { batch: true }),
       batch: { multicall: true },
     });
     const { registry, vault } = DEPLOYED;

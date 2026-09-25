@@ -1,8 +1,8 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
-import { defineChain } from "viem";
-import { ARC, MANDATE } from "@cordon/fixtures";
+import { MANDATE } from "@cordon/fixtures";
+import { chain } from "./chain";
 
 /**
  * The wallet gate.
@@ -12,7 +12,8 @@ import { ARC, MANDATE } from "@cordon/fixtures";
  * is the argument this gate exists to make.
  *
  * With `VITE_PRIVY_APP_ID` set the gate is real: Privy holds the key, the
- * owner logs in, and the address on screen is one that can sign on Arc.
+ * owner logs in, and the address on screen is one that can sign on the
+ * chain this console speaks for.
  * Without it the gate is the mock it has always been, and every surface that
  * depends on it says so out loud — a preview that claims a signature nobody
  * made is worse than one that admits it is a drawing.
@@ -26,15 +27,10 @@ import { ARC, MANDATE } from "@cordon/fixtures";
 const APP_ID: string | undefined =
   (import.meta.env.VITE_PRIVY_APP_ID as string | undefined) || undefined;
 
-/* Arc is nobody's default chain, so it is declared here from the same fixture
-   every other surface reads. */
-const arc = defineChain({
-  id: ARC.chainId,
-  name: ARC.name,
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: ARC.nativeDecimals },
-  rpcUrls: { default: { http: [ARC.rpc] } },
-  blockExplorers: { default: { name: "arcscan", url: ARC.explorer } },
-});
+/* Neither chain Cordon runs on is anybody's default, so the wallet is told
+   about the one this console speaks for, from the same place every other
+   surface reads it. */
+const arc = chain;
 
 interface WalletState {
   address: string | null;
