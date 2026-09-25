@@ -6,7 +6,7 @@
  */
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { ARC, DEPLOYMENT } from "../../fixtures/src/index.ts";
+import { DEFAULT_CHAIN, ARC, DEPLOYMENT } from "../../fixtures/src/index.ts";
 
 /** Where the owner surface lives. Overridable for a console served elsewhere. */
 const CONSOLE_URL = process.env.CORDON_CONSOLE_URL ?? "https://getcordon.xyz/console";
@@ -40,7 +40,7 @@ try {
   console.log("");
   console.log(`  ${CONSOLE_URL}/new?operator=${operators[0]!.address}`);
   console.log("");
-  console.log(`Each needs gas on ${ARC.name} — ${ARC.faucet} — and holds no USDC`);
+  console.log(`Each needs gas on ${DEFAULT_CHAIN.name} — ${DEFAULT_CHAIN.faucet} — and holds no USDC`);
   console.log("by design: the vault tops it up one purchase at a time.");
   console.log("");
   console.log("These are the daemon's, not your wallet's and not the agent's.");
@@ -61,7 +61,7 @@ try {
     console.log(`  CORDON_VAULT=${DEPLOYMENT.vault}`);
     console.log(`  CORDON_REGISTRY=${DEPLOYMENT.registry}`);
     console.log(`  CORDON_RECORD=${DEPLOYMENT.record}`);
-    console.log(`  CORDON_RPC=${ARC.rpc}`);
+    console.log(`  CORDON_RPC=${DEFAULT_CHAIN.rpc}`);
     console.log(`  CORDON_PORT=8402`);
     /* Named explicitly because its default is `$HOME`, whatever the two files
        above say: a second tree started from a second key file still writes its

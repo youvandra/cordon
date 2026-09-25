@@ -81,8 +81,63 @@ export function Names() {
       <Note tone="warn" title="A cap is never written into a record">
         A record is a copy, and a copy drifts: a mandate can narrow a minute
         after its cap was written down, and a seller reading the record would be
-        quoted a bound that no longer holds. So the name carries a pointer to
-        the contract, never the figure. What Cordon publishes is where to ask.
+        quoted a bound that no longer holds. So a stored record carries a
+        pointer to the contract, never the figure.
+      </Note>
+
+      <H2 id="computed-records">The records that are not stored at all</H2>
+      <P>
+        The table above is what a resolver <em>holds</em>. Holding is the part
+        that drifts, so <C>CordonResolver</C> does not: it is an ENSIP-10
+        resolver that computes its answers from the contracts while the read is
+        happening. There is no stored value, so there is nothing to go stale and
+        nothing to remember to update.
+      </P>
+      <Table
+        head={["Key", "Answered by calling", "When"]}
+        rows={[
+          [<C key="a">cordon.live</C>, <C key="b">MandateRegistry.revokedAt</C>, "this block"],
+          [<C key="c">cordon.revokedAt</C>, "the ancestor whose cut killed it", "this block"],
+          [<C key="d">cordon.headroom</C>, <C key="e">TreeVault.headroom</C>, "this block"],
+          [<C key="f">cordon.boundBy</C>, "the node whose limit produces that figure", "this block"],
+          [<C key="g">cordon.budget</C>, "the node's own window budget", "this block"],
+          [<C key="h">cordon.owner</C>, "the human who funded the tree", "this block"],
+        ]}
+      />
+      <P>
+        Three consequences, and they are the reason this exists rather than a
+        second way of doing the same thing.
+      </P>
+      <UL>
+        <li>
+          <b>A revocation reaches ENS in the transaction that revokes.</b> No
+          second write, and no per-descendant <C>unregister</C> to remember. Cut
+          a branch and every name beneath it answers <C>revoked</C> on the next
+          read.
+        </li>
+        <li>
+          <b>An ordinary <C>getText</C> becomes a live authorisation check.</b>{" "}
+          That call already exists in every ENS library in every language. A
+          seller needs no Cordon SDK, and no permission from us.
+        </li>
+        <li>
+          <b>A spawn costs no ENS transaction.</b> Wildcard resolution means one
+          resolver serves a whole subtree, so a name resolves without having
+          been registered. Only <C>bind</C> is needed, once, to say which
+          mandate a label speaks for — and that is the owner's call, never the
+          operator's.
+        </li>
+      </UL>
+      <Code lang="ts">{`// The same call as before. The answer is computed, not looked up.
+const live = await client.getEnsText({ name, key: "cordon.live" });
+const left = await client.getEnsText({ name, key: "cordon.headroom" });
+const by   = await client.getEnsText({ name, key: "cordon.boundBy" });
+
+// live === "revoked" the moment an ancestor is cut. No write happened.`}</Code>
+      <Note tone="info" title="What it will not say">
+        A name that has not been bound answers empty for every key, never{" "}
+        <C>"0"</C>. Zero is a number and a seller would believe it. An unknown
+        key answers empty rather than reverting, as a resolver should.
       </Note>
 
       <H2 id="the-check">The check a stranger makes</H2>

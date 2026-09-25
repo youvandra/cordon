@@ -14,7 +14,7 @@ import {
   Text,
   usePageMeta,
 } from "cordon-ui";
-import { ARC, ENFORCED_BY, REASON_MEANING, STRENGTH, formatUsdc, isAddress, shortAddress, shortId, strengthOf } from "@cordon/fixtures";
+import { DEFAULT_CHAIN, ENFORCED_BY, REASON_MEANING, STRENGTH, formatUsdc, isAddress, shortAddress, shortId, strengthOf } from "@cordon/fixtures";
 import {
   addrUrl,
   refusalByPath,
@@ -63,7 +63,7 @@ function Provenance({ refusal }: { refusal: RefusalRow }) {
             <a href={txUrl(refusal.tx)} target="_blank" rel="noreferrer" className="mono">
               {shortTx(refusal.tx)}
             </a>{" "}
-            on {ARC.name}. The contract returned rather than reverting, which
+            on {DEFAULT_CHAIN.name}. The contract returned rather than reverting, which
             is why there is an event to read at all: a refusal that reverts
             rolls back its own record.
           </Text>
@@ -196,7 +196,7 @@ function LiveRefusalPage({ data }: { data: LiveRefusal }) {
     title: `Refusal ${data.id} · Cordon`,
     description:
       `${formatUsdc(amount6)} was asked for and the contract refused it: ` +
-      `${meaning}. The transaction is on ${ARC.name}.`,
+      `${meaning}. The transaction is on ${DEFAULT_CHAIN.name}.`,
   });
 
   const figures = [
@@ -211,7 +211,7 @@ function LiveRefusalPage({ data }: { data: LiveRefusal }) {
       <Container width="wide" className="stackpage">
         <header className="public__head">
           <Text variant="micro" tone="dim" as="p" className="eyebrow">
-            refusal {data.id} · block {data.site.blockNumber} · {ARC.name}
+            refusal {data.id} · block {data.site.blockNumber} · {DEFAULT_CHAIN.name}
           </Text>
           <Headline animate={animate} lines={["A bound held,", "and left a record."]} />
           <Text variant="lead" tone="copy" as="p" className="public__lede">
@@ -325,7 +325,7 @@ function LiveRefusalPage({ data }: { data: LiveRefusal }) {
 function Loading({ id }: { id: string | undefined }) {
   /* One pane: a refusal page is a single record, not a record beside a column
      of figures. A skeleton in the wrong shape moves the page twice. */
-  return <RecordSkeleton eyebrow={`refusal ${id ?? "—"} · ${ARC.name}`} columns={1} />;
+  return <RecordSkeleton eyebrow={`refusal ${id ?? "—"} · ${DEFAULT_CHAIN.name}`} columns={1} />;
 }
 
 
@@ -339,7 +339,7 @@ function NotFound({ id }: { id: string | undefined }) {
       <Container width="wide" className="stackpage">
         <header className="public__head">
           <Text variant="micro" tone="dim" as="p" className="eyebrow">
-            refusal {id ?? "—"} · {ARC.name}
+            refusal {id ?? "—"} · {DEFAULT_CHAIN.name}
           </Text>
           <Headline lines={["No refusal", "with that id."]} />
           <Text variant="lead" tone="copy" as="p" className="public__lede">
@@ -382,7 +382,7 @@ function PreviewRefusal({ refusal, id: _id }: { refusal: RefusalRow; id: string 
     title: `Refusal ${ordinal} · Cordon`,
     description:
       `${formatUsdc(refusal.requested6)} was asked for and the contract refused it: ` +
-      `${refusal.boundLabel}. The transaction is on ${ARC.name}.`,
+      `${refusal.boundLabel}. The transaction is on ${DEFAULT_CHAIN.name}.`,
   });
 
   return (
@@ -390,7 +390,7 @@ function PreviewRefusal({ refusal, id: _id }: { refusal: RefusalRow; id: string 
       <Container width="wide" className="stackpage">
         <header className="public__head">
           <Text variant="micro" tone="dim" as="p" className="eyebrow">
-            refusal {ordinal} · {refusal.at} · {ARC.name}
+            refusal {ordinal} · {refusal.at} · {DEFAULT_CHAIN.name}
           </Text>
           <Headline animate={animate} lines={["A bound held,", "and left a record."]} />
           <Text variant="lead" tone="copy" as="p" className="public__lede">

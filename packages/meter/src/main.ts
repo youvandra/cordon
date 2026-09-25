@@ -14,7 +14,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPublicClient, defineChain, http, type Address, type PublicClient } from "viem";
-import { ARC, GATEWAY, chainFacts } from "../../fixtures/src/index.ts";
+import { ARC, DEFAULT_CHAIN, GATEWAY, chainFacts } from "../../fixtures/src/index.ts";
 import { deserialize, writeSnapshot } from "./snapshot.ts";
 import { sync } from "./sync.ts";
 import { createReadApi } from "./server.ts";
@@ -58,7 +58,7 @@ function parse(argv: string[]): Args {
     }
   }
 
-  const chainId = Number(args.chain ?? process.env.CORDON_CHAIN_ID ?? ARC.chainId);
+  const chainId = Number(args.chain ?? process.env.CORDON_CHAIN_ID ?? DEFAULT_CHAIN.chainId);
   return {
     chainId,
     /* The chain's own endpoint, where Cordon knows the chain. Defaulting to
@@ -66,7 +66,7 @@ function parse(argv: string[]): Args {
        Sepolia's blocks; `sync` catches the mismatch and exits, so this was
        a confusing failure rather than a wrong ledger — but it is still a
        default that names the wrong chain. */
-    rpc: args.rpc ?? process.env.CORDON_RPC ?? chainFacts(chainId)?.rpc ?? ARC.rpc,
+    rpc: args.rpc ?? process.env.CORDON_RPC ?? chainFacts(chainId)?.rpc ?? DEFAULT_CHAIN.rpc,
     /* Left undefined here and resolved from the deployment below, because
        the honest default is the block the contracts were created in and that
        file is the only place it is written down. */
@@ -120,7 +120,7 @@ function contractsFor(chainId: number): {
        Arc — so they are Arc's, and a chain that reaches them without its own
        file is a chain whose deployment record is too old to trust here. */
     gateway: (file.gateway ?? GATEWAY.wallet) as Address,
-    usdc: (file.usdc ?? ARC.erc20) as Address,
+    usdc: (file.usdc ?? chainFacts(chainId)?.erc20 ?? DEFAULT_CHAIN.erc20) as Address,
     fromBlock: BigInt(file.fromBlock ?? "0"),
   };
 }

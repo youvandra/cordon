@@ -19,8 +19,7 @@ import {
 } from "cordon-ui";
 import type { Strength } from "cordon-ui";
 import {
-  ARC,
-  ATTEST,
+  DEFAULT_CHAIN, ATTEST,
   ENFORCED_BY,
   ERC8004,
   MANDATE,
@@ -85,7 +84,7 @@ export default function AgentRecord() {
 function ReadingRecord({ id }: { id: string | undefined }) {
   return (
     <RecordSkeleton
-      eyebrow={`erc-8004 identity · token ${id ?? "—"} · arc ${ARC.chainId}`}
+      eyebrow={`erc-8004 identity · token ${id ?? "—"} · ${DEFAULT_CHAIN.name.toLowerCase()} ${DEFAULT_CHAIN.chainId}`}
     />
   );
 }
@@ -101,7 +100,7 @@ function NoSuchAgent({ id }: { id: string | undefined }) {
       <Container width="wide" className="stackpage">
         <header className="public__head">
           <Text variant="micro" tone="dim" as="p" className="eyebrow">
-            erc-8004 identity · token {id ?? "—"} · arc {ARC.chainId}
+            erc-8004 identity · token {id ?? "—"} · {DEFAULT_CHAIN.name.toLowerCase()} {DEFAULT_CHAIN.chainId}
           </Text>
           <Headline lines={["No agent", "with that identity."]} />
           <Text variant="lead" tone="copy" as="p" className="public__lede">
@@ -319,7 +318,7 @@ function PreviewAgentRecord({ node }: { node: ReturnType<typeof flatten>[number]
       <Container width="wide" className="stackpage">
         <header className="public__head">
           <Text variant="micro" tone="dim" as="p" className="eyebrow">
-            erc-8004 identity · token {node.agentId} · arc {ARC.chainId}
+            erc-8004 identity · token {node.agentId} · {DEFAULT_CHAIN.name.toLowerCase()} {DEFAULT_CHAIN.chainId}
           </Text>
           <Headline
             animate={animate}

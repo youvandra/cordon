@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ARC, DRILL, ERC8004, EVAL, GATES, SEARCH, formatUsdc } from "@cordon/fixtures";
+import { ARC, DEFAULT_CHAIN, DRILL, ERC8004, EVAL, GATES, SEARCH, formatUsdc } from "@cordon/fixtures";
 import { C, Code, H2, H3, Lead, Note, P, Table, UL } from "../parts";
 
 export function Contracts() {
@@ -163,8 +163,8 @@ export function Configuration() {
         rows={[
           [<C key="rec">CORDON_RECORD</C>, "unset. Without it, refusals are enforced and never published"],
           [<C key="id">CORDON_IDENTITY</C>, "the live ERC-8004 Identity registry"],
-          [<C key="rpc">CORDON_RPC</C>, ARC.rpc],
-          [<C key="cid">CORDON_CHAIN_ID</C>, `${ARC.chainId}`],
+          [<C key="rpc">CORDON_RPC</C>, DEFAULT_CHAIN.rpc],
+          [<C key="cid">CORDON_CHAIN_ID</C>, `${DEFAULT_CHAIN.chainId} · ${DEFAULT_CHAIN.name}`],
           [<C key="usdc">CORDON_USDC</C>, "the 6 decimal view of USDC on Arc"],
           [<C key="net">CORDON_NETWORKS</C>, "the networks this daemon will settle on"],
           [<C key="as">CORDON_ASSETS</C>, "the assets it will pay in"],

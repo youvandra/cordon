@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ARC, ATTEST, DEPLOYMENT, MCP_CONFIG, REASONS, REASON_MEANING, formatUsdc } from "@cordon/fixtures";
+import { ATTEST, DEFAULT_CHAIN, DEPLOYMENT, MCP_CONFIG, REASONS, REASON_MEANING, formatUsdc } from "@cordon/fixtures";
 import { C, Code, Defs, H2, H3, Lead, Note, OL, P, Table, UL } from "../parts";
 import { DOC_GROUPS } from "../nav";
 
@@ -211,8 +211,8 @@ curl -s -X POST localhost:8402/fetch \\
       <Table
         head={["What", "Where"]}
         rows={[
-          ["Chain", `${ARC.name} · ${ARC.chainId}`],
-          ["USDC, 6 decimals", <C key="usdc">{ARC.erc20}</C>],
+          ["Chain", `${DEFAULT_CHAIN.name} · ${DEFAULT_CHAIN.chainId}`],
+          ["USDC, 6 decimals", <C key="usdc">{DEFAULT_CHAIN.erc20}</C>],
           ["MandateRegistry", <C key="reg">{registry}</C>],
           ["TreeVault", <C key="vault">{vault}</C>],
         ]}
