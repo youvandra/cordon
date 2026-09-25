@@ -1,0 +1,13 @@
+{
+  "chainId": 11155111,
+  "deployedAt": "2026-09-25T14:13:38.432Z",
+  "fromBlock": "11779743",
+  "registry": "0x045b2050aadaff4b80a2325d63648c09f15ab1f3",
+  "vault": "0x12d15135b5bba8eef0d1098aa65a15af503d09c9",
+  "record": "0xf86de085e63b00c9fba300b19807c883deb961e9",
+  "usdc": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  "gateway": "0xA50d9454E71aCf152399C872815ae6895cB53229",
+  "identity": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  "reputation": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+  "commit": "99be0ca957f54a22b2d8620fb3a1a1f9b6620788"
+}
