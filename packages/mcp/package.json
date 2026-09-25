@@ -1,21 +1,24 @@
 {
   "name": "cordon-mcp",
   "version": "0.2.0",
-  "description": "Cordon inside an MCP client: an agent that can buy things and cannot move money, bounded by contracts on Arc.",
+  "description": "Cordon inside an MCP client: an agent that can buy things and cannot move money, bounded by contracts it cannot reach.",
   "license": "MIT",
   "author": "Youvandra Febrial",
   "homepage": "https://getcordon.xyz",
+  "bugs": {
+    "url": "https://github.com/youvandra/cordon/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/youvandra/cordon.git",
     "directory": "packages/mcp"
   },
-  "keywords": ["mcp", "x402", "agents", "arc", "circle", "usdc", "erc-8004"],
+  "keywords": ["mcp", "mcp-server", "x402", "agents", "ai-agents", "agent-payments", "spending-limits", "arc", "sepolia", "circle", "usdc", "erc-8004", "ens", "ensv2"],
   "type": "module",
   "bin": {
     "cordon-mcp": "dist/cordon-mcp.js"
   },
-  "files": ["dist", "SKILL.md", "README.md"],
+  "files": ["dist", "SKILL.md", "README.md", "LICENSE"],
   "engines": {
     "node": ">=22"
   },
