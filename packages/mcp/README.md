@@ -1,6 +1,7 @@
 # cordon-mcp
 
-**An agent that can buy things and cannot move money.** One config block, and
+**An agent that can buy things and cannot spend past the mandate its owner
+signed.** One config block, and
 the assistant in front of you spends against a mandate enforced by a contract
 it has no way to reach.
 

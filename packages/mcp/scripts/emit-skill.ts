@@ -46,12 +46,17 @@ description: >-
 
 # Cordon
 
-You can buy things. You cannot move money.
+You can buy things. You cannot spend faster than the mandate your owner signed.
 
 The only spending tool you have takes a **URL**. It takes no recipient and no
 amount, and there is no tool here that sends money to an address. The price and
 the payee come from the seller's own payment challenge, and a contract on chain
 decides whether the purchase is allowed before any money exists.
+
+Be clear about what that does and does not bound. Choosing a URL is choosing
+who gets paid — no contract can read a seller's intent, so the payee is a
+claim, recorded as one. What is enforced is how much and how fast, against
+every ancestor up to the root, and every refusal is written on chain.
 
 ## What to call
 

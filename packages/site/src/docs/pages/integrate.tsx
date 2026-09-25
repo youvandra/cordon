@@ -92,11 +92,13 @@ export function Integrate() {
         Copy it into your agent's skills directory, or paste it into a system
         prompt. The short version, if you are writing your own:
       </P>
-      <Code>{`You can buy things. You cannot move money.
+      <Code>{`You can buy things. You cannot spend faster than the mandate your owner
+signed.
 
 The only spending tool takes a URL. There is no tool that sends money to an
 address, and there will not be one. The price and the payee come from the
-seller's own payment challenge.
+seller's own payment challenge — so choosing a URL is choosing who gets paid,
+and what is bounded is how much and how fast, not who.
 
 cordon_fetch may come back refused. That is the contract declining, not an
 error: do not retry it, do not split the purchase to get under a cap, and do

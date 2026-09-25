@@ -1,7 +1,7 @@
 {
   "name": "cordon-mcp",
   "version": "0.2.0",
-  "description": "Cordon inside an MCP client: an agent that can buy things and cannot move money, bounded by contracts it cannot reach.",
+  "description": "Cordon inside an MCP client: an agent that can buy things and cannot spend past the mandate its owner signed, bounded by contracts it cannot reach.",
   "license": "MIT",
   "author": "Youvandra Febrial",
   "homepage": "https://getcordon.xyz",
