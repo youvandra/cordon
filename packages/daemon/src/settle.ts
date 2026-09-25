@@ -229,17 +229,7 @@ export class CircleSettler implements Settler {
    * one that surfaces as a seller's revert against a signature that verified.
    */
   private async assertCanPay(payment: Payment, operator: Address): Promise<void> {
-    const read =
-      this.options.balanceOf ??
-      ((token: Address, holder: Address) =>
-        this.options.publicClient.readContract({
-          address: token,
-          abi: ERC20,
-          functionName: "balanceOf",
-          args: [holder],
-        }) as Promise<bigint>);
-
-    const held = await read(payment.asset, operator);
+    const held = await readBalance(this.options, payment.asset, operator);
     if (held >= payment.value) return;
 
     throw new SettlementError(
@@ -251,49 +241,144 @@ export class CircleSettler implements Settler {
   }
 
   /** The x402 `exact` payload: an EIP-3009 authorisation the seller submits. */
-  private async authorise(
+  private authorise(
     wallet: WalletClient,
     operator: Address,
     payment: Payment,
     token: TokenDomain,
   ): Promise<string> {
-    const now = Math.floor((this.options.now?.() ?? Date.now()) / 1000);
-    const authorization = {
-      from: operator,
-      to: payment.to,
-      value: payment.value,
-      validAfter: 0n,
-      validBefore: BigInt(now + (payment.maxTimeoutSeconds ?? 300)),
-      nonce: this.options.nonce?.() ?? randomNonce(),
-    };
-
-    const signature = await wallet.signTypedData({
-      account: wallet.account!,
-      domain: token,
-      types: TRANSFER_WITH_AUTHORIZATION_TYPES,
-      primaryType: "TransferWithAuthorization",
-      message: authorization,
-    });
-
-    return Buffer.from(
-      JSON.stringify({
-        x402Version: 2,
-        scheme: "exact",
-        network: payment.network,
-        asset: payment.asset,
-        payload: {
-          signature,
-          authorization: {
-            ...authorization,
-            value: authorization.value.toString(),
-            validAfter: authorization.validAfter.toString(),
-            validBefore: authorization.validBefore.toString(),
-          },
-        },
-      }),
-      "utf8",
-    ).toString("base64");
+    return authoriseExact(wallet, operator, payment, token, this.options);
   }
+}
+
+/**
+ * Settlement on a chain with no Gateway.
+ *
+ * The vault deposits straight into the operator's own token balance here, so
+ * the first half of `CircleSettler` has nothing to do: no burn intent, no
+ * expiration height, no API call, no wait for an indexer to catch up, and no
+ * fourteen-day withdrawal to explain as the alternative. What remains is the
+ * half that was always the payment — an EIP-3009 authorisation the seller
+ * submits itself.
+ *
+ * **It has no floor.** `CircleSettler` refuses any purchase at or below
+ * `GATEWAY.baseFee6`, because Circle charges that fee on top of the value and
+ * a tranche at or under it cannot pay for its own release. Nothing is charged
+ * on top here, so a purchase of one base unit settles. x402 prices live below
+ * a cent, and this is the rail that can carry them.
+ *
+ * The bounds are untouched by any of it. A draw is refused or allowed by
+ * `TreeVault` before a settler is reached, and this one is reached only after
+ * the money is already the operator's.
+ */
+export class DirectSettler implements Settler {
+  private readonly options: DirectOptions;
+
+  constructor(options: DirectOptions) {
+    this.options = options;
+  }
+
+  async settle(node: Hex, payment: Payment): Promise<Settlement> {
+    const wallet = this.options.walletFor(node);
+    const operator = wallet.account!.address;
+
+    /* Before signing, for the same reason `CircleSettler` checks its own
+       domain first: an authorisation the token will refuse is discovered by
+       the seller, after it has served the answer. */
+    const token = tokenDomain(payment, this.options.chainId);
+
+    const held = await readBalance(this.options, payment.asset, operator);
+    if (held < payment.value) {
+      throw new SettlementError(
+        `${operator} holds ${held} base units and this purchase authorises ${payment.value}. ` +
+          `On this chain the vault deposits into the operator's own balance, so a draw that ` +
+          `returned should have covered it — a shortfall here means the money left again. ` +
+          `The draw has already happened, so the window is debited.`,
+      );
+    }
+
+    /* No `txHash`: nothing was broadcast. The authorisation is the whole
+       settlement, and the seller is the one who submits it. */
+    return { proof: await authoriseExact(wallet, operator, payment, token, this.options) };
+  }
+}
+
+export interface DirectOptions {
+  publicClient: PublicClient;
+  /** As `CircleOptions.walletFor`: the gate holds the key, this borrows the signer. */
+  walletFor: (node: Hex) => WalletClient;
+  chainId: number;
+  now?: () => number;
+  nonce?: () => Hex;
+  /** Overridable so a test exercises the path without a chain. */
+  balanceOf?: (token: Address, holder: Address) => Promise<bigint>;
+}
+
+/** The operator's token balance, read the one way both settlers read it. */
+function readBalance(
+  options: { publicClient: PublicClient; balanceOf?: (token: Address, holder: Address) => Promise<bigint> },
+  token: Address,
+  holder: Address,
+): Promise<bigint> {
+  if (options.balanceOf) return options.balanceOf(token, holder);
+  return options.publicClient.readContract({
+    address: token,
+    abi: ERC20,
+    functionName: "balanceOf",
+    args: [holder],
+  }) as Promise<bigint>;
+}
+
+/**
+ * The x402 `exact` payload: an EIP-3009 authorisation the seller submits.
+ *
+ * Shared by both settlers rather than written twice. Every defect this project
+ * has had in this class was one fact recorded in two places, and the fact here
+ * is the payload a seller will verify.
+ */
+async function authoriseExact(
+  wallet: WalletClient,
+  operator: Address,
+  payment: Payment,
+  token: TokenDomain,
+  clock: { now?: () => number; nonce?: () => Hex },
+): Promise<string> {
+  const now = Math.floor((clock.now?.() ?? Date.now()) / 1000);
+  const authorization = {
+    from: operator,
+    to: payment.to,
+    value: payment.value,
+    validAfter: 0n,
+    validBefore: BigInt(now + (payment.maxTimeoutSeconds ?? 300)),
+    nonce: clock.nonce?.() ?? randomNonce(),
+  };
+
+  const signature = await wallet.signTypedData({
+    account: wallet.account!,
+    domain: token,
+    types: TRANSFER_WITH_AUTHORIZATION_TYPES,
+    primaryType: "TransferWithAuthorization",
+    message: authorization,
+  });
+
+  return Buffer.from(
+    JSON.stringify({
+      x402Version: 2,
+      scheme: "exact",
+      network: payment.network,
+      asset: payment.asset,
+      payload: {
+        signature,
+        authorization: {
+          ...authorization,
+          value: authorization.value.toString(),
+          validAfter: authorization.validAfter.toString(),
+          validBefore: authorization.validBefore.toString(),
+        },
+      },
+    }),
+    "utf8",
+  ).toString("base64");
 }
 
 export interface TokenDomain {

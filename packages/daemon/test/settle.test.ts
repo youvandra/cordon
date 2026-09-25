@@ -13,8 +13,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createWalletClient, http, defineChain, verifyTypedData, type Hex, type Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { GATEWAY, ATTEST } from "../../fixtures/src/index.ts";
-import { CircleSettler, SettlementError, TRANSFER_WITH_AUTHORIZATION_TYPES } from "../src/settle.ts";
+import { GATEWAY, ATTEST, SEPOLIA } from "../../fixtures/src/index.ts";
+import { CircleSettler, DirectSettler, SettlementError, TRANSFER_WITH_AUTHORIZATION_TYPES } from "../src/settle.ts";
 import { buildBurnIntent, GatewayApi, GATEWAY_EIP712_DOMAIN, BURN_INTENT_TYPES } from "../src/gateway.ts";
 
 const KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d" as Hex;
@@ -268,6 +268,101 @@ test("an operator that cannot cover the authorisation is told so rather than the
       assert.ok(error instanceof SettlementError);
       assert.match(error.message, new RegExp(`authorises ${ATTEST.price6}`));
       assert.match(error.message, /own float/);
+      return true;
+    },
+  );
+});
+
+/* ------------------------------------------------------------------ */
+/* The direct rail — Sepolia, where there is no Gateway                */
+/* ------------------------------------------------------------------ */
+
+const sepolia = defineChain({
+  id: SEPOLIA.chainId, name: SEPOLIA.name,
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: SEPOLIA.nativeDecimals },
+  rpcUrls: { default: { http: ["http://127.0.0.1:1"] } },
+});
+const sepoliaWallet = createWalletClient({ account, chain: sepolia, transport: http() });
+const SEPOLIA_USDC = SEPOLIA.erc20 as Address;
+
+const direct = (held: bigint) =>
+  new DirectSettler({
+    publicClient: {} as never,
+    walletFor: () => sepoliaWallet,
+    chainId: sepolia.id,
+    now: () => 1_757_000_000_000,
+    nonce: () => ("0x" + "22".repeat(32)) as Hex,
+    balanceOf: async () => held,
+  });
+
+const sepoliaOffer = (value: bigint) => ({
+  to: SELLER, value, asset: SEPOLIA_USDC, network: `eip155:${sepolia.id}`,
+  extra: { name: "USDC", version: "2" }, maxTimeoutSeconds: ATTEST.maxTimeoutSeconds,
+});
+
+/**
+ * The improvement the port buys, stated as the two rails disagreeing about
+ * the same purchase rather than as a claim in a README.
+ */
+test("a purchase Circle's fee makes impossible settles on the direct rail", async () => {
+  const tooSmallForCircle = GATEWAY.baseFee6;
+
+  await assert.rejects(() => settler(fakeApi()).settle(NODE, offer(tooSmallForCircle)));
+
+  const { proof } = await direct(1_000_000n).settle(NODE, sepoliaOffer(tooSmallForCircle));
+  const sent = JSON.parse(Buffer.from(proof, "base64").toString("utf8"));
+  assert.equal(sent.payload.authorization.value, String(tooSmallForCircle));
+});
+
+test("one base unit settles, because nothing is charged on top of it", async () => {
+  const { proof } = await direct(1n).settle(NODE, sepoliaOffer(1n));
+
+  const sent = JSON.parse(Buffer.from(proof, "base64").toString("utf8"));
+  assert.equal(sent.payload.authorization.value, "1");
+});
+
+test("the direct rail broadcasts nothing, so it has no transaction to report", async () => {
+  const settlement = await direct(1_000_000n).settle(NODE, sepoliaOffer(ATTEST.price6));
+
+  assert.equal(settlement.txHash, undefined);
+});
+
+test("the direct authorisation verifies against the token the seller named", async () => {
+  const { proof } = await direct(1_000_000n).settle(NODE, sepoliaOffer(ATTEST.price6));
+  const sent = JSON.parse(Buffer.from(proof, "base64").toString("utf8"));
+  const a = sent.payload.authorization;
+
+  assert.ok(
+    await verifyTypedData({
+      address: account.address,
+      domain: { name: "USDC", version: "2", chainId: sepolia.id, verifyingContract: SEPOLIA_USDC },
+      types: TRANSFER_WITH_AUTHORIZATION_TYPES,
+      primaryType: "TransferWithAuthorization",
+      message: {
+        from: a.from, to: a.to, value: BigInt(a.value),
+        validAfter: BigInt(a.validAfter), validBefore: BigInt(a.validBefore), nonce: a.nonce,
+      },
+      signature: sent.payload.signature as Hex,
+    }),
+  );
+});
+
+test("an operator short of the price is told so, rather than the seller", async () => {
+  await assert.rejects(
+    () => direct(ATTEST.price6 - 1n).settle(NODE, sepoliaOffer(ATTEST.price6)),
+    (error: Error) => {
+      assert.ok(error instanceof SettlementError);
+      assert.match(error.message, /the window is debited/);
+      return true;
+    },
+  );
+});
+
+test("a seller that names no EIP-712 domain is refused before anything is signed", async () => {
+  await assert.rejects(
+    () => direct(1_000_000n).settle(NODE, { ...sepoliaOffer(ATTEST.price6), extra: undefined }),
+    (error: Error) => {
+      assert.match(error.message, /guesses them signs an authorisation the token will not verify/);
       return true;
     },
   );
