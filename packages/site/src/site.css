@@ -1366,3 +1366,105 @@ main { flex: 1 1 auto; }
   line-height: 1.7;
   white-space: pre;
 }
+
+/* ------------------------------------------------------------------ */
+/* What this is built on — a strip between the hero and the argument   */
+/* ------------------------------------------------------------------ */
+
+.stack {
+  padding: clamp(28px, 5vh, 52px) 0 clamp(36px, 6vh, 68px);
+  border-top: 1px solid var(--cordon-hairline-soft);
+  border-bottom: 1px solid var(--cordon-hairline-soft);
+  overflow: hidden;
+}
+
+/**
+ * The fade belongs to the window, not to the thing sliding through it.
+ *
+ * Put on the rail it scales with the rail — which is `max-content` wide and
+ * runs far past the screen — so the gradient's ends land somewhere offscreen
+ * and a name is sheared at the edge instead of fading. This element is the
+ * width of the viewport, which is what the fade is about.
+ */
+.stack__window {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+
+.stack__eyebrow {
+  margin: 0 0 clamp(18px, 3vh, 28px);
+  color: var(--cordon-copy-dim);
+  font-size: 12.5px;
+  letter-spacing: -0.01em;
+}
+
+.stack__eyebrow b {
+  color: var(--cordon-ink-strong);
+  font-weight: 600;
+}
+
+/* The rail is the viewport; the tracks slide inside it. Masked at both ends so
+   a name is never cut mid-letter at the edge of the screen. */
+.stack__rail {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: stack-slide 46s linear infinite;
+}
+
+.stack__track {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(36px, 6vw, 84px);
+  margin: 0;
+  padding: 0 clamp(18px, 3vw, 42px) 0 0;
+  list-style: none;
+}
+
+.stack__item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.stack__name {
+  color: var(--cordon-ink-strong);
+  font-size: clamp(17px, 2.1vw, 23px);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+}
+
+.stack__role {
+  color: var(--cordon-copy-dim);
+  font-size: 12.5px;
+}
+
+@keyframes stack-slide {
+  from { transform: translate3d(0, 0, 0); }
+  /* Exactly one track's width, so the second arrives where the first began. */
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+/* A reader who asked for less motion gets a list. The names were always in the
+   DOM; this only stops them moving. */
+@media (prefers-reduced-motion: reduce) {
+  .stack__window {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .stack__rail {
+    animation: none;
+    flex-wrap: wrap;
+    width: auto;
+    padding: 0 var(--cordon-space-6);
+  }
+  .stack__track {
+    flex-wrap: wrap;
+    gap: 14px 32px;
+  }
+  .stack__rail > .stack__track[aria-hidden="true"] {
+    display: none;
+  }
+}

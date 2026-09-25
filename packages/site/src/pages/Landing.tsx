@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Hero } from "../sections/Hero";
+import { Stack } from "../sections/Stack";
 import { Claim } from "../sections/Claim";
 import { Counterfactual } from "../sections/Counterfactual";
 import { Purchase } from "../sections/Purchase";
@@ -25,6 +26,7 @@ export default function Landing() {
   return (
     <>
       <Hero />
+      <Stack />
       <Claim />
       <Counterfactual />
       <Purchase />
