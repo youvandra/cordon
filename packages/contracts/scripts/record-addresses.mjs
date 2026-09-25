@@ -10,9 +10,16 @@
  * the surfaces say `pending` instead of showing an invented address. That is a
  * value, not a placeholder to be tidied away.
  *
+ * Two things come out of it. `DEPLOYMENT` is the chain the surfaces default
+ * to, and stays whatever was asked for. `DEPLOYMENTS` is every deployment
+ * found, keyed by chain id, because Cordon now runs on more than one chain and
+ * a surface that reads a name on Sepolia has to reach Sepolia's registry while
+ * the rest of the console is still pointed at Arc. Both are generated from the
+ * same files, so neither can drift from the other.
+ *
  * Usage: node scripts/record-addresses.mjs [chainId]
  */
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -42,12 +49,52 @@ const header =
   `  deployedAt: string;\n` +
   `};\n\n`;
 
+/** Every deployments/<chainId>.json on disk, in chain id order. */
+function everyDeployment() {
+  const dir = resolve(here, "../deployments");
+  const found = [];
+  for (const file of readdirSync(dir).sort()) {
+    const match = /^(\d+)\.json$/.exec(file);
+    if (!match) continue;
+    const d = JSON.parse(readFileSync(resolve(dir, file), "utf8"));
+    if (!/^0x[0-9a-fA-F]{40}$/.test(d.registry ?? "")) continue;
+    found.push(d);
+  }
+  return found.sort((a, b) => a.chainId - b.chainId);
+}
+
+function render(d, indent = "  ") {
+  return (
+    `{\n` +
+    `${indent}  chainId: ${d.chainId},\n` +
+    `${indent}  registry: "${d.registry}",\n` +
+    `${indent}  vault: "${d.vault}",\n` +
+    `${indent}  record: "${d.record}",\n` +
+    `${indent}  fromBlock: "${d.fromBlock ?? "0"}",\n` +
+    `${indent}  commit: "${d.commit ?? "unknown"}",\n` +
+    `${indent}  deployedAt: "${d.deployedAt}",\n` +
+    `${indent}}`
+  );
+}
+
+function everyBlock() {
+  const all = everyDeployment();
+  if (all.length === 0) return `export const DEPLOYMENTS: Record<number, Deployment> = {};\n`;
+  return (
+    `\n/** Every chain Cordon is deployed on, keyed by chain id. */\n` +
+    `export const DEPLOYMENTS: Record<number, Deployment> = {\n` +
+    all.map((d) => `  ${d.chainId}: ${render(d, "  ")},\n`).join("") +
+    `};\n`
+  );
+}
+
 if (!existsSync(source)) {
   writeFileSync(
     out,
     header +
       `/** No deployment on this chain yet, so every surface reads pending. */\n` +
-      `export const DEPLOYMENT: Deployment | null = null;\n`,
+      `export const DEPLOYMENT: Deployment | null = null;\n` +
+      everyBlock(),
   );
   console.log(`no deployments/${chainId}.json, so DEPLOYMENT is null`);
   process.exit(0);
@@ -72,6 +119,7 @@ writeFileSync(
     `  fromBlock: "${d.fromBlock ?? "0"}",\n` +
     `  commit: "${d.commit ?? "unknown"}",\n` +
     `  deployedAt: "${d.deployedAt}",\n` +
-    `};\n`,
+    `};\n` +
+    everyBlock(),
 );
 console.log(`wrote ${out} from chain ${d.chainId}`);

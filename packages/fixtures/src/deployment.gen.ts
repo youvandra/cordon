@@ -28,3 +28,25 @@ export const DEPLOYMENT: Deployment | null = {
   commit: "ee3955b82fb0b6f7786bbfb5b2f5ebc2b174f8cc",
   deployedAt: "2026-09-09T17:24:22.882Z",
 };
+
+/** Every chain Cordon is deployed on, keyed by chain id. */
+export const DEPLOYMENTS: Record<number, Deployment> = {
+  5042002: {
+    chainId: 5042002,
+    registry: "0xf86de085e63b00c9fba300b19807c883deb961e9",
+    vault: "0x00ab57acd260c594a661b6101bdf7e92267af135",
+    record: "0x2a8361ac23f5ffcfde9f0d7bc7618178770332d0",
+    fromBlock: "61265318",
+    commit: "ee3955b82fb0b6f7786bbfb5b2f5ebc2b174f8cc",
+    deployedAt: "2026-09-09T17:24:22.882Z",
+  },
+  11155111: {
+    chainId: 11155111,
+    registry: "0x045b2050aadaff4b80a2325d63648c09f15ab1f3",
+    vault: "0x12d15135b5bba8eef0d1098aa65a15af503d09c9",
+    record: "0xf86de085e63b00c9fba300b19807c883deb961e9",
+    fromBlock: "11779743",
+    commit: "99be0ca957f54a22b2d8620fb3a1a1f9b6620788",
+    deployedAt: "2026-09-25T14:13:38.432Z",
+  },
+};

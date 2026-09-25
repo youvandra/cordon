@@ -8,6 +8,7 @@ import { ConsoleShell } from "./parts/Shell";
 import Overview from "./screens/Overview";
 import Agents from "./screens/Agents";
 import Refusals from "./screens/Refusals";
+import Resolve from "./screens/Resolve";
 import NewMandate from "./screens/NewMandate";
 import NotFound from "./pages/NotFound";
 
@@ -55,6 +56,7 @@ export function App() {
               <Route index element={<Overview />} />
               <Route path="agents" element={<Agents />} />
               <Route path="refusals" element={<Refusals />} />
+              <Route path="resolve" element={<Resolve />} />
               <Route path="new" element={<NewMandate />} />
               <Route path="setup" element={<Moved to="/console/new" />} />
               <Route path="tree" element={<Moved to="/console/agents" />} />

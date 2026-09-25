@@ -1008,3 +1008,111 @@ html.entrance-done .cordon-card {
   color: var(--cordon-accent);
   font-size: 11px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Resolve — the one screen a stranger reads                           */
+/* ------------------------------------------------------------------ */
+
+.resolve__form {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.resolve__form .cordon-textfield {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .resolve__form {
+    flex-direction: column;
+  }
+}
+
+/**
+ * The authority chain, drawn as a ladder from the agent up to the owner.
+ *
+ * The rule holds through the line too: the agent is at the top because that is
+ * where a reader starts, and every rung below it is somebody with more
+ * authority than the one above. The last rung is the person who funded it.
+ */
+.chain {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0;
+}
+
+.chain__rung {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 0;
+}
+
+/* The line between rungs, stopping before the last so it reads as an end
+   rather than as something that carries on out of view. */
+.chain__rung::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 26px;
+  bottom: -12px;
+  width: 1px;
+  background: var(--cordon-hairline);
+}
+
+.chain__rung:last-child::before {
+  display: none;
+}
+
+.chain__mark {
+  width: 15px;
+  height: 15px;
+  margin-top: 4px;
+  border-radius: 50%;
+  border: 1px solid var(--cordon-hairline-strong, var(--cordon-hairline));
+  background: var(--cordon-surface);
+}
+
+.chain__rung[data-self] .chain__mark {
+  border-color: var(--cordon-ink-strong);
+  background: var(--cordon-ink-strong);
+}
+
+.chain__rung--owner .chain__mark {
+  border-style: dashed;
+}
+
+.chain__body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.chain__title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--cordon-ink-strong);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.chain__meta {
+  margin: 0;
+  color: var(--cordon-copy-dim);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.chain__note {
+  margin: 4px 0 0;
+  color: var(--cordon-copy);
+  font-size: 13px;
+  line-height: 1.5;
+}

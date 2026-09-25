@@ -525,7 +525,7 @@ export function shortId(value: string, head = 10, tail = 6): string {
  * `packages/contracts/scripts/record-addresses.mjs`. `null` until a deploy has
  * run, which is what makes the surfaces read `pending`.
  */
-export { DEPLOYMENT } from "./deployment.gen.ts";
+export { DEPLOYMENT, DEPLOYMENTS } from "./deployment.gen.ts";
 export type { Deployment } from "./deployment.gen.ts";
 
 export const MANDATE = {
