@@ -17,11 +17,11 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { load } from "../../daemon/src/config.ts";
 import { Gate } from "../../daemon/src/gate.ts";
-import { CircleSettler } from "../../daemon/src/settle.ts";
+import { CircleSettler, DirectSettler, type Settler } from "../../daemon/src/settle.ts";
 import { keyFileAt } from "../../daemon/src/keyfile.ts";
 import { ChainReleases } from "../../daemon/src/released.ts";
 import { dirname, join } from "node:path";
-import { ARC, DEPLOYMENT } from "../../fixtures/src/index.ts";
+import { ARC, SEPOLIA, DEPLOYMENT } from "../../fixtures/src/index.ts";
 import { createMcpServer } from "./server.ts";
 
 /* `npx` cannot pass node's own `--env-file`, so a published server reads the
@@ -70,6 +70,35 @@ if (!node) {
   process.exit(1);
 }
 
+/**
+ * Which rail settles a purchase here.
+ *
+ * Circle's Gateway exists on Arc and nowhere else this project runs, and
+ * `CircleSettler` is built around it: a burn intent, an expiration height and
+ * a wait for Circle's indexer. On a chain without it the vault deposits into
+ * the operator's own balance, so settlement is the authorisation alone.
+ *
+ * Choosing by chain rather than by configuration, because it is a fact about
+ * the chain. A server pointed at Sepolia and left on the Circle rail waits out
+ * a balance at an API that has never heard of the chain, and then reports a
+ * timeout for a purchase that was always going to be settled another way.
+ */
+function settlerFor(chainId: number): Settler {
+  const options = {
+    publicClient: gate.publicClientForSettlement,
+    walletFor: (node: `0x${string}`) => gate.signerFor(node),
+    chainId,
+  };
+  return chainId === ARC.chainId ? new CircleSettler(options) : new DirectSettler(options);
+}
+
+/** Where a refusal can be read back, on the chains this build knows by name. */
+function explorerFor(chainId: number): string | undefined {
+  if (chainId === ARC.chainId) return ARC.explorer;
+  if (chainId === SEPOLIA.chainId) return SEPOLIA.explorer;
+  return undefined;
+}
+
 const server = createMcpServer({
   gate,
   keyFile: keyFileAt(config.keyFile),
@@ -81,14 +110,10 @@ const server = createMcpServer({
     live: (node) => gate.isLive(node),
     file: join(dirname(config.keyFile), "released-spent.json"),
   }),
-  settler: new CircleSettler({
-    publicClient: gate.publicClientForSettlement,
-    walletFor: (node) => gate.signerFor(node),
-    chainId: config.chainId,
-  }),
+  settler: settlerFor(config.chainId),
   acceptable: { networks: config.networks, assets: config.assets },
   node,
-  explorer: config.chainId === ARC.chainId ? ARC.explorer : undefined,
+  explorer: explorerFor(config.chainId),
 });
 
 console.error(`cordon mcp: node ${node} on chain ${config.chainId}`);
