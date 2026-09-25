@@ -17,6 +17,7 @@ import { createPublicClient, http, parseAbi, type Address, type Hex } from "viem
 import { normalize } from "viem/ens";
 import { sepolia } from "viem/chains";
 import { SEPOLIA, ENSV2 } from "../../fixtures/src/index.ts";
+import { mirror, type Grant } from "../src/namespace.ts";
 
 const REGISTRY = parseAbi([
   "function getSubregistry(string label) view returns (address)",
@@ -66,7 +67,7 @@ const m = await client.readContract({
 const owns = own !== "0x0000000000000000000000000000000000000000";
 const maySpawn = m.depth < m.maxDepth;
 
-const rows: Array<[string, boolean, boolean]> = [];
+const grants: Grant[] = [];
 const ask = async (roles: bigint, who: Address) =>
   owns
     ? ((await client.readContract({
@@ -76,15 +77,31 @@ const ask = async (roles: bigint, who: Address) =>
 
 /* The operator may spawn beneath its node exactly while the tree has depth
    left for it, so it may register beneath its name on the same condition. */
-rows.push(["operator may register beneath itself", await ask(ROLE.REGISTRAR, m.operator), maySpawn]);
+grants.push({
+  what: "operator may register beneath itself",
+  granted: await ask(ROLE.REGISTRAR, m.operator),
+  allowed: maySpawn,
+});
 /* Cutting a branch belongs to whoever may revoke the mandate, and the operator
    of a node may not revoke its own. */
-rows.push(["operator may unregister", await ask(ROLE.UNREGISTER, m.operator), false]);
+grants.push({
+  what: "operator may unregister",
+  granted: await ask(ROLE.UNREGISTER, m.operator),
+  allowed: false,
+});
 /* The owner may revoke any node in the tree it funded. */
-rows.push(["owner may unregister", await ask(ROLE.UNREGISTER, m.owner), owns]);
+grants.push({
+  what: "owner may unregister",
+  granted: await ask(ROLE.UNREGISTER, m.owner),
+  allowed: owns,
+});
 /* Re-pointing a name's registry re-parents everything under it, which no
    mandate operation can do. */
-rows.push(["operator may re-point the registry", await ask(ROLE.SET_SUBREGISTRY, m.operator), false]);
+grants.push({
+  what: "operator may re-point the registry",
+  granted: await ask(ROLE.SET_SUBREGISTRY, m.operator),
+  allowed: false,
+});
 
 console.log(name);
 console.log(`  mandate depth ${m.depth} of ${m.maxDepth}, operator ${m.operator}`);
@@ -94,25 +111,15 @@ console.log();
 
 /**
  * The two disagreements are not the same failure, and calling them the same
- * thing hides the one that matters.
- *
- * A name that grants what the mandate refuses has invented an authority: a
- * stranger reading it is told something no contract will honour, and somebody
- * holding that role can act on it. That is the defect this whole check exists
- * to catch.
- *
- * A name that grants less is narrower than its mandate. Nothing false is
- * published and nobody gains anything — usually it is a name that has not been
- * given its own registry yet. Worth printing, never worth failing.
+ * thing hides the one that matters. `mirror` in `src/namespace.ts` keeps them
+ * apart, and is tested there — this script reads the chain and prints; it does
+ * not decide.
  */
-let invented = 0;
-let narrower = 0;
-for (const [what, granted, allowed] of rows) {
-  const verdict = granted === allowed ? "ok    " : granted ? "INVENT" : "narrow";
-  if (granted && !allowed) invented++;
-  if (!granted && allowed) narrower++;
+const { rows, invented, narrower, exitCode } = mirror(grants);
+const WORD = { ok: "ok    ", invented: "INVENT", narrower: "narrow" } as const;
+for (const row of rows) {
   console.log(
-    `  ${verdict} ${what.padEnd(38)} name:${String(granted).padEnd(5)} mandate:${allowed}`,
+    `  ${WORD[row.verdict]} ${row.what.padEnd(38)} name:${String(row.granted).padEnd(5)} mandate:${row.allowed}`,
   );
 }
 
@@ -125,4 +132,4 @@ if (invented > 0) {
 } else {
   console.log("  The namespace grants what the mandate grants, and nothing else.");
 }
-process.exit(invented === 0 ? 0 : 1);
+process.exit(exitCode);

@@ -22,7 +22,8 @@
 import { createPublicClient, http, parseAbi, isAddress, type Address, type Hex } from "viem";
 import { normalize } from "viem/ens";
 import { sepolia } from "viem/chains";
-import { SEPOLIA, ENSV2, ERC8004 } from "../../fixtures/src/index.ts";
+import { SEPOLIA, ERC8004 } from "../../fixtures/src/index.ts";
+import { registrationKey } from "../src/namespace.ts";
 
 const REGISTRY_ABI = parseAbi([
   "function isLive(bytes32) view returns (bool)",
@@ -34,21 +35,6 @@ const VAULT_ABI = parseAbi([
   "function treasury6(bytes32) view returns (uint128)",
 ]);
 const RECORD_ABI = parseAbi(["function agentIdOf(bytes32) view returns (uint256)"]);
-
-/**
- * The registry an ERC-8004 identity lives in, as ENSIP-25 keys it.
- *
- * ERC-7930: version, chain type, the length of the chain reference and the
- * reference itself, then the length of the address and the address. Built here
- * rather than written down, because a key one byte out looks absent and an
- * absent registration reads as an agent that never claimed its identity.
- */
-function erc7930(chainId: number, address: string): string {
-  let ref = chainId.toString(16);
-  if (ref.length % 2) ref = "0" + ref;
-  const refLen = (ref.length / 2).toString(16).padStart(2, "0");
-  return `0x0001` + `0000` + refLen + ref + `14` + address.slice(2).toLowerCase();
-}
 
 /* viem's own Sepolia, for the Universal Resolver address it carries. ENS's
    guidance is to look a resolver up rather than hold one, and this is the
@@ -155,7 +141,7 @@ if (conduct) {
   if (agentId === 0n) {
     console.log("  identity   none. This node is bound to no ERC-8004 agent.");
   } else {
-    const key = `agent-registration[${erc7930(SEPOLIA.chainId, ERC8004.identity)}][${agentId}]`;
+    const key = registrationKey(SEPOLIA.chainId, ERC8004.identity, agentId);
     const attested = await client.getEnsText({ name: normalize(name), key });
     console.log(
       "  identity  ",
