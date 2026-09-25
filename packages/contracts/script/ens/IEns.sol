@@ -77,7 +77,12 @@ interface IVerifiableFactory {
 interface IUserRegistry {
     function initialize(address rootAccount, uint256 roleBitmap) external;
 
+    function grantRootRoles(uint256 roleBitmap, address account) external returns (bool);
+    function revokeRootRoles(uint256 roleBitmap, address account) external returns (bool);
+    function hasRootRoles(uint256 roleBitmap, address account) external view returns (bool);
+
     function setResolver(uint256 anyId, address resolver) external;
+    function setSubregistry(uint256 anyId, address registry) external;
 
     function register(
         string memory label,
