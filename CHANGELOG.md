@@ -60,6 +60,46 @@ during it is `8aa6e22`.
 - The console has a test suite. `format.ts` — shares, revocation running down a
   branch, and dollars typed by an owner into the token's units — had none.
 
+### Fixed
+
+Found by an independent review of `a53e862`, and verified here before each was
+touched.
+
+- **The daemon listened on `0.0.0.0` with no authentication.** It is the only
+  process in the system that holds keys and can pay, and it was the only one of
+  the three that did not bind loopback. Anyone who could route to it could
+  enumerate the tree, force purchases until the budget was gone, or spawn a
+  child into the operator's key file. It binds `127.0.0.1` now, and off
+  loopback a bearer token is required rather than advised — a bind that leaves
+  the machine without `CORDON_TOKEN` is refused at startup.
+- **A seller could ask for an authorisation valid for years.** `validBefore`
+  came from the seller's own 402 with no ceiling, so a seller could hold signed
+  EIP-3009 authorisations and cash them together later. Ten minutes is the
+  ceiling; an offer asking for more is refused rather than clamped quietly.
+- **Two concurrent purchases could spend one release twice.** `claim` read the
+  chain twice between checking that a release was unspent and marking it spent.
+  It is serialised per node now, on the queue `gate.draw` already used.
+  `released-spent.json` is also written atomically, as `keyfile.ts` does.
+- **`npm test` in the daemon required Foundry to run any test at all**, because
+  it began by regenerating an ABI that is committed. The eighty-four tests that
+  need no chain run as `test:unit`; the two files that need anvil moved to
+  `test/chain`.
+
+### Corrected
+
+- **"An agent that can buy things and cannot move money" was not true**, and it
+  was on npm, in the README, in the agent's own skill and on the docs page. The
+  agent chooses the URL and the payee comes from that URL's 402, so a hostile
+  or injected agent can pay itself up to the bounds; concentration is keyed by
+  address and an address is free. What is enforced is how much and how fast,
+  against every ancestor, with every refusal on chain — which is what the
+  surfaces say now.
+
+### Added
+
+- Continuous integration. Nothing ran on push before, so gates were green on
+  the day somebody ran them and unknown since.
+
 ### Reused, unchanged
 
 The mandate tree, the vault's enforcement, the conduct record, the daemon, the
