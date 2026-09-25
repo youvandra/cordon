@@ -213,12 +213,16 @@ bilang masih ada orangnya atau nggak.
 ## Yang masih belum terjawab — sebut sendiri sebelum ditanya
 
 1. **Nama itu bukan identitas.** `acme.eth` bisa didaftarin anonim seharga lima
-   dolar. Nol KYC, nol bukti manusia. Yang dikasih nama itu **kontinuitas,
-   struktur delegasi, dan taruhan yang bisa hilang** — bukan identitas.
-   → Ini persis celah yang ditutup World ID di `open()`. Statistik Sybil yang
-   dikutip proyek ini sebagai alasan keberadaannya (`REGISTRY_BASELINE`,
-   arxiv 2606.26028) adalah masalah **identitas**; Cordon baru menyelesaikan
-   separuh **budget**-nya.
+   dolar. Nol KYC, nol bukti manusia. Jangan klaim sebaliknya — kalah dalam satu
+   kalimat. **Balik pertanyaannya:** penjual nggak butuh identitas, dia butuh
+   keterjangkauan dan jalan ganti rugi. Nama ngasih empat hal yang address
+   nggak bisa: rantai kustodi (parent-nya harus dipegang seseorang), taruhan
+   yang bisa hilang (address gratis dan tak terbatas; nama ada biayanya dan
+   riwayatnya menumpuk), pointer yang selamat dari rotasi kunci, dan — yang
+   paling tajam — **satu pihak dengan banyak address**, yang cuma pohonnya bisa
+   tunjukkan. Penutupnya: *"You don't need to know who I am to hold me
+   accountable. You need to know that I persist, that someone above me vouched
+   for me, and that I have something to lose."*
 
 2. **Nggak ada yang memaksa penjual ngecek.** Ini masalah adopsi, dan jawabannya
    bukan teknis: nilainya ngalir ke **owner**, bukan ke penjual. Batasan jadi

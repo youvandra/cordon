@@ -293,12 +293,7 @@ nggak child-nya jadi live-tapi-tak-bertuan). Yang salah cuma komentarnya. Di
 repo yang komentarnya adalah artefak utama, satu komentar yang overstate garansi
 kustodi kunci itu temuan, bukan typo.
 
-### F-14 · Nol integrasi World
-`worldcoin`, `World ID`, `IDKit`, `MiniKit`, `nullifier` — nol hit di seluruh
-repo. Untuk track WORLD, skor hari ini **0**. Detail di §5 — dan menurutku ini
-peluang terbesar yang belum diambil, bukan sekadar checkbox.
-
-### F-15 · Kecil-kecil
+### F-14 · Kecil-kecil
 - `AI_USAGE.md` bertanggal "26 September 2026" — besok. Di repo yang setiap
   angka diberi tanggal verifikasi, tanggal masa depan itu retakan kecil.
 - Heading di `site/src/sections/Names.tsx`: **"Cutting the name cuts the branch"**
@@ -317,7 +312,6 @@ peluang terbesar yang belum diambil, bukan sekadar checkbox.
 |---|---|---|
 | Kualitas kontrak & reasoning | **9 / 10** | Ancestor debit + invariant + immutability. Ini level audit-ready, bukan level hackathon. |
 | Kedalaman integrasi ENS | **8.5 / 10** | ENSv2 asli, EAC, ENSIP-25/26, reverse. Tertinggal karena dekoratif & manual. |
-| Integrasi World | **0 / 10** | Tidak ada. |
 | Reliability demo | **5 / 10** | Default nunjuk chain yang salah, test merah di run pertama, no CI. |
 | Ekonomi / kesiapan mainnet | **4 / 10** | 198k gas per $0.008, belum pernah dibahas. |
 | Kejujuran klaim | **9 / 10** | Jarang banget. Repo ini menulis batasannya sendiri. Pengurangnya: F-1, F-2, F-13. |
@@ -403,42 +397,45 @@ ENS. Yang ada sekarang menunjukkan bahwa penulisnya *mampu* membangun itu.
 
 ---
 
-## 5. Kalau aku juri WORLD: hari ini nol, tapi bentuknya sudah ada
+## 5. Pertanyaan yang paling berbahaya dari juri ENS
 
-Aku nggak akan nyaranin nempel World ID biar dapat track. Tapi di kodebase ini
-ada **dua tempat yang bentuknya persis World-shaped**, dan dua-duanya tulang
-punggung argumen proyek:
+> *"Apa bedanya nama sama address? Dua-duanya anonim."*
 
-**1. `MandateRegistry.open()` — satu manusia, satu akar.**
+Ini pertanyaan tersulit yang bisa datang, dan jawabannya **bukan** identitas —
+`acme.eth` bisa didaftarkan anonim seharga lima dolar, nol KYC. Jangan coba
+mengklaim nama itu identitas; itu kalah dalam satu kalimat.
 
-Repo ini **mengutip** masalah Sybil sebagai alasan keberadaannya:
-`REGISTRY_BASELINE` (arxiv 2606.26028) — 90.6% agent ERC-8004 ter-flag Sybil,
-biaya membalik status $0.0027. Cordon menyelesaikan separuh **budget**-nya.
-Separuh **identitas**-nya nggak tersentuh: siapa pun bisa `open()` seribu root
-dari seribu key.
+Jawabannya adalah **membalik pertanyaannya**: penjual tidak butuh identitas.
+Yang dia butuh adalah *keterjangkauan* dan *jalan ganti rugi*, dan nama
+menjawab empat hal yang address tidak bisa:
 
-World ID menutupnya persis: `open()` menerima proof, `nullifierHash` jadi
-identitas pemilik tree. Satu manusia terverifikasi, satu akar. Tiba-tiba
-"agent ini dibatasi" naik jadi **"agent ini dibatasi, dan di belakangnya ada
-satu manusia yang tidak bisa jadi seribu"** — dan itu tepat statistik yang
-sudah dikutip di halaman depan proyek ini.
+1. **Rantai kustodi.** Untuk memiliki `worker1.probe.acme.eth`, seseorang harus
+   memegang `probe.acme.eth`. Namanya membawa *siapa yang mendelegasikan ke
+   dia*. `0x1234` itu flat — dia tidak bisa menceritakan siapa yang membuatnya
+   ada.
+2. **Taruhan yang bisa hilang.** Address gratis dan tak terbatas. Nama punya
+   biaya registrasi dan riwayat resolusi yang menumpuk. Itu bukan anonim; itu
+   **pseudonim yang ada biayanya** — dan Sybil resistance datang dari situ,
+   bukan dari nama itu "asli".
+3. **Pointer yang selamat dari rotasi kunci.** Kunci operator mati dan diganti
+   — repo ini kena masalahnya sendiri (F-13). Namanya selamat, jadi nama itu
+   yang bisa dibangunkan relasi lintas waktu.
+4. **Satu pihak, banyak address.** Ini yang paling tajam: 50 agent = 50 EOA
+   tanpa kaitan apa pun di chain. Hanya pohonnya yang menunjukkan mereka satu
+   pihak. Tidak ada analisis address yang bisa melakukan itu.
 
-**2. `TreeVault.release()` — fungsi paling World-shaped di seluruh repo.**
+Kalimat penutupnya:
 
-Docstring-nya sudah bilang: *"the decision is a person's, and it has their
-signature on it."* Sekarang "person" = sebuah address. Tambahkan proof World ID
-di calldata `release`, dan kalimat itu berubah jadi *"a verified unique human
-signed this exception"* — itu klaim yang jauh lebih kuat, biayanya satu argumen,
-dan **tidak menambah satu pun kekuasaan off-chain** (yang penting, karena
-seluruh proyek ini menolak punya kontrol off-chain).
+> "You don't need to know who I am to hold me accountable. You need to know
+> that I persist, that someone above me vouched for me, and that I have
+> something to lose."
 
-**3. Console sebagai World App mini app.** Owner approve/refuse release dari HP.
-Console-nya sudah jadi; mini app itu wrapper. Dan ini menjawab pertanyaan
-praktis yang belum dijawab: refusal terjadi jam 3 pagi — owner-nya di mana?
-
-Urutannya penting: **(2) dulu, baru (1).** `release` itu satu fungsi, satu
-signature, dampak naratifnya besar. Gating `open()` menyentuh setiap test dan
-setiap script deploy.
+Dan batas yang harus disebut sendiri sebelum ditanya: ini memberi
+**kontinuitas, struktur delegasi, dan taruhan** — bukan identitas. Statistik
+Sybil yang dikutip proyek ini sebagai alasan keberadaannya
+(`REGISTRY_BASELINE`, arxiv 2606.26028) adalah masalah identitas, dan Cordon
+menyelesaikan separuh **budget**-nya, bukan separuh identitasnya. Mengakui itu
+lebih kuat daripada membelanya.
 
 ---
 
@@ -453,7 +450,7 @@ setiap script deploy.
 | 3 | **F-6 + F-4** — root `package.json` + workspaces, satu `npm test`; GitHub Action yang jalanin forge + semua suite node **dan** regenerate `gates.gen.ts` | Menyelesaikan F-5 selamanya, dan integrity story-nya jadi benar-benar otomatis |
 | 4 | **F-1** — tolak release pada refusal ber-reason `Revoked` | 1 baris, menutup kontradiksi dengan klaim utama |
 | 5 | **F-2** — `_releasedSpent` + view + console `delivered` | 1 baris klaim jadi benar di layar owner |
-| 6 | **F-15** — tanggal AI_USAGE, heading "Cutting the name" | Menit-menit |
+| 6 | **F-14** — tanggal AI_USAGE, heading "Cutting the name" | Menit-menit |
 
 **Yang mengubah hasil penilaian (hari, bukan jam):**
 
@@ -461,10 +458,9 @@ setiap script deploy.
 |---|---|---|
 | 7 | **`CordonResolver`** — ENSIP-10 wildcard, jawab `cordon.live` / `cordon.headroom` / `cordon.boundBy` dari kontrak saat resolve | **ENS — ini yang menang** |
 | 8 | **`@cordon/verify`** di npm + middleware x402 | ENS + distribusi |
-| 9 | **World ID di `release()`**, lalu di `open()` dengan nullifier sebagai identitas tree | **WORLD — dari 0** |
-| 10 | **F-8/F-9** — plafon `maxDepth`, publish tabel gas, dan nyatakan jawaban L2-nya secara eksplisit | Kredibilitas di hadapan juri yang pernah deploy mainnet |
-| 11 | ERC-3668 / CCIP-Read supaya nama mainnet resolve ke mandate L2 | ENS, kelas atas |
-| 12 | **F-12** — pin koneksi (undici `lookup`), batasi `method`/`body` | Keamanan |
+| 9 | **F-8/F-9** — plafon `maxDepth`, publish tabel gas, dan nyatakan jawaban L2-nya secara eksplisit | Kredibilitas di hadapan juri yang pernah deploy mainnet |
+| 10 | ERC-3668 / CCIP-Read supaya nama mainnet resolve ke mandate L2 | ENS, kelas atas |
+| 11 | **F-12** — pin koneksi (undici `lookup`), batasi `method`/`body` | Keamanan |
 
 ---
 
