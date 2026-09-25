@@ -22,7 +22,7 @@
 import { createPublicClient, http, parseAbi, isAddress, type Address, type Hex } from "viem";
 import { normalize } from "viem/ens";
 import { sepolia } from "viem/chains";
-import { SEPOLIA } from "../../fixtures/src/index.ts";
+import { SEPOLIA, ENSV2, ERC8004 } from "../../fixtures/src/index.ts";
 
 const REGISTRY_ABI = parseAbi([
   "function isLive(bytes32) view returns (bool)",
@@ -33,6 +33,22 @@ const VAULT_ABI = parseAbi([
   "function headroom(bytes32) view returns (uint128,bytes32)",
   "function treasury6(bytes32) view returns (uint128)",
 ]);
+const RECORD_ABI = parseAbi(["function agentIdOf(bytes32) view returns (uint256)"]);
+
+/**
+ * The registry an ERC-8004 identity lives in, as ENSIP-25 keys it.
+ *
+ * ERC-7930: version, chain type, the length of the chain reference and the
+ * reference itself, then the length of the address and the address. Built here
+ * rather than written down, because a key one byte out looks absent and an
+ * absent registration reads as an agent that never claimed its identity.
+ */
+function erc7930(chainId: number, address: string): string {
+  let ref = chainId.toString(16);
+  if (ref.length % 2) ref = "0" + ref;
+  const refLen = (ref.length / 2).toString(16).padStart(2, "0");
+  return `0x0001` + `0000` + refLen + ref + `14` + address.slice(2).toLowerCase();
+}
 
 /* viem's own Sepolia, for the Universal Resolver address it carries. ENS's
    guidance is to look a resolver up rather than hold one, and this is the
@@ -114,6 +130,38 @@ if (!live) {
   console.log("  cut at    ", cut, cut === node ? "(this node)" : "(an ancestor)");
   console.log("\n  Refuse it. A cut branch cannot pay.");
   process.exit(0);
+}
+
+/**
+ * What the name says about itself, and whether the chain agrees.
+ *
+ * `agent-context` and `agent-endpoint` are the owner's words and nothing
+ * checks them, which is why they are printed as claims. The registration
+ * record is different: it names an ERC-8004 identity, and `ConductRecord`
+ * holds the identity this node is actually bound to — so the two can be put
+ * side by side, and a name claiming an identity the contract never linked is
+ * an owner attesting to something no contract agrees with.
+ */
+const endpoint = await client.getEnsText({ name: normalize(name), key: "agent-endpoint[mcp]" });
+const context = await client.getEnsText({ name: normalize(name), key: "agent-context" });
+if (endpoint) console.log("  endpoint  ", endpoint, " (ENSIP-26, stated by the owner)");
+if (context) console.log("  context   ", context.length > 70 ? context.slice(0, 67) + "..." : context);
+
+const conduct = process.env.CORDON_RECORD as Address | undefined;
+if (conduct) {
+  const agentId = (await client.readContract({
+    address: conduct, abi: RECORD_ABI, functionName: "agentIdOf", args: [node],
+  })) as bigint;
+  if (agentId === 0n) {
+    console.log("  identity   none. This node is bound to no ERC-8004 agent.");
+  } else {
+    const key = `agent-registration[${erc7930(SEPOLIA.chainId, ERC8004.identity)}][${agentId}]`;
+    const attested = await client.getEnsText({ name: normalize(name), key });
+    console.log(
+      "  identity  ",
+      `${agentId} ${attested ? "— and the name attests to it (ENSIP-25)" : "— the name does NOT attest to it"}`,
+    );
+  }
 }
 
 if (vault) {
