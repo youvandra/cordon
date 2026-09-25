@@ -1,6 +1,6 @@
 {
   "name": "cordon-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Cordon inside an MCP client: an agent that can buy things and cannot move money, bounded by contracts on Arc.",
   "license": "MIT",
   "author": "Youvandra Febrial",

@@ -1,7 +1,7 @@
 {
   "name": "@cordon/brand",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "prebuild": "esbuild ../ui/lib/primitives/dotFont.ts --bundle --format=cjs --outfile=src/dotfont.cjs --log-level=error",
