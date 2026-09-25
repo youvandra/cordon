@@ -1,7 +1,8 @@
 # Use of AI tools
 
 Written for the ETHOnline 2026 submission requirement that a project state
-where and how AI tools were used. Last revised 13 September 2026.
+where and how AI tools were used, and kept current for ETHGlobal Tokyo 2026.
+Last revised 26 September 2026.
 
 ## The short version
 
@@ -112,9 +113,22 @@ check a figure against the chain before writing it down. Where that was not
 possible — anything needing a signature, a server password or a key — the
 session stopped and the author did it.
 
-Those planning files are not currently committed here. If the organisers
-consider this a spec-driven workflow within the meaning of their rules, they
-are available in full on request and can be added to this repository.
+### Where the direction lives, and what is kept out
+
+**Technical direction is in this repository.** Not in a private file: it is in
+the commit messages, which state what changed and why and what the alternative
+would have broken; in `packages/contracts/script/ens/README.md`, which is the
+sequence the ENS work runs in and the traps it hit; and in `/docs`, which is
+written as the work closes rather than after it. A reader who wants to know why
+a decision went the way it did can read the commit that made it.
+
+**What is kept out is prize strategy.** Which tracks to enter, which partner
+prizes to name, how to present the work to judges. That is a plan about a
+competition rather than direction for a build, it names nothing a reader of the
+code would need, and it stays on the author's machine.
+
+If the organisers consider this a spec-driven workflow within the meaning of
+their rules, every planning file is available in full on request.
 
 ## What is reused
 
@@ -130,8 +144,45 @@ The ERC-8004 registries and Circle's Gateway and USDC contracts are existing
 deployments on Arc that this project reads and writes; it did not author them.
 
 No code was carried over from any earlier project of the author's. The design
-system in `packages/ui` was written for this project during the event and is
-vendored as source from a sibling directory of the same age.
+system in `packages/ui` was written for this project and is vendored as source
+from a sibling directory of the same age.
+
+ENSv2's contracts are somebody else's deployment, read and written here and not
+authored here. The interfaces this repository compiles against them —
+`script/ens/IEns.sol` — are minimal declarations written against
+`ensdomains/contracts-v2`, and every one of them is exercised by a script that
+reverts if the shape is wrong.
+
+## ETHGlobal Tokyo 2026, 25–27 September
+
+Cordon existed before this event and is entered on the Continuity track. The
+boundary is a tag rather than a claim: `v0.1.0` is the last commit that predates
+it, so `git log v0.1.0..HEAD` is the weekend's work and nothing else.
+
+The same practice as before, and the same division. What the weekend added:
+
+| Built at the event | How |
+|---|---|
+| `LocalGateway.sol` and its tests | directed; the interface it satisfies and the decision to shim rather than edit `TreeVault` were the author's |
+| `DirectSettler` and its tests | directed, including the test that puts one purchase to both rails so the difference is a run rather than a sentence |
+| The Sepolia deployment | **the author ran every transaction.** Each one was signed from an encrypted keystore, at the author's keyboard, after reading a simulation |
+| The ENS scripts under `script/ens/` | written by the tool, run by the author, one password at a time |
+| The console's `Resolve` screen, `lib/chain.ts`, `lib/names.ts` | directed |
+| The `names` docs page and the landing section | drafted by the tool against the author's argument, then cut down |
+
+Three defects in this period are worth naming, because they say what the review
+was actually for. A check script labelled a name that grants *less* authority
+than its mandate as though it granted more — the claim reversed — and was caught
+by running it against a node it had not been written for. The console printed
+"nothing has been refused" over a tree with a refusal on chain, because it asked
+an indexer for a different chain and took an empty answer as an answer. And a
+record was written with an address where a name belonged, because `cast`
+resolves `.eth` arguments before encoding; the transaction succeeded and the
+event fired.
+
+None of those three were found by a model reading its own output. Two were
+found by running the thing against real state, and one by the author noticing
+that a screen said something he knew to be false.
 
 ## Honest limits
 

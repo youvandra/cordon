@@ -34,6 +34,35 @@ of them can see — and no agent in the tree holds a key.
 
 ---
 
+## What existed before this weekend, and what was built during it
+
+Cordon is entered at **ETHGlobal Tokyo 2026** on the **Continuity track**. It
+was built for ETHOnline 2026 and has been running on Arc testnet since
+September. The boundary is a tag rather than a claim:
+
+```bash
+git log  v0.1.0..HEAD      # the weekend's work, and nothing else
+git diff v0.1.0..HEAD
+```
+
+[`v0.1.0...main`](https://github.com/youvandra/cordon/compare/v0.1.0...main) is
+the same range in a browser.
+
+**Reused, and unchanged:** the mandate tree, the vault's enforcement, the
+conduct record, the daemon, the MCP server on npm, and the console's four
+owner-facing screens.
+
+**Built at the event:** every agent has a resolvable ENSv2 name, and the
+permission model lives in that namespace. Concretely — `LocalGateway`, a
+settlement rail for chains without Circle's Gateway; `DirectSettler`, which
+settles purchases below the fee Circle charges on top; the Sepolia deployment;
+subname issuance inside a spawn; Enhanced Access Control roles that mirror the
+mandate and cannot widen it; ENSIP-25 and ENSIP-26 records; and the console
+screen that answers a stranger. See
+[Partner integration — ENS](#partner-integration--ens).
+
+---
+
 ## Contents
 
 [Overview](#overview) · [The solution](#the-solution) ·
@@ -44,6 +73,7 @@ of them can see — and no agent in the tree holds a key.
 [HTTP API](#http-api) · [Settlement and the rail](#settlement-and-the-rail) ·
 [The record](#the-record) · [Evidence and gates](#evidence-and-gates) ·
 [What this does not claim](#what-this-does-not-claim) ·
+[Partner integration — ENS](#partner-integration--ens) ·
 [Tech stack](#tech-stack) ·
 [Repository structure](#repository-structure) · [Testing](#testing) ·
 [Running it](#running-it) · [Self-hosting](#self-hosting) ·
@@ -353,9 +383,30 @@ Also on Arc, and not ours: ERC-8004 **Identity** at
 `0x8004B663056A597Dffe9eCcC1965A193B7388713`. Cordon writes into what is
 already there rather than standing up a registry nobody would read.
 
-> **Testnet only.** Arc mainnet has not launched. The gas token and the money
-> are both test USDC, and every transaction linked from this repository opens
-> in a public explorer.
+### Ethereum Sepolia, chain 11155111
+
+Where ENSv2 is deployed, so where the agent names live. The Arc deployment is
+unchanged and still running.
+
+| Contract | Address |
+|---|---|
+| `MandateRegistry` | [`0x045b2050aadaff4b80a2325d63648c09f15ab1f3`](https://sepolia.etherscan.io/address/0x045b2050aadaff4b80a2325d63648c09f15ab1f3) |
+| `TreeVault` | [`0x12d15135b5bba8eef0d1098aa65a15af503d09c9`](https://sepolia.etherscan.io/address/0x12d15135b5bba8eef0d1098aa65a15af503d09c9) |
+| `ConductRecord` | [`0xf86de085e63b00c9fba300b19807c883deb961e9`](https://sepolia.etherscan.io/address/0xf86de085e63b00c9fba300b19807c883deb961e9) |
+| `LocalGateway` | [`0xa50d9454e71acf152399c872815ae6895cb53229`](https://sepolia.etherscan.io/address/0xa50d9454e71acf152399c872815ae6895cb53229) |
+
+`ConductRecord` here shares an address with `MandateRegistry` on Arc. The same
+deployer at the same nonce produces the same address on any chain, so read the
+chain beside an address before reading the address.
+
+The live tree hangs from **`mira.eth`**, and `sentinel.mira.eth` is an agent
+under it. Resolve either at
+[getcordon.xyz/console/resolve](https://getcordon.xyz/console/resolve) — no
+wallet, no permission.
+
+> **Testnet only, on both chains.** Arc mainnet has not launched. The gas token
+> and the money are test USDC, and every transaction linked from this repository
+> opens in a public explorer.
 
 ---
 
@@ -778,6 +829,95 @@ Being explicit about the edge of the guarantee is the point, so:
   things.
 - **Figures no run has produced read `pending`.** That is a value, not a
   placeholder to be tidied away.
+
+---
+
+## Partner integration — ENS
+
+Built at ETHGlobal Tokyo, on ENSv2's Sepolia deployment. What follows is the
+whole of it: which contracts, which records, and why the permission model needs
+a namespace rather than a configuration file.
+
+### What is used
+
+| ENSv2 | Used for |
+|---|---|
+| `ETHRegistry` / `ETHRegistrar` | registering the root name, commit and reveal |
+| `VerifiableFactory` + `UserRegistry` | a registry of its own per name, which is how a name gets subnames |
+| `PermissionedResolver` | one resolver proxy per name, with per-record roles |
+| Enhanced Access Control | the roles that carry the mandate's own authority |
+| `ReverseRegistrarAdapter` | the primary name, so a stranger can start from an address |
+| ENSIP-25 | `agent-registration[<registry>][<agentId>]`, keyed by ERC-7930 |
+| ENSIP-26 | `agent-endpoint[mcp]` and `agent-context` |
+
+Addresses are in `packages/fixtures/src/index.ts` under `ENSV2`, checked against
+the chain, and nowhere else.
+
+### Why a namespace and not a config file
+
+A configuration file answers its owner. The question this integration exists to
+answer belongs to somebody else: an agent is about to call a seller, and the
+seller has an address, no relationship, and no way to ask whether the payment
+will land. ENS makes the authority resolvable by a party who was never given
+anything.
+
+The name tree is the mandate tree. A subname is issued inside a spawn, and the
+two trees are walked the same way — which is visible rather than asserted:
+revoking a parent's mandate stops its descendants spending, and unregistering
+the parent's name stops the descendants resolving, though neither transaction
+names them.
+
+**The roles mirror the contract and may not widen it.** An operator that may
+spawn beneath its node holds `ROLE_REGISTRAR` in its own subregistry. It holds
+no `ROLE_UNREGISTER`, because cutting a branch belongs to whoever may revoke the
+mandate. And it cannot write its own records at all — an agent able to set its
+own `cordon.node` could point it at a wider mandate and a seller reading the
+name would be told a bound that does not hold it. There is no raise-cap role,
+because a mandate narrows monotonically and no contract here can widen one.
+
+That mirror is checkable rather than claimed:
+
+```bash
+node packages/daemon/scripts/check-authority.ts sentinel.mira.eth
+node packages/daemon/scripts/resolve-agent.ts  0x88ee…   # as a seller receives it
+```
+
+The first walks the registries down to an agent's own, reads the mandate its
+name points at, compares them line by line, and exits non-zero only when the
+name grants what the contract refuses. The second is the check a seller makes.
+
+**What the records never carry is a figure.** A cap written into a text record
+is a copy, and a copy drifts: the mandate can narrow a minute later while the
+record still quotes the old number. The name carries `cordon.node` and
+`cordon.registry` — a pointer to the enforcer — and the live answer comes from
+the contract.
+
+### Feedback on ENSv2
+
+Written as a builder who shipped against the beta this weekend.
+
+- **The per-name registry is the right shape.** A mandate tree and a name tree
+  turned out to be the same structure, and nothing had to bend to fit. Cutting
+  a branch means the same thing in both.
+- **EAC's separation of a role from its admin bit is what made the mirror
+  honest.** Granting `ROLE_REGISTRAR` without its admin expresses "may act,
+  may not delegate", which is exactly the authority a mandate gives an
+  operator. A single-owner model could not have said it.
+- **Sepolia carries more than one complete ENSv2 deployment**, and only one is
+  reachable from the root registry. A name registered in the other resolves to
+  nothing, silently. Their implementations also differ: the `UserRegistry` in
+  the resolving set predates the `initialize(address,uint256)` the factory
+  calls. A deployment page that marked which set is current, and a registry
+  that refused a subregistry whose implementation it does not recognise, would
+  both have saved hours.
+- **The docs' reverse-resolution path is the thinnest part.** `claim` then
+  `setName` on the resolver, signed by two different accounts, is the correct
+  design and took reading the contracts to find. It deserves a worked example.
+- **A resolver write that silently stores the wrong value is the worst failure
+  mode here.** `cast send` resolves `.eth` arguments before encoding, so
+  `setName(node, "agent.example.eth")` stores an address. The transaction
+  succeeds, the event fires, and reverse resolution then answers that the
+  address has no name.
 
 ---
 
