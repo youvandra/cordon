@@ -1,0 +1,82 @@
+# Every claim in this project is a gate, and a gate is green because a run
+# said so. Until this file existed nothing ran on push — so the gates were
+# green on the day somebody ran them locally, and unknown since.
+#
+# Three jobs rather than one, because they fail for different reasons and a
+# reader should be able to tell which happened without opening a log: the
+# contracts, the suites that need no chain, and the suites that spin up anvil.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # The 100 Solidity tests, including the fuzzing and the adversarial search.
+  # G4 is most of the runtime, so it is given its own job rather than making
+  # every other failure wait behind it.
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: forge test
+        run: npm test --prefix packages/contracts
+
+  # What a contributor without Foundry installed can run. Keeping this honest
+  # is the point: if this job needs a chain, the split has rotted.
+  units:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: fixtures
+        run: cd packages/fixtures && npm test
+      - name: daemon
+        run: cd packages/daemon && npm ci && npm run test:unit
+      - name: console
+        run: cd packages/console && npm ci && npm test
+      - name: proxy
+        run: cd packages/proxy && npm ci && npm test
+
+  # The suites that start anvil. These are the ones that cannot tell you
+  # anything on a machine without Foundry, which is why they are separate.
+  chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # `abi.gen.ts` is committed so the unit suites can run without Foundry.
+      # That only works while the committed copy matches the contracts, so the
+      # one place with a compiler checks it rather than trusting it.
+      - name: the committed ABI is the one the contracts produce
+        run: |
+          cd packages/daemon
+          npm ci
+          npm run abi
+          git diff --exit-code src/abi.gen.ts
+      - name: daemon
+        run: cd packages/daemon && npm run test:chain
+      - name: meter
+        run: cd packages/meter && npm ci && npm test
+      - name: attest
+        run: cd packages/attest && npm ci && npm test
+      - name: mcp
+        run: cd packages/mcp && npm ci && npm test
+      - name: eval
+        run: cd packages/eval && npm ci && npm test

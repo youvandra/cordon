@@ -7,7 +7,9 @@
   "scripts": {
     "abi": "node scripts/emit-abi.mjs",
     "build": "npm run abi && tsc --noEmit",
-    "test": "npm run abi && node --test \"test/*.test.ts\"",
+    "test": "npm run test:unit && npm run test:chain",
+    "test:unit": "node --test \"test/*.test.ts\"",
+    "test:chain": "npm run abi && node --test \"test/chain/*.test.ts\"",
     "start": "node src/main.ts",
     "init": "node src/init-cli.ts"
   },

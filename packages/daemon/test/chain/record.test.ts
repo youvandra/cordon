@@ -10,11 +10,11 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { hexToString, type Address, type Hex } from "viem";
-import { load } from "../src/config.ts";
-import { Gate } from "../src/gate.ts";
-import { ConductRecordAbi, TreeVaultAbi } from "../src/abi.gen.ts";
-import { ERC8004 } from "../../fixtures/src/index.ts";
-import { startHarness, type Harness, OP_CHILD_KEY, SELLER_PAYOUT, PRICE, TRANCHE } from "./harness.ts";
+import { load } from "../../src/config.ts";
+import { Gate } from "../../src/gate.ts";
+import { ConductRecordAbi, TreeVaultAbi } from "../../src/abi.gen.ts";
+import { ERC8004 } from "../../../fixtures/src/index.ts";
+import { startHarness, type Harness, OP_CHILD_KEY, SELLER_PAYOUT, PRICE, TRANCHE } from "../harness.ts";
 
 let h: Harness;
 

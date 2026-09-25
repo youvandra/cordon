@@ -1,17 +1,17 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import type { Address, Hex } from "viem";
-import { load } from "../src/config.ts";
-import { Gate } from "../src/gate.ts";
-import { cordonFetch, type Transport } from "../src/fetch.ts";
-import { createDaemon } from "../src/server.ts";
-import type { Settler, Payment, Settlement } from "../src/settle.ts";
+import { load } from "../../src/config.ts";
+import { Gate } from "../../src/gate.ts";
+import { cordonFetch, type Transport } from "../../src/fetch.ts";
+import { createDaemon } from "../../src/server.ts";
+import type { Settler, Payment, Settlement } from "../../src/settle.ts";
 import { decodeEventLog } from "viem";
-import { TreeVaultAbi, MandateRegistryAbi } from "../src/abi.gen.ts";
-import { REASONS } from "../../fixtures/src/index.ts";
+import { TreeVaultAbi, MandateRegistryAbi } from "../../src/abi.gen.ts";
+import { REASONS } from "../../../fixtures/src/index.ts";
 import {
   startHarness, type Harness, ERC20, GATEWAY, OP_CHILD_KEY, SELLER_PAYOUT, PRICE, ROOT_BUDGET, TRANCHE,
-} from "./harness.ts";
+} from "../harness.ts";
 
 /**
  * The claim, end to end: an agent that holds no key pays a seller through the
