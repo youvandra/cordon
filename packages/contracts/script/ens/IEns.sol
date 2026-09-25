@@ -77,6 +77,8 @@ interface IVerifiableFactory {
 interface IUserRegistry {
     function initialize(address rootAccount, uint256 roleBitmap) external;
 
+    function setResolver(uint256 anyId, address resolver) external;
+
     function register(
         string memory label,
         address owner,
@@ -118,6 +120,35 @@ library EnsRoles {
     uint256 internal constant SET_RESOLVER = 1 << 24;
     uint256 internal constant SET_URI = 1 << 36;
     uint256 internal constant CAN_NAME = 1 << 120;
+    uint256 internal constant UPGRADE = 1 << 124;
+
+    function admin(uint256 role) internal pure returns (uint256) {
+        return role << 128;
+    }
+}
+
+interface IPermissionedResolver {
+    function initialize(address admin, uint256 roleBitmap) external;
+    function setAddr(bytes32 node, address addr_) external;
+    function setText(bytes32 node, string calldata key, string calldata value) external;
+    function addr(bytes32 node) external view returns (address payable);
+    function text(bytes32 node, string calldata key) external view returns (string memory);
+}
+
+/**
+ * The resolver's own roles, from
+ * `contracts/src/resolver/libraries/PermissionedResolverLib.sol`, 25 Sep 2026.
+ * Separate from `EnsRoles`: a registry and a resolver number their roles from
+ * the same bit positions and mean different things by them.
+ */
+library EnsResolverRoles {
+    uint256 internal constant SET_ADDR = 1 << 0;
+    uint256 internal constant SET_TEXT = 1 << 4;
+    uint256 internal constant SET_CONTENTHASH = 1 << 8;
+    uint256 internal constant SET_NAME = 1 << 24;
+    uint256 internal constant SET_ALIAS = 1 << 28;
+    uint256 internal constant CLEAR = 1 << 32;
+    uint256 internal constant SET_DATA = 1 << 36;
     uint256 internal constant UPGRADE = 1 << 124;
 
     function admin(uint256 role) internal pure returns (uint256) {
