@@ -144,6 +144,27 @@ export const ENSV2 = {
   universalResolver: "0x5d25c1d6acbb71b7a28aa7899618a3412a8303e3",
   permissionedResolverImpl: "0x14f09fd05d4585759e54844dc9b00147131cf243",
   /**
+   * How a name gets subnames: they live in a registry of their own, a
+   * UserRegistry proxy the parent deploys through this factory and then points
+   * at with `setSubregistry`. A mandate tree is a tree of these.
+   */
+  verifiableFactory: "0x9e726eb570beb6bceb495ab8cda7df517d4e841c",
+  userRegistryImpl: "0xa80338aaa8d23831cea25e858d1774534abb0263",
+  /**
+   * What the registrar charges, and the reason this set is the right one.
+   *
+   * Sepolia carries two complete ENSv2 deployments, both live and both with
+   * names registered in them, because the contracts are an early preview and
+   * are redeployed as they change — a chain keeps every one of them. The other
+   * set is documented only in an unmerged docs build. This set is the one the
+   * published docs list, and it is self-consistent where it counts: the
+   * registrar at the address above answers `rentPriceOracle()` with exactly
+   * the oracle the docs list for it, and the root registry answers
+   * `getSubregistry("eth")` with exactly the registry above. Checked against
+   * the chain on 25 Sep 2026.
+   */
+  rentPriceOracle: "0x9b0b9c65bdaf9794ff7697e4dcfb1f50581072bb",
+  /**
    * What the registrar charges registration fees in, and a different token
    * from the one a mandate spends.
    *
@@ -154,6 +175,8 @@ export const ENSV2 = {
    */
   feeToken: "0x16f95d91dba7da3aca778ec053df0ff6c6a8aa8e",
   feeTokenDecimals: 6,
+  /** The registrar takes either. Listed so the pair is not discovered late. */
+  feeTokenDai: "0x278053acc97888e63ec81c80fec641bf0bf19664",
 } as const;
 
 /**
