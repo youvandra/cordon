@@ -18,9 +18,10 @@
  * restart forgets nothing it needs. What it does remember is which ones it has
  * spent, in a file: a released amount pays one purchase, not one per restart.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Address, Hex } from "viem";
+import { serialiseByKey } from "../../fixtures/src/serial.ts";
 
 export interface RefusalRow {
   node: Hex;
@@ -54,6 +55,18 @@ export interface ChainReleasesOptions {
 export class ChainReleases implements ReleasedPurchases {
   private readonly options: ChainReleasesOptions;
   private readonly spent: Set<string>;
+  /**
+   * One claim at a time per node.
+   *
+   * `claimInTurn` reads the chain twice between finding an unspent release and
+   * marking it spent, and an `await` is where another request gets to run. Two
+   * concurrent `POST /fetch` for the same purchase both passed the `spent`
+   * check, both reserved the same release, and one owner signature paid twice.
+   *
+   * `gate.draw` was already serialised per node for the nonce; this was not,
+   * and `cordonFetch` calls it first. Same queue, same key.
+   */
+  private readonly inTurn = serialiseByKey();
 
   constructor(options: ChainReleasesOptions) {
     this.options = options;
@@ -62,7 +75,11 @@ export class ChainReleases implements ReleasedPurchases {
       : new Set();
   }
 
-  async claim(node: Hex, payTo: Address, amount6: bigint): Promise<bigint | null> {
+  claim(node: Hex, payTo: Address, amount6: bigint): Promise<bigint | null> {
+    return this.inTurn(node, () => this.claimInTurn(node, payTo, amount6));
+  }
+
+  private async claimInTurn(node: Hex, payTo: Address, amount6: bigint): Promise<bigint | null> {
     const count = await this.options.count();
     const scan = BigInt(this.options.scan ?? 256);
     const floor = count > scan ? count - scan : 0n;
@@ -95,8 +112,17 @@ export class ChainReleases implements ReleasedPurchases {
     if (this.spent.delete(refusalId.toString())) this.save();
   }
 
+  /**
+   * Written beside and renamed over, the way `keyfile.ts` writes.
+   *
+   * A crash during `writeFileSync` leaves a truncated file, and this one is
+   * parsed in the constructor — so a half-written ledger of spent releases
+   * does not cost a purchase, it stops the daemon starting at all.
+   */
   private save(): void {
     mkdirSync(dirname(this.options.file), { recursive: true });
-    writeFileSync(this.options.file, JSON.stringify([...this.spent], null, 2) + "\n");
+    const staging = `${this.options.file}.tmp-${process.pid}`;
+    writeFileSync(staging, JSON.stringify([...this.spent], null, 2) + "\n");
+    renameSync(staging, this.options.file);
   }
 }

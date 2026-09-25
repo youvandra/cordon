@@ -16,6 +16,7 @@
  */
 import { parseAbi, type Address, type Hex, type PublicClient, type WalletClient } from "viem";
 import { GATEWAY } from "../../fixtures/src/index.ts";
+import { MAX_AUTH_SECONDS } from "./challenge.ts";
 import {
   GatewayApi,
   buildBurnIntent,
@@ -349,7 +350,10 @@ async function authoriseExact(
     to: payment.to,
     value: payment.value,
     validAfter: 0n,
-    validBefore: BigInt(now + (payment.maxTimeoutSeconds ?? 300)),
+    /* Clamped at the signature, not only at the offer: this is the last point
+       before a bearer instrument exists, and it is the one that must hold
+       however the payment got here. */
+    validBefore: BigInt(now + Math.min(payment.maxTimeoutSeconds ?? 300, MAX_AUTH_SECONDS)),
     nonce: clock.nonce?.() ?? randomNonce(),
   };
 

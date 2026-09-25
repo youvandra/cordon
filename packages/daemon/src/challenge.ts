@@ -122,6 +122,23 @@ export interface Acceptable {
  * on it lets a seller steer us onto a network or an asset we did not intend to
  * hold. The daemon settles on what it was configured for, or it does not pay.
  */
+/**
+ * The longest authorisation this daemon will sign, in seconds.
+ *
+ * A `PAYMENT-SIGNATURE` is an EIP-3009 `transferWithAuthorization`: a bearer
+ * instrument. Its `validBefore` came straight from the seller's own 402, with
+ * no ceiling, so a seller asking for `maxTimeoutSeconds: 99999999` was handed
+ * an authorisation good for years. It could hold a stack of them unsubmitted,
+ * wait until the operator's balance was topped up for other purchases, and
+ * submit them all at once.
+ *
+ * The amount was always bounded per authorisation. What was not bounded was
+ * the gap between the contract releasing the money and the money moving — and
+ * an unbounded gap is the one thing this system's account of itself cannot
+ * survive. Ten minutes is long enough for any settlement on either rail.
+ */
+export const MAX_AUTH_SECONDS = 600;
+
 export function selectOffer(challenge: Challenge, ok: Acceptable): Offer {
   const scheme = ok.scheme ?? "exact";
   const networks = new Set(ok.networks);
@@ -143,6 +160,16 @@ export function selectOffer(challenge: Challenge, ok: Acceptable): Offer {
      seller controls this string, and it becomes the counterparty on chain. */
   if (match.network.startsWith("eip155:") && !ADDRESS.test(match.payTo)) {
     throw new ChallengeError(`payTo is not an address: ${match.payTo}`);
+  }
+
+  /* Refused here rather than clamped quietly, because a seller asking for a
+     year does not want ten minutes — it wants the year, and the purchase is
+     better failed than settled against a term neither side agreed. The signer
+     clamps as well; this is the half that says so out loud. */
+  if (match.maxTimeoutSeconds !== undefined && match.maxTimeoutSeconds > MAX_AUTH_SECONDS) {
+    throw new ChallengeError(
+      `seller asks for an authorisation valid ${match.maxTimeoutSeconds}s; this daemon signs none longer than ${MAX_AUTH_SECONDS}s`,
+    );
   }
 
   return match;
