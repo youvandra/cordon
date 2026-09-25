@@ -44,6 +44,21 @@ during it is `8aa6e22`.
   and moving it back is one constant.
 - The MCP server picks its settlement rail from the chain rather than from
   configuration.
+- **The ENSIP-25 key is built in one place.** It was built twice, in the
+  daemon's seller check and in the console's Resolve screen, from two copies of
+  the same encoding. A key one byte out is not rejected by a resolver — it
+  resolves to nothing, which is what an agent that never registered looks like,
+  so the two copies could have come to disagree about the same agent without
+  either reporting an error. The builder now lives in `fixtures`, beside the
+  registries it encodes, and both surfaces call it.
+- **The mirror between a name and its mandate is decided where a test can
+  reach it.** The comparison was arithmetic inside a top-level script and could
+  not be called without an RPC, which is why the defect that reversed its claim
+  was found by running it rather than by a test. `invented` and `narrower` are
+  now named verdicts in `daemon/src/namespace.ts`, and a test asserts they
+  never collapse into each other.
+- The console has a test suite. `format.ts` — shares, revocation running down a
+  branch, and dollars typed by an owner into the token's units — had none.
 
 ### Reused, unchanged
 
