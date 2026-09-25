@@ -894,30 +894,15 @@ the contract.
 
 ### Feedback on ENSv2
 
-Written as a builder who shipped against the beta this weekend.
+Written up as a builder's report in **[FEEDBACK.md](FEEDBACK.md)** — what the
+per-name registry and EAC's admin bit made possible, the two complete Sepolia
+deployments and the hour the unreachable one cost, the reverse-resolution path,
+the `cast` edge that stores an address where a name was meant, and the one
+design question this integration left open.
 
-- **The per-name registry is the right shape.** A mandate tree and a name tree
-  turned out to be the same structure, and nothing had to bend to fit. Cutting
-  a branch means the same thing in both.
-- **EAC's separation of a role from its admin bit is what made the mirror
-  honest.** Granting `ROLE_REGISTRAR` without its admin expresses "may act,
-  may not delegate", which is exactly the authority a mandate gives an
-  operator. A single-owner model could not have said it.
-- **Sepolia carries more than one complete ENSv2 deployment**, and only one is
-  reachable from the root registry. A name registered in the other resolves to
-  nothing, silently. Their implementations also differ: the `UserRegistry` in
-  the resolving set predates the `initialize(address,uint256)` the factory
-  calls. A deployment page that marked which set is current, and a registry
-  that refused a subregistry whose implementation it does not recognise, would
-  both have saved hours.
-- **The docs' reverse-resolution path is the thinnest part.** `claim` then
-  `setName` on the resolver, signed by two different accounts, is the correct
-  design and took reading the contracts to find. It deserves a worked example.
-- **A resolver write that silently stores the wrong value is the worst failure
-  mode here.** `cast send` resolves `.eth` arguments before encoding, so
-  `setName(node, "agent.example.eth")` stores an address. The transaction
-  succeeds, the event fires, and reverse resolution then answers that the
-  address has no name.
+It lives in its own file rather than here because it is written for ENS to
+read, and because a report kept in two places is a report that disagrees with
+itself.
 
 ---
 
