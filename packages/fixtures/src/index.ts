@@ -79,6 +79,84 @@ export function scaleUsdc(
 }
 
 /**
+ * Ethereum Sepolia — the chain ENSv2 is deployed on.
+ *
+ * Cordon runs here so that a name can be issued for a mandate the same
+ * transaction that spawns it. ENSv2 exists on Sepolia and nowhere else for
+ * now, and a name on one chain cannot cut a mandate on another without a
+ * bridge or an off-chain control, so the mandate comes to the name.
+ *
+ * `ARC` stays. Both chains are already reachable: the chain is parameterised
+ * through `CORDON_CHAIN_ID` / `CORDON_RPC` and deployments are keyed by chain
+ * id, so Arc remains the rehearsed fallback.
+ *
+ * **The decimal shape is different here, and it is the difference that bites.**
+ * On Arc one balance has two views, 18-decimal native and 6-decimal ERC-20,
+ * and `scaleUsdc` is the only place that converts. On Sepolia there is no such
+ * pair: gas is ETH, USDC is an ordinary ERC-20, and the two are separate
+ * balances of separate tokens. `nativeDecimals` below is **ETH's**, so nothing
+ * may pass it to `scaleUsdc` — that function converts between two views of
+ * USDC, and this chain has one.
+ */
+export const SEPOLIA = {
+  chainId: 11155111,
+  name: "Ethereum Sepolia",
+  /* Answered `eth_getBalance`, `eth_getCode` and `eth_call` on 25 Sep 2026;
+     the other two public endpoints tried that day returned 404 and a paywall. */
+  rpc: "https://ethereum-sepolia-rpc.publicnode.com",
+  explorer: "https://sepolia.etherscan.io",
+  /** ETH, for gas. Arc's faucet pours the gas token, which there is USDC. */
+  faucet: "https://cloud.google.com/application/web3/faucet/ethereum/sepolia",
+  /** USDC, from Circle, and a separate errand from the gas above. */
+  usdcFaucet: "https://faucet.circle.com",
+  /** ETH's, and it has nothing to do with USDC on this chain. */
+  nativeDecimals: 18,
+  /**
+   * USDC, and the only view of it. A real FiatTokenV2 with EIP-3009, so x402
+   * `exact` settles here: probed on 20 Sep 2026 for `version() -> "2"`,
+   * `DOMAIN_SEPARATOR()` and an `authorizationState` that answers rather than
+   * falls through. Carried code on 25 Sep 2026.
+   */
+  erc20: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  erc20Decimals: 6,
+  /** Multicall3, at the address it has on every chain that has one. */
+  multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
+  mainnetLaunched: false,
+} as const;
+
+/**
+ * ENSv2, on its only deployment.
+ *
+ * Addresses of contracts nobody here deployed, so they sit beside the USDC and
+ * Multicall3 addresses rather than in `deployments/`. Every one of them
+ * carried code when checked against the RPC above on 25 Sep 2026.
+ *
+ * **The resolver address is absent on purpose.** ENS's own guidance is to look
+ * a name's resolver up rather than hold it, because a write to a resolver a
+ * name has stopped pointing at succeeds and then reads back stale. Registry
+ * and registrar are fixed and belong here; the resolver is a lookup.
+ */
+export const ENSV2 = {
+  chainId: SEPOLIA.chainId,
+  registry: "0x657ea849311d3d5823348dded7c2aaafb3ede09e",
+  rootRegistry: "0x9703dbd26dab89504490994138cf2c575251a9ce",
+  registrar: "0xabe76f6c8dfced81aa5a2bb8034202a7136b94ca",
+  universalResolver: "0x5d25c1d6acbb71b7a28aa7899618a3412a8303e3",
+  permissionedResolverImpl: "0x14f09fd05d4585759e54844dc9b00147131cf243",
+  /**
+   * What the registrar charges registration fees in, and a different token
+   * from the one a mandate spends.
+   *
+   * It mints to anyone who asks, with no access control, which is what makes
+   * it safe to demo with — and exactly why it may never reach a vault. The
+   * money Cordon bounds is `SEPOLIA.erc20`, whose supply nobody here can
+   * conjure. Confusing the two turns a budget into a suggestion.
+   */
+  feeToken: "0x16f95d91dba7da3aca778ec053df0ff6c6a8aa8e",
+  feeTokenDecimals: 6,
+} as const;
+
+/**
  * Display helper. Never used to compute a bound.
  *
  * Two decimals is what money looks like, and for most of this project's
