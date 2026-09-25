@@ -163,7 +163,7 @@ export default function Overview() {
         />
         <Kpi
           label="Spent in total"
-          value={formatUsdc(root.lifetimeSpent6)}
+          value={formatUsdc(root.delivered6)}
           of={`of ${formatUsdc(root.lifetimeCap6)}`}
           pct={share(root.lifetimeSpent6, root.lifetimeCap6)}
           foot="The lifetime cap never refills"

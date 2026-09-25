@@ -11,7 +11,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, execFileSync, type ChildProcess } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -57,7 +57,15 @@ let client: PublicClient;
 let token: Address;
 
 before(async () => {
-  execFileSync("forge", ["build"], { cwd: contracts, stdio: "pipe" });
+  /* Built here only if the artifact this test reads is missing.
+     This used to build unconditionally, inside a hook with a 120-second
+     timeout: on a clean clone that is a full compile plus an solc download, it
+     does not fit, and the suite failed its first run and passed its second.
+     CI and `npm run build:contracts` build ahead of time; this is the fallback
+     for someone running one test file by hand. */
+  if (!existsSync(resolve(contracts, "out/Mock3009.sol/Mock3009.json"))) {
+    execFileSync("forge", ["build"], { cwd: contracts, stdio: "pipe" });
+  }
   anvil = spawn("anvil", ["--port", String(PORT), "--silent"], { stdio: "ignore" });
   client = createPublicClient({ chain, transport: http(RPC) }) as PublicClient;
   for (let i = 0; i < 80; i++) {

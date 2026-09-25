@@ -22,7 +22,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPublicClient, defineChain, http, type Address, type Hex, type PublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { ARC, ATTEST } from "../../fixtures/src/index.ts";
+import { ARC, ATTEST, DEFAULT_CHAIN, chainFacts } from "../../fixtures/src/index.ts";
 import { deserialize, everyAfter, sync, writeSnapshot, type Ledger } from "../../meter/src/index.ts";
 import { Eip3009Collector, resolveDomain } from "./collect.ts";
 import { createAttestApi } from "./server.ts";
@@ -38,8 +38,8 @@ function flag(argv: string[], name: string): string | undefined {
 }
 
 const argv = process.argv.slice(2);
-const chainId = Number(flag(argv, "chain") ?? process.env.CORDON_CHAIN_ID ?? ARC.chainId);
-const rpc = flag(argv, "rpc") ?? process.env.CORDON_RPC ?? ARC.rpc;
+const chainId = Number(flag(argv, "chain") ?? process.env.CORDON_CHAIN_ID ?? DEFAULT_CHAIN.chainId);
+const rpc = flag(argv, "rpc") ?? process.env.CORDON_RPC ?? DEFAULT_CHAIN.rpc;
 const port = Number(flag(argv, "port") ?? process.env.CORDON_ATTEST_PORT ?? 8405);
 const fromArg = flag(argv, "from") ?? process.env.CORDON_FROM_BLOCK;
 const snapshot = flag(argv, "out") ?? resolve(here, `../ledger.${chainId}.json`);
@@ -70,23 +70,40 @@ const contracts = JSON.parse(readFileSync(deployment, "utf8")) as {
    explicit --from still wins, since a narrower range invents nothing. */
 const fromBlock = fromArg === undefined ? BigInt(contracts.fromBlock ?? "0") : BigInt(fromArg);
 
+/* The gas token is the chain's, not Arc's. This read `ARC.nativeDecimals` and
+   called the result USDC, which is true on Arc and false on Sepolia — where gas
+   is ETH and USDC is a separate token with six decimals. */
+const facts = chainFacts(chainId);
+if (!facts) {
+  console.error(`chain ${chainId} is not one this build knows`);
+  console.error("chains live in packages/fixtures/src/index.ts and nowhere else");
+  process.exit(2);
+}
 const chain = defineChain({
-  id: chainId,
-  name: `chain-${chainId}`,
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: ARC.nativeDecimals },
+  id: facts.chainId,
+  name: facts.name,
+  nativeCurrency: {
+    name: facts.nativeName,
+    symbol: facts.nativeSymbol,
+    decimals: facts.nativeDecimals,
+  },
   rpcUrls: { default: { http: [rpc] } },
 });
 /* Same reason as the collector's, which had this and this one did not: viem's
    four-second default poll and block-number cache are written for chains where
    a block is minutes away, and Arc settles in under a second. */
+/* The pace follows the chain. 250ms matches Arc's sub-second finality; on
+   Sepolia, where a block is twelve seconds, it is forty requests per block
+   against a public endpoint and the way an address gets rate limited. */
+const POLL_MS = chainId === ARC.chainId ? 250 : 4_000;
 const client = createPublicClient({
   chain,
   transport: http(rpc),
-  pollingInterval: 250,
-  cacheTime: 250,
+  pollingInterval: POLL_MS,
+  cacheTime: POLL_MS,
 }) as PublicClient;
 
-const asset = (process.env.CORDON_ATTEST_ASSET ?? ARC.erc20) as Address;
+const asset = (process.env.CORDON_ATTEST_ASSET ?? facts.erc20) as Address;
 const domain = await resolveDomain(client, asset, chainId);
 const collector = new Eip3009Collector({ rpcUrl: rpc, chain, token: asset, privateKey: key });
 const payTo = (process.env.CORDON_ATTEST_PAYTO ?? privateKeyToAccount(key).address) as Address;
@@ -121,7 +138,7 @@ const server = createAttestApi({
     vault: contracts.vault,
     registry: contracts.registry,
     record: contracts.record,
-    explorer: ARC.explorer,
+    explorer: facts.explorer,
   },
 });
 

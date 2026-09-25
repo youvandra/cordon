@@ -54,6 +54,10 @@ export interface ChainNode {
   /** From the vault, not from a count of events. */
   windowSpent6: bigint;
   lifetimeSpent6: bigint;
+  /** What `release` handed this node. Not in `lifetimeSpent6`, by design. */
+  releasedSpent6: bigint;
+  /** `lifetimeSpent6 + releasedSpent6` — what the node actually cost. */
+  delivered6: bigint;
   /** What it may draw right now, and which node is the reason. */
   available6: bigint;
   boundBy: Hex;
@@ -127,7 +131,7 @@ export function useChainTree(owner: string | null): ChainTree {
 
     const readNode = async (candidate: Candidate, depth: number): Promise<ChainNode> => {
       const { node, parent } = candidate;
-      const [m, spentWindow, spentLifetime, room] = await Promise.all([
+      const [m, spentWindow, spentLifetime, room, spentReleased] = await Promise.all([
         client.readContract({ address: registry, abi: MandateRegistryAbi, functionName: "mandate", args: [node] }) as Promise<{
           operator: `0x${string}`;
           budget6: bigint;
@@ -141,6 +145,11 @@ export function useChainTree(owner: string | null): ChainTree {
         client.readContract({ address: vault, abi: TreeVaultAbi, functionName: "windowSpent", args: [node] }) as Promise<bigint>,
         client.readContract({ address: vault, abi: TreeVaultAbi, functionName: "lifetimeSpent", args: [node] }) as Promise<bigint>,
         client.readContract({ address: vault, abi: TreeVaultAbi, functionName: "headroom", args: [node] }) as Promise<[bigint, Hex]>,
+        /* What the owner signed an exception for. It consumes no budget on
+           purpose, so it appears in neither figure above — and it still left
+           the vault, so a screen that omits it prints a tree as cheaper than
+           it was. */
+        client.readContract({ address: vault, abi: TreeVaultAbi, functionName: "releasedSpent", args: [node] }) as Promise<bigint>,
       ]);
       return {
         node,
@@ -156,6 +165,8 @@ export function useChainTree(owner: string | null): ChainTree {
         revoked: m.revoked,
         windowSpent6: spentWindow,
         lifetimeSpent6: spentLifetime,
+        releasedSpent6: spentReleased,
+        delivered6: spentLifetime + spentReleased,
         available6: room[0],
         boundBy: room[1],
       };

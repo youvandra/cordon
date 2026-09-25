@@ -129,6 +129,34 @@ export const SEPOLIA = {
 } as const;
 
 /**
+ * Anvil, the chain the tests run on.
+ *
+ * Not somewhere Cordon is deployed, and listed here anyway: the daemon, the
+ * collector and the meter all build their viem chain from `chainFacts`, and a
+ * chain absent from that lookup makes them refuse to start. The test harness
+ * runs against a local node, so leaving it out means the guard that protects a
+ * real deployment from an unknown chain id fires on every test instead.
+ *
+ * Gas is ETH with eighteen decimals, as it is on a stock anvil. `erc20` is the
+ * zero address because there is no canonical USDC here — a test deploys its own
+ * mock and passes the address explicitly, and a default that pointed anywhere
+ * would be a default that silently worked.
+ */
+export const ANVIL = {
+  chainId: 31337,
+  name: "Anvil",
+  rpc: "http://127.0.0.1:8545",
+  explorer: "",
+  faucet: "",
+  nativeDecimals: 18,
+  nativeName: "Ether",
+  nativeSymbol: "ETH",
+  erc20: "0x0000000000000000000000000000000000000000",
+  erc20Decimals: 6,
+  mainnetLaunched: false,
+} as const;
+
+/**
  * Every chain Cordon runs on, keyed by chain id.
  *
  * Anything that builds a viem chain reads its native token from here. The
@@ -144,7 +172,24 @@ export const SEPOLIA = {
 export const CHAINS = {
   [ARC.chainId]: ARC,
   [SEPOLIA.chainId]: SEPOLIA,
+  [ANVIL.chainId]: ANVIL,
 } as const;
+
+/**
+ * The chain a process means when nothing told it which.
+ *
+ * Every default in this repository used to be Arc's, because Arc was the only
+ * chain there was. Cordon now lives on Sepolia — that is where ENSv2 is, so it
+ * is where the names are, where the console reads and where the contracts are
+ * deployed. A daemon started with only a vault address and a key was landing on
+ * Arc and reading Sepolia addresses there: every call failed, or worse answered
+ * about another chain's money.
+ *
+ * So the default is named once, here, and every process reads it. Arc stays a
+ * first-class chain in `CHAINS` and is still reachable with an explicit
+ * `CORDON_CHAIN_ID` — it is the rehearsed fallback, not the assumption.
+ */
+export const DEFAULT_CHAIN = SEPOLIA;
 
 /** What a surface needs to name a chain and its gas. Both chains above answer
  *  it, and a third would have to before it could be added. */

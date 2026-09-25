@@ -93,6 +93,19 @@ contract TreeVault {
     ///      under it. This one never rolls: that is the whole point of it.
     mapping(bytes32 => uint128) private _lifetimeSpent;
 
+    /**
+     * @dev What `release` delivered, by node. Deliberately NOT folded into
+     *      `_lifetimeSpent`: a release is money that was never inside the
+     *      window's authority, so counting it there would let a node's spend
+     *      exceed its own cap and make `headroom`'s subtraction underflow.
+     *
+     *      It is tracked all the same, because it left the vault. Without it
+     *      `lifetimeSpent` — the figure the console prints as what a tree has
+     *      spent — reads lower than what the operator was actually handed, and
+     *      a record that under-reports the money is not a record.
+     */
+    mapping(bytes32 => uint128) private _releasedSpent;
+
     mapping(bytes32 => Window) private _nodeWindow;
     /// @dev Keyed by DECLARED counterparty. Bounds an honest daemon; a lying
     ///      one is caught by reconciliation, not here.
@@ -112,6 +125,7 @@ contract TreeVault {
     error InsufficientTreasury(bytes32 root, uint128 have, uint128 want);
     error UnknownRefusal(uint256 id);
     error AlreadyReleased(uint256 id);
+    error BranchIsCut(uint256 id, bytes32 cutAt);
 
     /* ------------------------------------------------------------------ */
     /* Events — Arc events are the log. Postgres is a rebuildable cache.    */
@@ -142,7 +156,15 @@ contract TreeVault {
         uint128 amount6,
         Reason reason
     );
-    event Released(uint256 indexed refusalId, address indexed by, address indexed counterparty, uint128 amount6);
+    /// @param released6 what this node has now been handed by `release`, all
+    ///        time. Emitted so an indexer never has to total it itself.
+    event Released(
+        uint256 indexed refusalId,
+        address indexed by,
+        address indexed counterparty,
+        uint128 amount6,
+        uint128 released6
+    );
 
     constructor(IERC20 usdc_, MandateRegistry registry_, IGatewayWallet gateway_) {
         usdc = usdc_;
@@ -323,7 +345,16 @@ contract TreeVault {
      * signature on it.
      *
      * Deliberately: the released amount does NOT consume window budget,
-     * because it was never inside the window's authority to begin with.
+     * because it was never inside the window's authority to begin with. It IS
+     * added to `releasedSpent`, because it left the vault and a surface that
+     * omits it under-reports the money.
+     *
+     * A refusal on a branch the owner has cut may NOT be released. Revocation
+     * is the one bound this contract advertises as final — `isLive` walks to
+     * the root so a single revocation kills every descendant — and a release
+     * that funded a cut branch would be the one path around it. The owner who
+     * wants that money spent re-opens a mandate and signs for it; they do not
+     * reach through a refusal that a revocation produced.
      */
     function release(uint256 refusalId) external {
         if (refusalId == 0 || refusalId > _refusals.length) revert UnknownRefusal(refusalId);
@@ -333,14 +364,18 @@ contract TreeVault {
         MandateRegistry.Mandate memory m = registry.mandate(r.node);
         if (msg.sender != m.owner) revert NotOwner(m.root, msg.sender);
 
+        bytes32 cut = registry.revokedAt(r.node);
+        if (cut != bytes32(0)) revert BranchIsCut(refusalId, cut);
+
         uint128 have = treasury6[m.root];
         if (r.amount6 > have) revert InsufficientTreasury(m.root, have, r.amount6);
 
         r.released = true;
         treasury6[m.root] = have - r.amount6;
+        _releasedSpent[r.node] += r.amount6;
         usdc.allow(address(gateway), r.amount6);
-        gateway.depositFor(address(usdc), registry.mandate(r.node).operator, r.amount6);
-        emit Released(refusalId, msg.sender, r.counterparty, r.amount6);
+        gateway.depositFor(address(usdc), m.operator, r.amount6);
+        emit Released(refusalId, msg.sender, r.counterparty, r.amount6, _releasedSpent[r.node]);
     }
 
     /* ------------------------------------------------------------------ */
@@ -351,6 +386,26 @@ contract TreeVault {
     ///         everything under it, for the life of the mandate. Never resets.
     function lifetimeSpent(bytes32 node) external view returns (uint128) {
         return _lifetimeSpent[node];
+    }
+
+    /**
+     * @notice What `release` has handed this node, all time.
+     *
+     * Money that left the vault under a human's signed exception rather than
+     * under a bound. It is not in `lifetimeSpent` and not in `windowSpent`, by
+     * design — but `lifetimeSpent + releasedSpent` is what the tree actually
+     * cost, and that sum is the honest headline for an owner.
+     */
+    function releasedSpent(bytes32 node) external view returns (uint128) {
+        return _releasedSpent[node];
+    }
+
+    /**
+     * @notice What this node cost in total: drawn under its bounds, plus
+     *         released over them. The figure a surface should print as "spent".
+     */
+    function delivered(bytes32 node) external view returns (uint128) {
+        return _lifetimeSpent[node] + _releasedSpent[node];
     }
 
     /// @notice `TreeVault.windowSpent(node)` — the budget figure on screen.

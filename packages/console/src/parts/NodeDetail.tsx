@@ -95,7 +95,7 @@ export function NodeDetail({ node, all, cut }: { node: ChainNode; all: ChainNode
         <Row
           label="Lifetime"
           fn={ENFORCED_BY.lifetime}
-          value={`${formatUsdc(node.lifetimeSpent6)} of ${formatUsdc(node.lifetimeCap6)}`}
+          value={`${formatUsdc(node.delivered6)} of ${formatUsdc(node.lifetimeCap6)}`}
         />
         <Row label="Per purchase" value={formatUsdc(node.trancheCap6)} />
         <Row label="Per seller" value={`${node.concentrationBps / 100}% of a window`} />

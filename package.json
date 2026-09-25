@@ -1,0 +1,30 @@
+{
+  "name": "cordon",
+  "private": true,
+  "version": "0.2.0",
+  "description": "One budget for a tree of agents, enforced by contracts they cannot reach.",
+  "license": "MIT",
+  "workspaces": [
+    "packages/fixtures",
+    "packages/ui",
+    "packages/daemon",
+    "packages/attest",
+    "packages/meter",
+    "packages/proxy",
+    "packages/eval",
+    "packages/mcp",
+    "packages/console",
+    "packages/site",
+    "packages/brand"
+  ],
+  "scripts": {
+    "fixtures": "node packages/fixtures/scripts/emit-solidity.ts",
+    "build:contracts": "npm run fixtures && forge build --root packages/contracts",
+    "test:contracts": "npm run fixtures && forge test --root packages/contracts",
+    "test:node": "npm run test --workspaces --if-present",
+    "test": "npm run test:contracts && npm run test:node",
+    "gates": "node packages/contracts/scripts/gates.mjs",
+    "typecheck": "npm run build --workspaces --if-present"
+  },
+  "engines": { "node": ">=22" }
+}

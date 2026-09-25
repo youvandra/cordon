@@ -10,7 +10,7 @@
    One import, resolved the same way at build time and at run time. */
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { ARC, ERC8004 } from "../../fixtures/src/index.ts";
+import { ARC, ERC8004, DEFAULT_CHAIN } from "../../fixtures/src/index.ts";
 
 export interface NodeKey {
   /** The mandate node this key is the operator of. */
@@ -99,15 +99,15 @@ export const ENV = {
   optional: {
     CORDON_RECORD: "ConductRecord, from deployments/<chainId>.json. Without it, refusals are enforced but never published",
     CORDON_IDENTITY: `ERC-8004 Identity; defaults to ${ERC8004.identity}`,
-    CORDON_RPC: `defaults to ${ARC.rpc}`,
-    CORDON_CHAIN_ID: `defaults to ${ARC.chainId}`,
-    CORDON_USDC: "the 6-decimal ERC-20 view; defaults to Arc's",
+    CORDON_RPC: `defaults to ${DEFAULT_CHAIN.rpc}`,
+    CORDON_CHAIN_ID: `defaults to ${DEFAULT_CHAIN.chainId} (${DEFAULT_CHAIN.name})`,
+    CORDON_USDC: `the 6-decimal ERC-20 view; defaults to ${DEFAULT_CHAIN.name}'s`,
     CORDON_NETWORKS: "CAIP-2 ids this daemon will settle on",
     CORDON_ASSETS: "assets it will pay in",
     CORDON_PORT: "defaults to 8402",
     CORDON_BIND: "the interface to listen on; defaults to 127.0.0.1. Anything else requires CORDON_TOKEN",
     CORDON_TOKEN: "a shared secret every request must send as `Authorization: Bearer <token>`. Optional on loopback, required off it",
-    CORDON_POLL_MS: "receipt polling interval; defaults to 250, matched to Arc's finality rather than to viem's 4,000",
+    CORDON_POLL_MS: "receipt polling interval; 250 on Arc, matched to its sub-second finality, and 4,000 elsewhere — asking a public endpoint forty times per twelve-second block is how an address gets rate limited",
     CORDON_KEY_FILE: "where a spawned child's key is written, before the spawn is sent; defaults to ~/.cordon/cordon.env",
   },
 } as const;
@@ -158,19 +158,19 @@ export function load(env = process.env): Config {
   }
 
   return {
-    rpcUrl: env.CORDON_RPC ?? ARC.rpc,
-    chainId: Number(env.CORDON_CHAIN_ID ?? ARC.chainId),
+    rpcUrl: env.CORDON_RPC ?? DEFAULT_CHAIN.rpc,
+    chainId: Number(env.CORDON_CHAIN_ID ?? DEFAULT_CHAIN.chainId),
     vault: address(env, "CORDON_VAULT"),
     registry: address(env, "CORDON_REGISTRY"),
-    usdc: (env.CORDON_USDC ?? ARC.erc20) as `0x${string}`,
+    usdc: (env.CORDON_USDC ?? DEFAULT_CHAIN.erc20) as `0x${string}`,
     record: env.CORDON_RECORD ? address(env, "CORDON_RECORD") : undefined,
     identity: (env.CORDON_IDENTITY ?? ERC8004.identity) as `0x${string}`,
-    networks: (env.CORDON_NETWORKS ?? `eip155:${ARC.chainId}`).split(",").map((s) => s.trim()),
-    assets: (env.CORDON_ASSETS ?? ARC.erc20).split(",").map((s) => s.trim()),
+    networks: (env.CORDON_NETWORKS ?? `eip155:${DEFAULT_CHAIN.chainId}`).split(",").map((s) => s.trim()),
+    assets: (env.CORDON_ASSETS ?? DEFAULT_CHAIN.erc20).split(",").map((s) => s.trim()),
     port: Number(env.CORDON_PORT ?? 8402),
     bind,
     token,
-    pollMs: Number(env.CORDON_POLL_MS ?? 250),
+    pollMs: Number(env.CORDON_POLL_MS ?? (Number(env.CORDON_CHAIN_ID ?? DEFAULT_CHAIN.chainId) === ARC.chainId ? 250 : 4_000)),
     keys,
     keyFile: env.CORDON_KEY_FILE ?? join(homedir(), ".cordon", "cordon.env"),
   };

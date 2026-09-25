@@ -46,6 +46,22 @@ contract MandateRegistry {
 
     uint16 public constant BPS = 10_000;
 
+    /**
+     * @notice The deepest a tree may be opened to.
+     *
+     * `TreeVault.draw` walks the whole path on every purchase — it reads each
+     * ancestor's mandate and writes three windows per ancestor — so the cost of
+     * one purchase is linear in depth. Measured on this contract: a draw at
+     * depth 2 costs ~198k gas, at depth 64 ~4.5M, and at depth 255 ~14.0M.
+     *
+     * `maxDepth` is a uint8, so without this a tree could be opened to 255 and
+     * its deepest agents would each spend 14M gas to buy something priced in
+     * fractions of a cent — a tree that is alive, funded, and economically
+     * dead. Eight is past anything a delegation chain needs and keeps the
+     * deepest draw inside ~700k gas.
+     */
+    uint8 public constant MAX_TREE_DEPTH = 8;
+
     /* ------------------------------------------------------------------ */
     /* Storage                                                             */
     /* ------------------------------------------------------------------ */
@@ -114,6 +130,10 @@ contract MandateRegistry {
         }
         if (p.windowSeconds == 0) revert WindowMustEqualParent(0, 0);
         if (p.maxDepth == 0) revert DepthExceeded(0, 0);
+        /* Checked here and not in `spawn`: a child inherits the root's
+           `maxDepth` and can never raise it, so bounding it once at the root
+           bounds every node under it. */
+        if (p.maxDepth > MAX_TREE_DEPTH) revert DepthExceeded(p.maxDepth, MAX_TREE_DEPTH);
 
         node = keccak256(abi.encode(block.chainid, address(this), msg.sender, _rootNonce[msg.sender]++));
 

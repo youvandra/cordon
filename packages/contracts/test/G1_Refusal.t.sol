@@ -191,22 +191,27 @@ contract G1_Refusal is Base {
     }
 
     /**
-     * Cutting a branch stops it drawing. It does not stop the owner paying it.
+     * Cutting a branch stops it drawing AND stops it being paid.
      *
-     * The claim everywhere in this project is that a revoked node draws
-     * nothing afterwards, and against `draw` that is enforced: `_evaluate`
-     * asks `revokedAt` first and refuses the whole branch. `release` does not
-     * ask. So an owner who cuts a branch and then releases one of its earlier
-     * refusals still funds that operator's Gateway balance.
+     * This test used to state the opposite, as a tripwire: `release` checked
+     * the owner and never asked `revokedAt`, so an owner who cut a branch could
+     * still fund one of its earlier refusals. The old docstring asked for that
+     * to be changed deliberately rather than drifted into, and this is the
+     * deliberate change.
      *
-     * That is the owner's own signature on their own money, which is the one
-     * thing release exists for — but it is not what "a cut node draws nothing"
-     * says, and the difference is exactly the kind a reader would not expect.
-     * This test states the behaviour rather than asserting what we wish were
-     * true, so that if the contracts are redeployed with a revocation check in
-     * `release`, it fails and has to be rewritten deliberately.
+     * The reason to close it is that revocation is the only bound this project
+     * advertises as final. `isLive` walks to the root so one revocation kills
+     * every descendant at constant cost, and every surface says a cut node
+     * spends nothing. A release that funded a cut branch was the single path
+     * around that sentence — reachable only by the owner, on their own money,
+     * but a claim with one exception is a claim a reader has to be told about,
+     * and nobody was.
+     *
+     * The owner keeps the authority, they just spend it in the open: re-open a
+     * mandate and sign for it. What they cannot do is reach back through a
+     * refusal that their own revocation produced.
      */
-    function test_a_cut_branch_can_still_be_paid_by_the_owner_that_cut_it() public {
+    function test_a_cut_branch_cannot_be_paid_even_by_the_owner_that_cut_it() public {
         (, uint256 id,) = _draw(opG, grandchild, aisa, Fixtures.TRANCHE6 + 1);
 
         vm.prank(owner);
@@ -219,12 +224,42 @@ contract G1_Refusal is Base {
 
         uint128 before = uint128(gateway.availableBalance(address(usdc), opG));
         vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(TreeVault.BranchIsCut.selector, id, grandchild));
         vault.release(id);
 
         assertEq(
-            uint128(gateway.availableBalance(address(usdc), opG)) - before,
-            Fixtures.TRANCHE6 + 1,
-            "release pays a cut node's operator: it checks the owner, not the revocation"
+            uint128(gateway.availableBalance(address(usdc), opG)),
+            before,
+            "not one base unit reached a cut branch"
+        );
+    }
+
+    /**
+     * A refusal on a LIVE branch is still releasable, and the release is
+     * counted. The cut is what closes the path, not the release itself.
+     */
+    function test_a_release_on_a_live_branch_is_recorded_as_delivered() public {
+        (, uint256 id,) = _draw(opG, grandchild, aisa, Fixtures.TRANCHE6 + 1);
+
+        uint128 lifetimeBefore = vault.lifetimeSpent(grandchild);
+        uint128 windowBefore = vault.windowSpent(grandchild);
+
+        vm.prank(owner);
+        vault.release(id);
+
+        /* The released amount consumes no budget: it was never inside the
+           window's authority. Both of these are deliberate. */
+        assertEq(vault.lifetimeSpent(grandchild), lifetimeBefore, "lifetime is untouched");
+        assertEq(vault.windowSpent(grandchild), windowBefore, "the window is untouched");
+
+        /* And it is still money that left the vault, so it is counted where a
+           surface can find it. Without this the console printed a tree as
+           having spent less than the operator was handed. */
+        assertEq(vault.releasedSpent(grandchild), Fixtures.TRANCHE6 + 1, "the release is counted");
+        assertEq(
+            vault.delivered(grandchild),
+            lifetimeBefore + Fixtures.TRANCHE6 + 1,
+            "delivered is what the tree actually cost"
         );
     }
 }

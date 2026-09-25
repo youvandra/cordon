@@ -88,6 +88,25 @@ export const TreeVaultAbi = [
   },
   {
     "type": "function",
+    "name": "delivered",
+    "inputs": [
+      {
+        "name": "node",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "draw",
     "inputs": [
       {
@@ -327,6 +346,25 @@ export const TreeVaultAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "releasedSpent",
+    "inputs": [
+      {
+        "name": "node",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -571,6 +609,12 @@ export const TreeVaultAbi = [
         "type": "uint128",
         "indexed": false,
         "internalType": "uint128"
+      },
+      {
+        "name": "released6",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
       }
     ],
     "anonymous": false
@@ -608,6 +652,22 @@ export const TreeVaultAbi = [
         "name": "id",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "BranchIsCut",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "cutAt",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ]
   },
@@ -713,6 +773,19 @@ export const MandateRegistryAbi = [
         "name": "",
         "type": "uint16",
         "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_TREE_DEPTH",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
       }
     ],
     "stateMutability": "view"

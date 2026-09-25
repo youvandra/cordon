@@ -10,13 +10,13 @@
  */
 import { createPublicClient, defineChain, http, type Address, type Hex, type PublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { ARC, DEMO_SELLER } from "../../fixtures/src/index.ts";
+import { DEMO_SELLER, DEFAULT_CHAIN, chainFacts } from "../../fixtures/src/index.ts";
 import { Eip3009Collector, resolveDomain } from "./collect.ts";
 import { createDemoSeller } from "./demo.ts";
 import type { Terms } from "./payment.ts";
 
-const chainId = Number(process.env.CORDON_CHAIN_ID ?? ARC.chainId);
-const rpc = process.env.CORDON_RPC ?? ARC.rpc;
+const chainId = Number(process.env.CORDON_CHAIN_ID ?? DEFAULT_CHAIN.chainId);
+const rpc = process.env.CORDON_RPC ?? DEFAULT_CHAIN.rpc;
 const port = Number(process.env.CORDON_DEMO_PORT ?? 8406);
 const bind = process.env.CORDON_BIND ?? "127.0.0.1";
 
@@ -27,10 +27,20 @@ if (!key || !/^0x[0-9a-fA-F]{64}$/.test(key)) {
   process.exit(2);
 }
 
+/* The chain's own gas token, not Arc's. See the note in src/main.ts. */
+const facts = chainFacts(chainId);
+if (!facts) {
+  console.error(`chain ${chainId} is not one this build knows`);
+  process.exit(2);
+}
 const chain = defineChain({
-  id: chainId,
-  name: `chain-${chainId}`,
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: ARC.nativeDecimals },
+  id: facts.chainId,
+  name: facts.name,
+  nativeCurrency: {
+    name: facts.nativeName,
+    symbol: facts.nativeSymbol,
+    decimals: facts.nativeDecimals,
+  },
   rpcUrls: { default: { http: [rpc] } },
 });
 const client = createPublicClient({
@@ -40,7 +50,7 @@ const client = createPublicClient({
   cacheTime: 250,
 }) as PublicClient;
 
-const asset = (process.env.CORDON_ATTEST_ASSET ?? ARC.erc20) as Address;
+const asset = (process.env.CORDON_ATTEST_ASSET ?? facts.erc20) as Address;
 const domain = await resolveDomain(client, asset, chainId);
 const collector = new Eip3009Collector({ rpcUrl: rpc, chain, token: asset, privateKey: key });
 const payTo = (process.env.CORDON_DEMO_PAYTO ?? privateKeyToAccount(key).address) as Address;

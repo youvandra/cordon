@@ -1,82 +1,105 @@
-# Every claim in this project is a gate, and a gate is green because a run
-# said so. Until this file existed nothing ran on push — so the gates were
-# green on the day somebody ran them locally, and unknown since.
+# The gates, run by a machine rather than remembered.
 #
-# Three jobs rather than one, because they fail for different reasons and a
-# reader should be able to tell which happened without opening a log: the
-# contracts, the suites that need no chain, and the suites that spin up anvil.
-name: ci
+# Every claim this project makes about itself is a number recorded from a run:
+# packages/fixtures/src/gates.gen.ts holds the test counts the site prints. Those
+# numbers were recorded by hand, so they drifted — the file claimed 66 G1 tests
+# against a suite that had grown to 69. A figure nobody re-derives is a figure
+# that is eventually wrong, so the derivation lives here.
+name: gates
 
 on:
   push:
+    branches: ["**"]
   pull_request:
+  workflow_dispatch:
 
-permissions:
-  contents: read
+concurrency:
+  group: gates-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # The 100 Solidity tests, including the fuzzing and the adversarial search.
-  # G4 is most of the runtime, so it is given its own job rather than making
-  # every other failure wait behind it.
   contracts:
+    name: contracts (G1, G4, G5, G6)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: foundry-rs/foundry-toolchain@v1
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      # The Solidity view of packages/fixtures. Generated, never written twice.
+      - name: Emit fixtures
+        run: node packages/fixtures/scripts/emit-solidity.ts
+
+      # Committed generated files must match what the generator produces. A
+      # drifted Fixtures.gen.sol means the tests asserted against figures the
+      # rest of the repo no longer holds.
+      - name: Generated fixtures are current
+        run: git diff --exit-code -- packages/contracts/test/Fixtures.gen.sol
+
+      - name: forge build
+        run: forge build --root packages/contracts
+
       - name: forge test
-        run: npm test --prefix packages/contracts
+        run: forge test --root packages/contracts -vv
 
-  # What a contributor without Foundry installed can run. Keeping this honest
-  # is the point: if this job needs a chain, the split has rotted.
-  units:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: fixtures
-        run: cd packages/fixtures && npm test
-      - name: daemon
-        run: cd packages/daemon && npm ci && npm run test:unit
-      - name: console
-        run: cd packages/console && npm ci && npm test
-      - name: proxy
-        run: cd packages/proxy && npm ci && npm test
+      # Refusals are returns, not reverts, and every bound is priced on the hot
+      # path. A gas report in the log is how a regression in either gets noticed.
+      - name: Gas report
+        run: forge test --root packages/contracts --gas-report
 
-  # The suites that start anvil. These are the ones that cannot tell you
-  # anything on a machine without Foundry, which is why they are separate.
-  chain:
+  node:
+    name: node suites (daemon, attest, meter, proxy, eval, fixtures)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: foundry-rs/foundry-toolchain@v1
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      # `abi.gen.ts` is committed so the unit suites can run without Foundry.
-      # That only works while the committed copy matches the contracts, so the
-      # one place with a compiler checks it rather than trusting it.
-      - name: the committed ABI is the one the contracts produce
+
+      # anvil and forge: the collector and the end-to-end tests run against a
+      # real local node rather than a mock of one.
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install workspaces
+        run: npm install --workspaces --include-workspace-root
+
+      # Built once, here, rather than inside a test's before() hook. A cold
+      # forge build plus a solc download does not fit in a test timeout, which
+      # is why a clean clone used to fail its first run and pass its second.
+      - name: Build contracts for the suites that read the artifacts
         run: |
-          cd packages/daemon
-          npm ci
-          npm run abi
-          git diff --exit-code src/abi.gen.ts
-      - name: daemon
-        run: cd packages/daemon && npm run test:chain
-      - name: meter
-        run: cd packages/meter && npm ci && npm test
-      - name: attest
-        run: cd packages/attest && npm ci && npm test
-      - name: mcp
-        run: cd packages/mcp && npm ci && npm test
-      - name: eval
-        run: cd packages/eval && npm ci && npm test
+          node packages/fixtures/scripts/emit-solidity.ts
+          forge build --root packages/contracts
+
+      - name: Test
+        run: npm run test:node
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --workspaces --include-workspace-root
+      - run: node packages/fixtures/scripts/emit-solidity.ts
+      - name: tsc --noEmit across every workspace that has a build
+        run: npm run typecheck

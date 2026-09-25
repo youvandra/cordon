@@ -226,7 +226,7 @@ export default function Agents() {
                 numeric: true,
                 cell: (node) => (
                   <span className="num muted">
-                    {formatUsdc(node.lifetimeSpent6)} / {formatUsdc(node.lifetimeCap6)}
+                    {formatUsdc(node.delivered6)} / {formatUsdc(node.lifetimeCap6)}
                   </span>
                 ),
               },

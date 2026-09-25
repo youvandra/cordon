@@ -27,7 +27,7 @@ import { Recorder } from "./record.ts";
    shows, because the console decodes the same enum from the same events and a
    second copy of this list is a second thing that can fall behind the
    contract. Re-exported so nothing that already imports them has to move. */
-import { REASONS, UNRECOGNISED, type Reason } from "../../fixtures/src/index.ts";
+import { REASONS, UNRECOGNISED, chainFacts, type Reason } from "../../fixtures/src/index.ts";
 import { RefusalRepeats } from "./repeats.ts";
 import { serialiseByKey } from "../../fixtures/src/serial.ts";
 
@@ -95,10 +95,29 @@ export class Gate {
 
   constructor(config: Config) {
     this.config = config;
+    /* The gas token comes from the chain, not from a literal.
+       This site held `{ name: "USDC", symbol: "USDC", decimals: 18 }` — true on
+       Arc, where the gas token IS USDC with an 18-decimal native view, and a
+       plain falsehood on Sepolia, where gas is ETH and USDC is a separate
+       6-decimal ERC-20. Nothing in the daemon computed a bound from it, which
+       is exactly why it sat here being wrong: every figure it reached was a
+       displayed one, so the error surfaced as a receipt that named the wrong
+       money rather than as a failure. */
+    const facts = chainFacts(config.chainId);
+    if (!facts) {
+      throw new Error(
+        `chain ${config.chainId} is not one this build knows. ` +
+          `Chains live in packages/fixtures/src/index.ts and nowhere else.`,
+      );
+    }
     const chain = defineChain({
-      id: config.chainId,
-      name: `chain-${config.chainId}`,
-      nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+      id: facts.chainId,
+      name: facts.name,
+      nativeCurrency: {
+        name: facts.nativeName,
+        symbol: facts.nativeSymbol,
+        decimals: facts.nativeDecimals,
+      },
       rpcUrls: { default: { http: [config.rpcUrl] } },
     });
 

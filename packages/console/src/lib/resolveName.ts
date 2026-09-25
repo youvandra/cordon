@@ -18,7 +18,7 @@ import { useEffect, useState } from "react";
 import { createPublicClient, http, parseAbi, isAddress, type Address, type Hex } from "viem";
 import { normalize } from "viem/ens";
 import { sepolia } from "viem/chains";
-import { SEPOLIA, ERC8004, DEPLOYMENTS, registrationKey } from "@cordon/fixtures";
+import { SEPOLIA, ERC8004, ENSV2, DEPLOYMENTS, registrationKey } from "@cordon/fixtures";
 
 const REGISTRY_ABI = parseAbi([
   "function isLive(bytes32) view returns (bool)",
@@ -31,7 +31,26 @@ const VAULT_ABI = parseAbi([
 ]);
 const RECORD_ABI = parseAbi(["function agentIdOf(bytes32) view returns (uint256)"]);
 
-const client = createPublicClient({ chain: sepolia, transport: http(SEPOLIA.rpc) });
+/**
+ * Pointed at ENSv2's universal resolver, explicitly.
+ *
+ * viem's `sepolia` chain carries the address of ENS**v1**'s universal resolver,
+ * and every `getEnsName` / `getEnsText` here would have gone through it. The
+ * names this console reads are registered in ENSv2 — a different registry, a
+ * different resolver implementation — so resolution through v1 answers about a
+ * namespace these names do not live in, and an agent that is published reads
+ * back as one that was never named.
+ *
+ * The address was already in `packages/fixtures` and nothing used it, which is
+ * the quiet version of this bug: a fixture that is right and unread.
+ */
+const client = createPublicClient({
+  chain: sepolia,
+  transport: http(SEPOLIA.rpc),
+  contracts: {
+    ensUniversalResolver: { address: ENSV2.universalResolver as Address },
+  },
+});
 
 /** The Sepolia deployment, or nothing. `pending` is a value here too. */
 const HERE = DEPLOYMENTS[SEPOLIA.chainId] ?? null;

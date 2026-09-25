@@ -71,7 +71,7 @@ export function Names() {
               </p>
             </li>
             <li className="points__item">
-              <span className="points__title">Cutting the name cuts the branch</span>
+              <span className="points__title">Two cuts, and they do different work</span>
               <p className="points__body">
                 Revoking stops the money and unregistering stops the discovery.
                 Everything below falls with it, and nothing below is touched.
