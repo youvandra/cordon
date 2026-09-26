@@ -741,10 +741,16 @@ export const DEMOS: Record<number, DemoTree> = {
     root: "0xd08820db0e1cd58426ba9dc8e78513b05d244b42cdaf841070b0a00d49b901ad",
     agentId: "894124",
   },
+  /* Re-read from chain on 27 Sep. The 26 Sep redeploy left both figures here
+     pointing at the tree that existed before it: `isLive` came back false for
+     that root and `agentIdOf` came back 0, so every surface keyed on them
+     asked about a node the registry no longer holds. Nothing failed loudly —
+     the meter answered "no such tree in this range" and the pages fell back to
+     their preview rows, which is the failure this fixture exists to prevent. */
   11155111: {
     owner: "0x9F846D2054689a439DA8D0619f37F6c70Db03597",
-    root: "0x7a64b3d4db9223e41fa3e5ddd3c4512a44f47a9d48218f5a7224b1cf80dc18ff",
-    agentId: "10521",
+    root: "0x6052919a0adffdfcbde3b6cbdba1f3ab5db068e5dbeb730d46a4eca05d34663b",
+    agentId: "10529",
   },
 };
 
