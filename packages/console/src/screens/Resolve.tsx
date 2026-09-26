@@ -215,6 +215,47 @@ export default function Resolve() {
             </dl>
           </Panel>
 
+          {lookup.agent.viaEns.computed ? (
+            <Panel title="What the name itself answered">
+              <p className="muted">
+                Everything above came from the contracts. These came from an
+                ordinary ENS <span className="mono">text</span> lookup — the call
+                every ENS library already makes — and they are not stored
+                anywhere. This name is on a resolver that reads the registry and
+                the vault while it answers, so a revocation reaches the namespace
+                in the transaction that revokes it and there is no record to go
+                stale.
+              </p>
+              <dl className="detail">
+                <Fact label="cordon.live">
+                  <span className="mono">{lookup.agent.viaEns.live}</span>
+                </Fact>
+                {lookup.agent.viaEns.headroom ? (
+                  <Fact label="cordon.headroom">
+                    <span className="mono">{lookup.agent.viaEns.headroom}</span>
+                  </Fact>
+                ) : null}
+                {lookup.agent.viaEns.boundBy ? (
+                  <Fact label="cordon.boundBy">
+                    <span className="mono breakable">{lookup.agent.viaEns.boundBy}</span>
+                  </Fact>
+                ) : null}
+                <Fact label="Agreement">
+                  {lookup.agent.viaEns.agrees ? (
+                    <Tag tone="positive">the name and the chain agree</Tag>
+                  ) : (
+                    <Tag tone="critical">the name and the chain disagree</Tag>
+                  )}
+                </Fact>
+              </dl>
+              <p className="panel__note">
+                Compared rather than assumed. If these ever diverge, the name is
+                pointing at a resolver that stores figures instead of computing
+                them, and the contract is the one to believe.
+              </p>
+            </Panel>
+          ) : null}
+
           <Panel title="Who can cut it off">
             <Chain
               rungs={lookup.agent.chain}

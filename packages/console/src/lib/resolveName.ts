@@ -55,6 +55,21 @@ const client = createPublicClient({
 /** The Sepolia deployment, or nothing. `pending` is a value here too. */
 const HERE = DEPLOYMENTS[SEPOLIA.chainId] ?? null;
 
+/**
+ * Six decimals, no rounding, matching `CordonResolver._usdc` exactly.
+ *
+ * Written here rather than reusing `formatUsdc`, which is a display helper that
+ * widens and trims for readability. This one has to be byte-identical to what
+ * the contract emits, because it is used to decide whether the name and the
+ * chain agree — and a formatter that disagreed by a digit would report a
+ * mismatch that does not exist.
+ */
+function formatBase6(base6: bigint): string {
+  const whole = base6 / 1_000_000n;
+  const frac = (base6 % 1_000_000n).toString().padStart(6, "0");
+  return `${whole}.${frac}`;
+}
+
 export interface Rung {
   node: Hex;
   operator: Address;
@@ -84,6 +99,23 @@ export interface Resolved {
   /** Stated by the owner and enforced by nothing. */
   endpoint: string | null;
   context: string | null;
+  /**
+   * What the NAME says, for the keys a computing resolver answers from the
+   * contracts. Null where the name is on a resolver that only stores records.
+   *
+   * Kept separate from the contract reads above rather than merged, because the
+   * whole claim is that these two agree — and a claim is only worth making if
+   * the screen shows both halves and lets a reader check.
+   */
+  viaEns: {
+    live: string | null;
+    headroom: string | null;
+    boundBy: string | null;
+    /** True when the name answered the computed keys at all. */
+    computed: boolean;
+    /** True when what the name said matches what the contract said. */
+    agrees: boolean | null;
+  };
   /** The identity the chain holds, and whether the name attests to it. */
   agentId: bigint | null;
   attested: boolean;
@@ -137,12 +169,20 @@ export function useResolvedAgent(subject: string): Lookup {
           return;
         }
 
-        const [node, registryText, endpoint, context] = await Promise.all([
-          client.getEnsText({ name: normalize(name), key: "cordon.node" }),
-          client.getEnsText({ name: normalize(name), key: "cordon.registry" }),
-          client.getEnsText({ name: normalize(name), key: "agent-endpoint[mcp]" }),
-          client.getEnsText({ name: normalize(name), key: "agent-context" }),
-        ]);
+        const [node, registryText, endpoint, context, liveText, headroomText, boundByText] =
+          await Promise.all([
+            client.getEnsText({ name: normalize(name), key: "cordon.node" }),
+            client.getEnsText({ name: normalize(name), key: "cordon.registry" }),
+            client.getEnsText({ name: normalize(name), key: "agent-endpoint[mcp]" }),
+            client.getEnsText({ name: normalize(name), key: "agent-context" }),
+            /* The computed keys. A name on `CordonResolver` answers these from
+               the registry and the vault as of this block; a name on a resolver
+               that stores its records answers nothing, and the screen says so
+               rather than inventing a figure. */
+            client.getEnsText({ name: normalize(name), key: "cordon.live" }).catch(() => null),
+            client.getEnsText({ name: normalize(name), key: "cordon.headroom" }).catch(() => null),
+            client.getEnsText({ name: normalize(name), key: "cordon.boundBy" }).catch(() => null),
+          ]);
         if (!node || !registryText) {
           if (live) setLookup({ state: "unbound", name, address });
           return;
@@ -208,6 +248,18 @@ export function useResolvedAgent(subject: string): Lookup {
             owner: mandate.owner, operator: mandate.operator, budget6: mandate.budget6,
             live: isLive as boolean, cutAt, headroom6, boundBy, treasury6, chain,
             endpoint: endpoint || null, context: context || null,
+            viaEns: {
+              live: liveText || null,
+              headroom: headroomText || null,
+              boundBy: boundByText || null,
+              computed: Boolean(liveText),
+              /* Compared, not assumed. `headroom` is six decimals on both
+                 sides: the resolver formats the same base units this reads. */
+              agrees: liveText
+                ? liveText === (isLive ? "true" : "revoked") &&
+                  (headroom6 === null || headroomText === formatBase6(headroom6))
+                : null,
+            },
             agentId: agentId && agentId > 0n ? agentId : null, attested,
           },
         });
