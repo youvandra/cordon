@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Logo } from "cordon-ui";
+import { DEFAULT_CHAIN } from "@cordon/fixtures";
 import { SECTIONS } from "./nav";
 import { CONSOLE_URL, GITHUB_URL } from "./links";
 import { SiteNav } from "./SiteNav";
@@ -38,7 +39,10 @@ export function Shell({ children }: { children: ReactNode }) {
               GitHub
             </a>
           </nav>
-          <p className="foot__meta">Arc testnet · preview build · no live money here</p>
+          {/* Named from the fixture for the same reason the record footer is. */}
+          <p className="foot__meta">
+            {DEFAULT_CHAIN.name} · preview build · no live money here
+          </p>
         </div>
       </footer>
     </div>

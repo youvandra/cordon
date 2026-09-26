@@ -28,9 +28,14 @@ export function RecordShell({ children }: { children: ReactNode }) {
       <footer className="foot">
         <div className="foot__inner">
           <Logo size={16} />
+          {/* Read from `DEFAULT_CHAIN` rather than typed. This line said "Arc
+              testnet" for a fortnight after the pages beneath it moved to
+              Sepolia, two lines above an explorer link that already pointed at
+              Sepolia — so the one sentence whose job is to tell a reader which
+              chain they are looking at named the wrong one. */}
           <Text variant="micro" tone="dim" as="p">
-            One budget for a tree of agents, enforced on chain. Arc testnet ·
-            nothing here is live money.
+            One budget for a tree of agents, enforced on chain.{" "}
+            {DEFAULT_CHAIN.name} · nothing here is live money.
           </Text>
           <nav aria-label="Cordon" className="foot__links">
             <Link to="/">The argument</Link>
