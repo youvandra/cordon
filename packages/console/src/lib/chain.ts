@@ -19,7 +19,7 @@
  * names a chain.
  */
 import { defineChain } from "viem";
-import { ARC, SEPOLIA, DEPLOYMENTS, DEMOS } from "@cordon/fixtures";
+import { ARC, SEPOLIA, ENSV2, DEPLOYMENTS, DEMOS } from "@cordon/fixtures";
 
 export const CHAIN = SEPOLIA;
 /** The chain this console is not on, for the one or two places that say so. */
@@ -35,9 +35,22 @@ export const chain = defineChain({
   },
   rpcUrls: { default: { http: [CHAIN.rpc] } },
   blockExplorers: { default: { name: "explorer", url: CHAIN.explorer } },
-  /* Declared so viem may pack a batch of `eth_call`s into one request. A tree
-     is read view by view, and a public endpoint counts requests. */
-  contracts: { multicall3: { address: CHAIN.multicall3 as `0x${string}` } },
+  contracts: {
+    /* Declared so viem may pack a batch of `eth_call`s into one request. A
+       tree is read view by view, and a public endpoint counts requests. */
+    multicall3: { address: CHAIN.multicall3 as `0x${string}` },
+    /* ENSv2's Universal Resolver, named rather than inherited.
+       `viem/chains`'s own Sepolia carries ENS**v1**'s, and the names this
+       console reads are registered in ENSv2 — a different registry, a
+       different resolver. Resolution through v1 answers about a namespace
+       these agents do not live in, so a published agent reads back as one
+       that was never named. The address was already in `packages/fixtures`
+       and nothing used it, which is the quiet version of that bug: a fixture
+       that is right and unread. */
+    ...(CHAIN.chainId === ENSV2.chainId
+      ? { ensUniversalResolver: { address: ENSV2.universalResolver as `0x${string}` } }
+      : {}),
+  },
 });
 
 /**

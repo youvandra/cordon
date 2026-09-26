@@ -19,14 +19,17 @@
  */
 import { useEffect, useState } from "react";
 import { createPublicClient, http, type Address } from "viem";
-import { sepolia } from "viem/chains";
-import { CHAIN } from "./chain";
+import { ENSV2 } from "@cordon/fixtures";
+import { CHAIN, chain } from "./chain";
 
-/* viem's own chain, for the Universal Resolver address it carries: ENS's
-   guidance is to look a resolver up rather than hold one. */
+/* This package's own chain, which carries ENSv2's Universal Resolver.
+   `viem/chains`'s Sepolia carries ENSv1's, and the reverse record this reads
+   was written in ENSv2 — resolving through v1 leaves every name column
+   falling back to hexadecimal. `chain.ts` says nothing else in this package
+   names a chain; this file used to. */
 const client =
-  CHAIN.chainId === sepolia.id
-    ? createPublicClient({ chain: sepolia, transport: http(CHAIN.rpc) })
+  CHAIN.chainId === ENSV2.chainId
+    ? createPublicClient({ chain, transport: http(CHAIN.rpc) })
     : null;
 
 export interface AgentNames {

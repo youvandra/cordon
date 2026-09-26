@@ -21,8 +21,8 @@
  */
 import { createPublicClient, http, parseAbi, isAddress, type Address, type Hex } from "viem";
 import { normalize } from "viem/ens";
-import { sepolia } from "viem/chains";
 import { SEPOLIA, ERC8004 } from "../../fixtures/src/index.ts";
+import { ensChain } from "../src/ens.ts";
 import { registrationKey } from "../src/namespace.ts";
 
 const REGISTRY_ABI = parseAbi([
@@ -36,11 +36,10 @@ const VAULT_ABI = parseAbi([
 ]);
 const RECORD_ABI = parseAbi(["function agentIdOf(bytes32) view returns (uint256)"]);
 
-/* viem's own Sepolia, for the Universal Resolver address it carries. ENS's
-   guidance is to look a resolver up rather than hold one, and this is the
-   library doing that; the RPC still comes from the fixtures, which is the one
-   place this project writes an endpoint down. */
-const client = createPublicClient({ chain: sepolia, transport: http(SEPOLIA.rpc) });
+/* `src/ens.ts`, which names ENSv2's Universal Resolver. viem's own Sepolia
+   carries ENSv1's, and the names this script reads are registered in ENSv2 —
+   a different registry answering about a different namespace. */
+const client = createPublicClient({ chain: ensChain, transport: http(SEPOLIA.rpc) });
 
 const usd = (base6: bigint) => `$${(Number(base6) / 1e6).toFixed(2)}`;
 

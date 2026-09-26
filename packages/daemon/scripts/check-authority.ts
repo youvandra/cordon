@@ -15,8 +15,8 @@
  */
 import { createPublicClient, http, parseAbi, type Address, type Hex } from "viem";
 import { normalize } from "viem/ens";
-import { sepolia } from "viem/chains";
 import { SEPOLIA, ENSV2 } from "../../fixtures/src/index.ts";
+import { ensChain } from "../src/ens.ts";
 import { mirror, type Grant } from "../src/namespace.ts";
 
 const REGISTRY = parseAbi([
@@ -30,7 +30,11 @@ const MANDATES = parseAbi([
 /** From `contracts/src/registry/libraries/RegistryRolesLib.sol`. */
 const ROLE = { REGISTRAR: 1n << 0n, UNREGISTER: 1n << 12n, SET_SUBREGISTRY: 1n << 20n };
 
-const client = createPublicClient({ chain: sepolia, transport: http(SEPOLIA.rpc) });
+/* `src/ens.ts`, which names ENSv2's Universal Resolver. This file walks the
+   ENSv2 registries directly, so on viem's default the two halves of the
+   comparison would read different namespaces and the mismatch would be the
+   check's own. */
+const client = createPublicClient({ chain: ensChain, transport: http(SEPOLIA.rpc) });
 
 const name = normalize(process.argv[2] ?? "probe.mira.eth");
 const labels = name.split(".");
