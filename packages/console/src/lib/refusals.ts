@@ -77,8 +77,17 @@ async function logsInWindows<T>(
 const REFUSED = parseAbiItem(
   "event Refused(uint256 indexed refusalId, bytes32 indexed node, bytes32 indexed breachedAt, address counterparty, uint128 amount6, uint8 reason)",
 );
+/**
+ * Five arguments, matching the vault.
+ *
+ * `released6` was added so an indexer never has to total a node's releases
+ * itself. This signature is what `getLogs` hashes into `topic0`, so a copy one
+ * argument out matches nothing at all — and nothing is what a console with no
+ * releases looks like, which is indistinguishable from an owner who has never
+ * released one.
+ */
 const RELEASED = parseAbiItem(
-  "event Released(uint256 indexed refusalId, address indexed by, address indexed counterparty, uint128 amount6)",
+  "event Released(uint256 indexed refusalId, address indexed by, address indexed counterparty, uint128 amount6, uint128 released6)",
 );
 
 export interface ChainRefusal {

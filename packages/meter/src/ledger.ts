@@ -51,7 +51,7 @@ export type Event =
   | ({ kind: "Drawn"; node: Hex; counterparty: Address; beneficiary: Address; amount6: bigint; root: Hex } & Site)
   | ({ kind: "AncestorDebited"; node: Hex; ancestor: Hex; amount6: bigint; spent6: bigint; budget6: bigint } & Site)
   | ({ kind: "Refused"; refusalId: bigint; node: Hex; breachedAt: Hex; counterparty: Address; amount6: bigint; reason: Reason } & Site)
-  | ({ kind: "Released"; refusalId: bigint; by: Address; counterparty: Address; amount6: bigint } & Site)
+  | ({ kind: "Released"; refusalId: bigint; by: Address; counterparty: Address; amount6: bigint; released6: bigint } & Site)
   | ({ kind: "Bound"; node: Hex; agentId: bigint; operator: Address } & Site)
   | ({ kind: "Attested"; refusalId: bigint; node: Hex; agentId: bigint; recordHash: Hex } & Site);
 
@@ -318,7 +318,11 @@ function apply(ledger: Ledger, event: Event): void {
       }
       refusal.released = { by: event.by, site: site(event) };
       const row = node(ledger, refusal.node);
-      if (row) row.releasedTo6 += event.amount6;
+      /* Taken from the event rather than accumulated. `released6` is the
+         node's running total as the vault holds it, which is why the vault
+         emits it — a total this ledger adds up itself is a second place the
+         figure can be wrong, and the chain is the log. */
+      if (row) row.releasedTo6 = event.released6;
       else ledger.releasedUnattributed6 += event.amount6;
       return;
     }

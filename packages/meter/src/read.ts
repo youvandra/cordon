@@ -214,6 +214,7 @@ function translate(log: unknown): Event | null {
         by: a.by as Address,
         counterparty: a.counterparty as Address,
         amount6: a.amount6 as bigint,
+        released6: a.released6 as bigint,
       };
 
     case "Bound":

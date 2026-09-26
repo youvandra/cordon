@@ -137,7 +137,7 @@ test("an override is recorded against the refusal it belongs to and is not count
     at({ kind: "Refused", refusalId: 1n, node: CHILD, breachedAt: ROOT, counterparty: AISA, amount6: 5_000_000n, reason: "window-budget" } as const),
   ];
   nextBlock();
-  events.push(at({ kind: "Released", refusalId: 1n, by: OWNER, counterparty: AISA, amount6: 5_000_000n } as const));
+  events.push(at({ kind: "Released", refusalId: 1n, by: OWNER, counterparty: AISA, amount6: 5_000_000n, released6: 5_000_000n } as const));
 
   const ledger = reduce(emptyLedger(5042002), events);
   const child = ledger.nodes[CHILD.toLowerCase() as Hex]!;
@@ -432,7 +432,7 @@ test("a release finds its refusal wherever in the range it sits", () => {
   for (const id of [1n, 20n, 40n]) {
     const ledger = reduce(emptyLedger(5042002), [
       ...manyRefusals(40),
-      at({ kind: "Released", refusalId: id, by: OWNER, counterparty: AISA, amount6: 500n } as const),
+      at({ kind: "Released", refusalId: id, by: OWNER, counterparty: AISA, amount6: 500n, released6: 500n } as const),
     ]);
     const row = ledger.refusals.find((r) => r.id === id)!;
     assert.ok(row.released, `refusal ${id} was not found`);
@@ -443,7 +443,7 @@ test("a release finds its refusal wherever in the range it sits", () => {
 test("a release for a refusal outside the range is still reported rather than mis-attached", () => {
   const ledger = reduce(emptyLedger(5042002), [
     ...manyRefusals(40),
-    at({ kind: "Released", refusalId: 999n, by: OWNER, counterparty: AISA, amount6: 500n } as const),
+    at({ kind: "Released", refusalId: 999n, by: OWNER, counterparty: AISA, amount6: 500n, released6: 500n } as const),
   ]);
   assert.equal(ledger.refusals.filter((r) => r.released).length, 0, "nothing was attached to the wrong row");
   assert.equal(ledger.releasedUnattributed6, 500n);

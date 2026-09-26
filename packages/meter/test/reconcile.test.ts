@@ -70,7 +70,7 @@ test("a refusal an owner released is money the vault let out, not money from out
     ...tree(),
     /* The human exit, on chain and signed. The vault deposits it into the same
        operator balance a draw would have. */
-    at({ kind: "Released", refusalId: 7n, by: OWNER, counterparty: SELLER, amount6: 4_000_000n } as const),
+    at({ kind: "Released", refusalId: 7n, by: OWNER, counterparty: SELLER, amount6: 4_000_000n, released6: 4_000_000n } as const),
   ]);
 
   const row = ledger.nodes[CHILD.toLowerCase() as Hex]!;
@@ -97,7 +97,7 @@ test("a refusal an owner released is money the vault let out, not money from out
 test("a balance above the release is still the thing this check is for", async () => {
   const ledger = reduce(emptyLedger(5042002), [
     ...tree(),
-    at({ kind: "Released", refusalId: 7n, by: OWNER, counterparty: SELLER, amount6: 4_000_000n } as const),
+    at({ kind: "Released", refusalId: 7n, by: OWNER, counterparty: SELLER, amount6: 4_000_000n, released6: 4_000_000n } as const),
   ]);
 
   /* One base unit more than the vault ever released. A check that cannot fail
@@ -119,7 +119,7 @@ test("a release whose refusal predates the range is reported rather than assumed
      accusation — so the report says which. */
   const ledger = reduce(emptyLedger(5042002), [
     ...tree(),
-    at({ kind: "Released", refusalId: 999n, by: OWNER, counterparty: SELLER, amount6: 2_000_000n } as const),
+    at({ kind: "Released", refusalId: 999n, by: OWNER, counterparty: SELLER, amount6: 2_000_000n, released6: 2_000_000n } as const),
   ]);
 
   assert.equal(ledger.released6, 2_000_000n, "the money moved and the ledger says so");
