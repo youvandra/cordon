@@ -8,7 +8,7 @@ import {
   usePageMeta,
   useNoIndex,
 } from "cordon-ui";
-import { DEFAULT_CHAIN, DEMOS, MANDATE, formatUsdc, shortId } from "@cordon/fixtures";
+import { DEFAULT_CHAIN, DEMOS, MANDATE, MARKET, formatUsdc, shortId } from "@cordon/fixtures";
 import { RecordShell } from "../parts/RecordShell";
 import { useLiveTree, type LiveNode, type LiveTree } from "../parts/meter";
 
@@ -29,6 +29,25 @@ import { useLiveTree, type LiveNode, type LiveTree } from "../parts/meter";
 const DEMO = DEMOS[DEFAULT_CHAIN.chainId]!;
 
 /**
+ * The one file every command needs, and the reason it is spelled out.
+ *
+ * `packages/daemon/.env.live` is Arc's — chain 5042002, Arc's registry, Arc's
+ * vault. Handed to a script that reads Sepolia it does not misreport, it
+ * throws: `agentIdOf` reverts, because the address it was given holds no such
+ * contract on this chain. Handed to the daemon it starts a daemon against the
+ * wrong chain entirely.
+ *
+ * Omitting it is quieter and worse. `resolve-agent.ts` reads `CORDON_VAULT`
+ * from the environment and prints `headroom  set CORDON_VAULT to read it` when
+ * it is absent, so beat 1 runs, looks like it worked, and silently drops the
+ * bound — which is the third of its three parts and the one the beat is for.
+ *
+ * This file carries the chain, the three addresses and the node keys together,
+ * so it is the whole configuration rather than one of two halves.
+ */
+const ENV = '--env-file="$HOME/.cordon/cordon-sepolia.env"';
+
+/**
  * The live node furthest from the root — the one beat 4 is about.
  *
  * Revoked nodes are skipped: a cut branch draws nothing for a reason that has
@@ -40,6 +59,31 @@ function deepest(tree: LiveTree | null): LiveNode | null {
   const live = tree.nodes.filter((node) => !node.revoked);
   if (live.length === 0) return null;
   return live.reduce((best, node) => (node.depth > best.depth ? node : best));
+}
+
+/**
+ * Whether an ancestor is what actually stops the deepest node — beat 4's
+ * precondition, and the one condition this page could not see.
+ *
+ * Deliberately a comparison of two figures rather than a headroom. `meter.ts`
+ * computes no headroom on purpose: the window arithmetic belongs to the vault,
+ * and an indexer that models it is a second implementation that can disagree
+ * with the contract it reports on. So this reads what the meter does hold —
+ * a node's budget and what has been debited to it — and answers the weaker
+ * question it can answer honestly: is there less room above than below?
+ *
+ * That is necessary for beat 4 and not sufficient, which is why the check it
+ * feeds sends the presenter to `/status` for the figure itself. What it catches
+ * is the case that silently wastes the beat: a freshly funded tree, where the
+ * root has more room left than the grandchild and `headroom` therefore returns
+ * the grandchild's own budget with the grandchild's own id beside it.
+ */
+function bindsFromAbove(tree: LiveTree | null): boolean | null {
+  const node = deepest(tree);
+  const root = tree?.nodes.find((n) => n.parent === null);
+  if (!node || !root || node.node === root.node) return null;
+  const left = (n: LiveNode) => BigInt(n.budget6) - BigInt(n.debited6);
+  return left(root) < left(node);
 }
 
 interface Beat {
@@ -64,8 +108,14 @@ interface Beat {
    * Written out rather than described, because a beat described is a beat
    * retyped from memory at the worst possible moment. Every one of these runs
    * from `packages/daemon`, which is the one directory the demo needs.
+   *
+   * A function where the command names a node. A node id typed in here is an
+   * id from whichever tree existed when it was typed, and these get respawned
+   * — the same reason beat 3 links to the agent's record rather than to a
+   * refusal id. Without a meter it falls back to a named placeholder, which
+   * reads as something to fill in rather than as an id to paste.
    */
-  run?: string;
+  run?: string | ((tree: LiveTree | null) => string);
   /** What the room should be looking at when it lands. */
   shows: string | ((tree: LiveTree | null) => string);
   /** Shown as it appears on screen rather than described. Set in mono,
@@ -96,7 +146,7 @@ const BEATS: Beat[] = [
     title: "A name that points, never states",
     say: "This agent has a name. Ask the name what it may spend and it will not tell you — it points at the contract that decides.",
     act: "One command, and it is the whole beat. The console's Resolve screen is the same two reads with a wallet attached — use it only if the room wants to see a UI.",
-    run: "node scripts/resolve-agent.ts probe.mira.eth",
+    run: `node ${ENV} scripts/resolve-agent.ts probe.mira.eth`,
     shows:
       "The round trip first — address to name and back, because without the second half anyone can point a name at somebody else's address and claim their bound. Then three records with no figure among them, and then the bound itself, read from the registry the records name.",
     open: { label: "The same thing with a wallet", to: "/console/resolve" },
@@ -110,7 +160,7 @@ const BEATS: Beat[] = [
     title: "The bound is the contract's",
     say: "A cap copied into a text record is a copy, and a copy drifts. The mandate can narrow a minute from now while the record still quotes the old number to a seller deciding whether to serve.",
     act: "The lower half of what beat 1 already printed. Run this one only if a judge pushes on whether the name could lie about its bound — it walks the registries down to the agent's own and compares the grant to the mandate line by line.",
-    run: "node scripts/check-authority.ts worker1.probe.mira.eth",
+    run: `node ${ENV} scripts/check-authority.ts worker1.probe.mira.eth`,
     /* The window and the lifetime cap come off the live root where there is
        one. The tranche cap, the concentration bound and the depth limit are
        the vault's own constants and the same for every tree, so they stay
@@ -130,9 +180,19 @@ const BEATS: Beat[] = [
     id: "refusal",
     title: "A refusal is a transaction",
     say: "It did not fail. It was refused, by name, and the refusal is on chain with the transaction that holds it.",
-    act: "Ask for a purchase above the tranche cap, and read the answer aloud. A refusal comes back 200, not 5xx — the agent asked a valid question and got a real answer: no.",
-    run: `curl -s 127.0.0.1:8402/fetch -H 'content-type: application/json' \\
-  -d '{"node":"0x<worker>","url":"https://attest.getcordon.xyz/attest/894124"}' | jq`,
+    act: "Ask for a purchase above the tranche cap, and read the answer aloud. A refusal comes back 200 rather than 5xx — the agent asked a valid question and got a real answer: no.",
+    /* Beacon's dataset, because it is the only thing sold on this chain that
+       costs more than the cap. `attest` is $0.01 against a $1 tranche cap, so
+       the obvious endpoint to reach for settles cleanly and demonstrates the
+       opposite of this beat; its published id is Arc's besides. The price is
+       the precondition here, which is what `MARKET`'s comment means by the
+       prices being the demonstration. */
+    run: (tree) => {
+      const worker = deepest(tree);
+      return `curl -s 127.0.0.1:8402/fetch -H 'content-type: application/json' \\
+  -d '{"node":"${worker ? worker.node : "$CORDON_NODE_WORKER1"}",
+       "url":"${MARKET.publicBase}/v1/dataset/onchain-flows"}' | jq`;
+    },
     shows:
       "The daemon's answer, and then the refusal page it points at — which names the record it was published under in a registry nobody here controls.",
     snippet:
@@ -143,7 +203,7 @@ const BEATS: Beat[] = [
        node actually has, including the one just made. */
     open: { label: "The agent's record", to: `/agent/${DEMO.agentId}` },
     ifItFails:
-      "Open an existing refusal instead and say it was made earlier. The claim is that refusals carry their transaction — 98.7 to 100% of the registry's feedback carries none — and a refusal from this morning proves it as well as one from this minute.",
+      "Beacon has to be serving for this beat, and it is the only beat that needs any seller. If it is not, open an existing refusal and say it was made earlier — the claim is that refusals carry their transaction, and 98.7 to 100% of the registry's feedback carries none, so a refusal from this morning proves it as well as one from this minute.",
     sellerFree: false,
   },
   {
@@ -152,15 +212,24 @@ const BEATS: Beat[] = [
     title: "The bound no wallet can express",
     say: (tree) => {
       const grandchild = deepest(tree);
-      return grandchild
-        ? `This grandchild has ${formatUsdc(BigInt(grandchild.budget6), 0)} of its own window untouched. Ask what it may actually draw.`
-        : "This grandchild has its own window untouched. Ask what it may actually draw.";
+      /* What is left of its window, rather than the window. This read
+         `budget6` and called it untouched, which on a tree that has already
+         served beat 3 is a figure $1 above the one `/status` puts on screen
+         beside it. */
+      const left = grandchild
+        ? BigInt(grandchild.budget6) - BigInt(grandchild.debited6)
+        : null;
+      return left === null
+        ? "This grandchild has room left in its own window. Ask what it may actually draw."
+        : `This grandchild has ${formatUsdc(left, 0)} left in its own window. Ask what it may actually draw.`;
     },
     act: "One read, every node the daemon holds a key for. `headroom` returns two things and the second is the beat: the node that bound it.",
     run: `curl -s 127.0.0.1:8402/status \\
   | jq '.nodes[] | {node, available: .headroom.available, boundBy: .headroom.boundBy}'`,
-    shows:
-      "Zero, and an ancestor's id beside it. The root is spent, so nothing beneath it draws, however much room a child's own window has left. Give every agent its own wallet and there is no way to write that down.",
+    shows: (tree) =>
+      bindsFromAbove(tree) === false
+        ? "Right now the root has more room left than this node does, so `headroom` will answer with the node's own budget and its own id — which is the beat failing quietly. Draw the root down first, or say the sentence over beat 2's screen. Give every agent its own wallet and there is still no way to write this bound down."
+        : "Zero, and an ancestor's id beside it. The root is spent, so nothing beneath it draws, however much room a child's own window has left. Give every agent its own wallet and there is no way to write that down.",
     open: { label: "Agents", to: "/console/agents" },
     ifItFails:
       "Nothing to fail. No seller serves, no money moves, no transaction is sent — it is a view function. If the console is down, this is the beat to run from a terminal.",
@@ -193,7 +262,7 @@ const PREP: { when: string; what: string; run?: string }[] = [
   {
     when: "T-30",
     what: "Start the daemon. It prints the nodes it holds keys for and refuses to start misconfigured, so this is the step that tells you the key file and the node ids still agree with the chain.",
-    run: 'node --env-file=.env.live --env-file="$HOME/.cordon/cordon.env" src/main.ts',
+    run: `node ${ENV} src/main.ts`,
   },
   {
     when: "T-20",
@@ -377,7 +446,9 @@ function Beat({ beat, tree }: { beat: Beat; tree: LiveTree | null }) {
           <dt>Do</dt>
           <dd>
             {beat.act}
-            {beat.run ? <pre className="code beat__snippet mono">{beat.run}</pre> : null}
+            {beat.run ? (
+              <pre className="code beat__snippet mono">{line(beat.run, tree)}</pre>
+            ) : null}
           </dd>
         </div>
         <div>
@@ -439,6 +510,7 @@ function checks(tree: LiveTree): Check[] {
   const draws = tree.nodes.reduce((total, node) => total + node.draws, 0);
   const depth = tree.nodes.reduce((deepest, node) => Math.max(deepest, node.depth), 0);
   const money = behind(tree);
+  const binding = bindsFromAbove(tree);
 
   return [
     {
@@ -476,6 +548,27 @@ function checks(tree: LiveTree): Check[] {
         revoked.length === 0
           ? undefined
           : "A rehearsal cut this. Beat 5 needs a live branch — spawn one, or pick a node that is still live.",
+    },
+    {
+      /* Added after the tree was funded and beat 4 stopped working without
+         anything here going amber. The five checks around this one describe the
+         tree's shape, and beat 4 does not depend on its shape — it depends on
+         where the money sits inside it. A root with room left answers
+         `headroom` with the grandchild's own budget and the grandchild's own
+         id, which is a true answer to the question and the wrong one for the
+         beat. */
+      label: "Beat 4's bound comes from above",
+      value:
+        binding === null
+          ? "no grandchild to ask about"
+          : binding
+            ? "yes — an ancestor is the tighter of the two"
+            : "no — this node's own budget is the tighter one",
+      ready: binding === true,
+      note:
+        binding === true
+          ? "Confirm the figure itself on `/status`: `headroom` returns the bound and the node that set it, and the vault owns that arithmetic."
+          : "Draw the root down until less is left above than below, then re-read. Until then `headroom` answers with the node's own id and beat 4 shows a limit a shared wallet could already express.",
     },
     {
       label: "Refusals on record",
