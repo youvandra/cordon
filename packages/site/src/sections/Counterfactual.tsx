@@ -78,8 +78,8 @@ export function Counterfactual() {
             </p>
             <p className="lede">
               A CFO wants an override, and “we can never undo this” reads as a
-              defect. Release is there: a named person signs it from their own
-              key. What cannot be reversed is the bound, not the decision.
+              defect. Release answers it: a named person signs. The bound cannot
+              be reversed; the decision can.
             </p>
           </div>
           <hr className="rule" />

@@ -21,10 +21,8 @@ export function Names() {
             A limit only you can see <span className="display__dim">is a limit only you can trust.</span>
           </h2>
           <p className="lede">
-            Cordon began as a private fence: you held the mandate, you saw the
-            tree, and the bounds were yours alone to know. Give every agent a
-            name and the same bounds become a public fact — a seller reads what
-            an agent may spend, and who can cut it off, without asking us.
+            Cordon began as a private fence: the bounds were yours alone to
+            know. Give every agent a name and they become a public fact.
           </p>
         </Reveal>
 

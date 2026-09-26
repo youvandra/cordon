@@ -20,14 +20,10 @@ export function Arc() {
             Small tranche, <span className="display__dim">tight leash.</span>
           </h2>
           <p className="lede">
-            How small a tranche can be depends on what it costs to settle one and
-            how long it takes. A chain that makes both near zero lets a tranche be
-            the size of a single purchase, which is what turns the budget into a
-            leash on every purchase rather than a ceiling on the month. The bound
-            itself is the contracts', the same wherever they run: Cordon is on{" "}
-            {SEPOLIA.name} because that is where the names are, and on Arc because
-            the money and the gas are the same asset there. At mainnet gas prices
-            this design wants an L2.
+            How small a tranche can be is set by what the chain charges to settle
+            one, and how long it takes. Arc makes both near zero — a tranche can
+            be a single purchase, a leash rather than a monthly ceiling. Cordon
+            runs on Arc and on {SEPOLIA.name}, where the names are.
           </p>
         </Reveal>
 

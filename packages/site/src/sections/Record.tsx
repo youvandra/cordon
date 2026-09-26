@@ -15,10 +15,9 @@ export function Record() {
             Reputation is an opinion <span className="display__dim">somebody types.</span>
           </h2>
           <p className="lede">
-            There is already a shared registry for agent reputation, and anyone
-            can read it. The trouble is that anyone can also write to it. On
-            Base, {REGISTRY_BASELINE.sybilFlaggedBase}% of the reviewers are
-            flagged as fake.
+            The shared reputation registry is readable by anyone — and writable
+            by anyone. On Base, {REGISTRY_BASELINE.sybilFlaggedBase}% of the
+            reviewers are flagged as fake.
           </p>
         </Reveal>
 

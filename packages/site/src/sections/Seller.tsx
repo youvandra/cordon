@@ -44,10 +44,8 @@ export function Seller() {
             A seller cannot tell a buyer <span className="display__dim">from a swarm.</span>
           </h2>
           <p className="lede">
-            Every payment is made by an address, and an address is free. So the
-            seller — a paid API, serving at its own cost — sees a bounded agent
-            and a script as the same thing. Its only two settings are trust
-            everyone, or block everyone.
+            Every payment is an address, and an address is free. So a seller
+            sees a bounded agent and a script as the same thing.
           </p>
         </Reveal>
 

@@ -18,9 +18,8 @@ export function Purchase() {
             An agent buys something. <span className="display__dim">This is the path.</span>
           </h2>
           <p className="lede">
-            The agent never holds money. It asks for a URL, and everything
-            between that request and a seller being paid passes a contract that
-            can say no.
+            The agent never holds money. It asks for a URL; a contract stands
+            between that request and a seller being paid.
           </p>
         </Reveal>
 
