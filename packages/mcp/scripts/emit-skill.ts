@@ -13,12 +13,16 @@ import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  ARC, ATTEST, DEPLOYMENT, MCP_TOOLS, ABSENT_TOOLS, REASONS, REASON_MEANING, formatUsdc,
+  ARC, CHAINS, DEFAULT_CHAIN, ATTEST, DEPLOYMENT, MCP_TOOLS, ABSENT_TOOLS, REASONS, REASON_MEANING, formatUsdc,
 } from "../../fixtures/src/index.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, "../SKILL.md");
 
+/* The chain the three addresses below are on. Written as a literal Arc until
+   26 September 2026, when the deployment moved and the skill an agent reads
+   began naming a chain its own addresses were not on. */
+const chain = (DEPLOYMENT ? CHAINS[DEPLOYMENT.chainId] : undefined) ?? DEFAULT_CHAIN;
 const vault = DEPLOYMENT?.vault ?? "pending — no deployment recorded";
 const registry = DEPLOYMENT?.registry ?? "pending — no deployment recorded";
 const record = DEPLOYMENT?.record ?? "pending — no deployment recorded";
@@ -108,14 +112,16 @@ ${ATTEST.resourcePath}/<agent id>   on attest.getcordon.xyz
 
 | | |
 |---|---|
-| Chain | ${ARC.name} (${ARC.chainId}) |
-| Money | USDC, 6 decimals, at \`${ARC.erc20}\` |
+| Chain | ${chain.name} (${chain.chainId}) |
+| Money | USDC, 6 decimals, at \`${chain.erc20}\` |
 | MandateRegistry | \`${registry}\` |
 | TreeVault | \`${vault}\` |
 | ConductRecord | \`${record}\` |
-| Explorer | ${ARC.explorer} |
+| Explorer | ${chain.explorer} |
 
-Testnet. The gas and the money are both test USDC.
+Testnet. ${chain.chainId === ARC.chainId
+  ? "The gas and the money are both test USDC."
+  : `Gas is ${chain.nativeSymbol} and the money is USDC, so an operator needs both.`}
 
 ## The arrangement, stated plainly
 

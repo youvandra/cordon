@@ -83,14 +83,14 @@ buyer. That reading is itself a paid endpoint, priced at $0.01:
 
 | | |
 |---|---|
-| Chain | Arc testnet (5042002) |
-| Money | USDC, 6 decimals, at `0x3600000000000000000000000000000000000000` |
-| MandateRegistry | `0xf86de085e63b00c9fba300b19807c883deb961e9` |
-| TreeVault | `0x00ab57acd260c594a661b6101bdf7e92267af135` |
-| ConductRecord | `0x2a8361ac23f5ffcfde9f0d7bc7618178770332d0` |
-| Explorer | https://testnet.arcscan.app |
+| Chain | Ethereum Sepolia (11155111) |
+| Money | USDC, 6 decimals, at `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` |
+| MandateRegistry | `0xe799edc4aa6bcaf6915c7a5eadbdc4e709aef4b2` |
+| TreeVault | `0x22d539bdf23e08a856fc80bc991e34948921ad46` |
+| ConductRecord | `0x5c026b1b129a9e2171e53c5024f76052006ef1e0` |
+| Explorer | https://sepolia.etherscan.io |
 
-Testnet. The gas and the money are both test USDC.
+Testnet. Gas is ETH and the money is USDC, so an operator needs both.
 
 ## The arrangement, stated plainly
 
