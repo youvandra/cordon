@@ -6,6 +6,7 @@
   "license": "MIT",
   "workspaces": [
     "packages/fixtures",
+    "packages/verify",
     "packages/ui",
     "packages/daemon",
     "packages/attest",
