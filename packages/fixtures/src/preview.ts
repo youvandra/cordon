@@ -14,7 +14,7 @@
  * Rule 1: the console may not display a number the contract does not enforce.
  * Each figure below therefore carries the function that produces it.
  */
-import { MANDATE, ENFORCED_BY, ARC, PENDING_ADDRESS } from "./index.ts";
+import { MANDATE, ENFORCED_BY, DEFAULT_CHAIN, PENDING_ADDRESS } from "./index.ts";
 import { DEPLOYMENT } from "./deployment.gen.ts";
 
 export type NodeId = string;
@@ -439,8 +439,16 @@ export const AGENT_PROFILE = {
   parent: "enrichment-worker",
 };
 
-export const txUrl = (tx: string) => `${ARC.explorer}/tx/${tx}`;
-export const addrUrl = (a: string) => `${ARC.explorer}/address/${a}`;
+/**
+ * Explorer links for the chain the record pages read.
+ *
+ * `DEFAULT_CHAIN`, not Arc. These are called with live hashes — a refusal read
+ * from the meter, the transaction that attested it — on pages whose own
+ * eyebrow prints `DEFAULT_CHAIN.name`. Held at Arc's explorer, the page named
+ * one chain and linked to another's, and the link resolved to nothing.
+ */
+export const txUrl = (tx: string) => `${DEFAULT_CHAIN.explorer}/tx/${tx}`;
+export const addrUrl = (a: string) => `${DEFAULT_CHAIN.explorer}/address/${a}`;
 export const shortTx = (tx: string) => `${tx.slice(0, 10)}…${tx.slice(-6)}`;
 
 /* ------------------------------------------------------------------ */
@@ -589,12 +597,13 @@ export function attestationOf(node: TreeNode, root: TreeNode = TREE): Attestatio
       released: refusal.released,
       attested: Boolean(refusal.attested),
     })),
-    range: { chainId: ARC.chainId, ...SAMPLE_RANGE },
+    range: { chainId: DEPLOYMENT?.chainId ?? DEFAULT_CHAIN.chainId, ...SAMPLE_RANGE },
     verify: {
       vault: DEPLOYMENT?.vault ?? PENDING_ADDRESS,
       registry: DEPLOYMENT?.registry ?? PENDING_ADDRESS,
       record: DEPLOYMENT?.record ?? PENDING_ADDRESS,
-      explorer: ARC.explorer,
+      /* The chain those three addresses are on. */
+      explorer: DEFAULT_CHAIN.explorer,
     },
   };
 }
