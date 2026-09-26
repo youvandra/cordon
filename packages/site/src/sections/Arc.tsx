@@ -1,9 +1,14 @@
-import { BarChart, DotText, Surface, Tag } from "cordon-ui";
-import { ARC, SEPOLIA, ENDPOINTS, MARKETPLACE } from "@cordon/fixtures";
+import { BarChart, DotText, Surface } from "cordon-ui";
+import { ENDPOINTS, MARKETPLACE, SEPOLIA } from "@cordon/fixtures";
 import { Reveal } from "../parts/Reveal";
 
 /**
- * Why the tranche can be small enough to be a leash.
+ * Why the chain matters: it decides how small the tranche can be.
+ *
+ * The bound is the contracts', and it is the same wherever they run. What a
+ * chain changes is the cost and the wait of settling one purchase, and that is
+ * what decides whether a budget can be a leash on every purchase or only a
+ * ceiling on the month.
  */
 export function Arc() {
   return (
@@ -15,13 +20,14 @@ export function Arc() {
             Small tranche, <span className="display__dim">tight leash.</span>
           </h2>
           <p className="lede">
-            How small a tranche can be depends on what it costs to settle one
-            and how long it takes. Arc makes both close to zero, which is what
-            lets a tranche be the size of a single purchase. The bound is the
-            same wherever the contracts run &mdash; Cordon is on {SEPOLIA.name}{" "}
-            too, because that is where ENSv2 is &mdash; what changes is how
-            small a leash stays affordable. At mainnet gas prices this design
-            wants an L2.
+            How small a tranche can be depends on what it costs to settle one and
+            how long it takes. A chain that makes both near zero lets a tranche be
+            the size of a single purchase, which is what turns the budget into a
+            leash on every purchase rather than a ceiling on the month. The bound
+            itself is the contracts', the same wherever they run: Cordon is on{" "}
+            {SEPOLIA.name} because that is where the names are, and on Arc because
+            the money and the gas are the same asset there. At mainnet gas prices
+            this design wants an L2.
           </p>
         </Reveal>
 
@@ -64,37 +70,17 @@ export function Arc() {
             </Surface>
 
             <Surface glaze="bisque" radius="6" rim elevation="tile" className="counter__panel">
-              <p className="panel__label">Of those, listed on Arc</p>
+              <p className="panel__label">Of those, on a testnet</p>
               <span className="stat__value" style={{ marginTop: 10 }}>
                 <DotText radius={2.05} style={{ width: 46, color: "var(--cordon-ink-strong)" }}>
                   {`${MARKETPLACE.arcListings}`}
                 </DotText>
               </span>
               <p className="panel__note">
-                None yet. The seat is open on the chain Circle is building.
+                None. The catalogue is mainnet only, which is why Cordon runs
+                sellers of its own to buy from.
               </p>
             </Surface>
-          </div>
-        </Reveal>
-      </div>
-
-      <div className="wrap wrap--narrow" style={{ marginTop: "clamp(48px, 8vh, 96px)" }}>
-        <Reveal>
-          <p className="eyebrow">Said before you find it</p>
-          <p className="lede">
-            {ARC.mainnetLaunched
-              ? "Arc mainnet is live, and Cordon runs on it."
-              : `Arc mainnet has not launched yet. Everything Cordon does today
-                 happens on a testnet — Arc's, and Ethereum Sepolia — and every
-                 transaction on this site opens in a public explorer.`}
-          </p>
-          <div style={{ display: "flex", gap: 8, marginTop: "var(--cordon-space-5)", flexWrap: "wrap" }}>
-            <Tag tone="caution" size="sm" dot>
-              testnet only
-            </Tag>
-            <a href={ARC.explorer} target="_blank" rel="noreferrer" className="mono" style={{ color: "var(--cordon-accent)" }}>
-              {ARC.explorer}
-            </a>
           </div>
         </Reveal>
       </div>
