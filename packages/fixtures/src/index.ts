@@ -330,6 +330,7 @@ export const ERC8004 = {
 } as const;
 
 /**
+/**
  * An ERC-7930 interoperable address: the registry an ERC-8004 identity lives
  * in, encoded the way ENSIP-25 keys it.
  *
@@ -361,6 +362,49 @@ export function erc7930(chainId: number, address: string): string {
 export function registrationKey(chainId: number, registry: string, agentId: bigint): string {
   return `agent-registration[${erc7930(chainId, registry)}][${agentId}]`;
 }
+
+/**
+ * What enforcement costs, measured by `G9_Cost.t.sol` rather than estimated.
+ *
+ * This exists because the question it answers was the one nothing here
+ * confronted. Both chains Cordon runs on have free or near-free gas, so the
+ * price of a bound never surfaced — and it is the first thing anybody who has
+ * deployed to mainnet asks.
+ *
+ * The figures are not flattering and they are published anyway. A draw costs
+ * six figures of gas to authorise a purchase priced at $0.008, which is roughly
+ * three orders of magnitude of overhead. That is an argument for settling this
+ * on an L2, not an argument that the mechanism is wrong: the cost is linear in
+ * depth because every ancestor is debited, and the ancestor debit is the whole
+ * reason the tree cannot be bypassed by delegation.
+ *
+ * Recorded on 26 Sep 2026 against solc 0.8.28, optimizer on, 200 runs. The gate
+ * asserts ceilings rather than equalities, so a compiler bump moves these a
+ * little without failing and a real regression still does.
+ */
+export const COST = {
+  measuredOn: "2026-09-26",
+  /** The demo's own price, so the ratio below is the real one. */
+  unit6: 8_000n,
+  draw: {
+    depth0Cold: 206_181,
+    depth1Cold: 179_738,
+    depth2Cold: 198_914,
+    /** The steady state a running agent is actually in. */
+    depth2Warm: 93_546,
+    /** The worst draw `MAX_TREE_DEPTH` permits. Comfortably inside a block. */
+    maxDepth: 848_276,
+  },
+  /** A refusal is a storage write, so it is paid for. Count these too. */
+  refusal: 161_850,
+  /** What the daemon calls before it sends. An eth_call, so no gas at all. */
+  evaluateCold: 101_684,
+  evaluateWarm: 30_684,
+  headroom: 26_767,
+  /** The cap that keeps depth payable. Without it, a draw at 255 cost ~14.0M. */
+  maxTreeDepth: 8,
+  depth255BeforeTheCap: 14_000_356,
+} as const;
 
 /** Published ecosystem baseline. arxiv 2606.26028. We are the exception to it. */
 export const REGISTRY_BASELINE = {

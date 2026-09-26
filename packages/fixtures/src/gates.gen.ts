@@ -18,5 +18,6 @@ export const GATE_RUNS: Record<string, GateRecord> = {
   "G5": {"id":"G5","status":"green","tests":12,"passed":12,"recordedAt":"2026-09-25"},
   "G6": {"id":"G6","status":"green","tests":16,"passed":16,"recordedAt":"2026-09-25"},
   "G7": {"id":"G7","status":"green","tests":10,"passed":10,"recordedAt":"2026-09-09"},
-  "G8": {"id":"G8","status":"green","tests":9,"passed":9,"recordedAt":"2026-09-25"},
+  "G8": {"id":"G8","status":"green","tests":14,"passed":14,"recordedAt":"2026-09-26"},
+  "G9": {"id":"G9","status":"green","tests":4,"passed":4,"recordedAt":"2026-09-26"},
 };

@@ -49,11 +49,40 @@ contract CordonResolver {
     /// @notice The mandate a name speaks for.
     mapping(bytes32 => bytes32) public nodeOf;
 
+    /**
+     * @dev The owner's own words, for the keys no contract can answer.
+     *
+     * Two kinds of record share this resolver and the difference is the whole
+     * point of the split:
+     *
+     *   COMPUTED — `cordon.live`, `cordon.headroom`, `cordon.boundBy` and the
+     *   rest. Read from the registry and the vault while answering. Not stored,
+     *   so not capable of drifting, and not writable by anyone including the
+     *   owner. A bound is the contract's to state.
+     *
+     *   STATED — ENSIP-26 `agent-endpoint[<protocol>]` and `agent-context`,
+     *   ENSIP-25 `agent-registration[<registry>][<agentId>]`, and ordinary ENS
+     *   keys like `avatar` or `url`. Nothing enforces them, they are the owner
+     *   describing their own agent, and a resolver that could not carry them
+     *   would be a downgrade: an agent with a live bound and no endpoint is one
+     *   a caller cannot reach.
+     *
+     * A stated value may never shadow a computed one — see `setText`. Without
+     * that rule the owner could write `cordon.headroom` and a seller reading
+     * this resolver would be quoted a figure the vault never agreed to, which
+     * is precisely the drift this contract exists to remove.
+     */
+    mapping(bytes32 => mapping(string => string)) private _stated;
+
     error NotMandateOwner(bytes32 node, address caller);
     error UnknownName(bytes32 namehash);
     error UnsupportedSelector(bytes4 selector);
+    error ComputedKey(string key);
+    error NameNotBound(bytes32 namehash);
 
     event Bound(bytes32 indexed namehash, bytes32 indexed node, address indexed by);
+    /// @dev ENS's own event, so an indexer watching resolvers sees these too.
+    event TextChanged(bytes32 indexed namehash, string indexed indexedKey, string key, string value);
 
     constructor(MandateRegistry registry_, TreeVault vault_) {
         registry = registry_;
@@ -74,6 +103,45 @@ contract CordonResolver {
         if (msg.sender != m.owner) revert NotMandateOwner(node, msg.sender);
         nodeOf[namehash] = node;
         emit Bound(namehash, node, msg.sender);
+    }
+
+    /**
+     * @notice Write one of the owner's stated records.
+     *
+     * The owner's, never the operator's, for the same reason `bind` is: an
+     * operator that could write its own `agent-endpoint` could point callers at
+     * a host the owner never approved, and one that could write
+     * `agent-registration` could claim an ERC-8004 identity it does not hold.
+     *
+     * A key this resolver computes is refused rather than ignored. Silently
+     * dropping the write would leave the owner believing they had published a
+     * figure, and believing a bound is published when it is not is worse than
+     * being told no.
+     */
+    function setText(bytes32 namehash, string calldata key, string calldata value) external {
+        bytes32 node = nodeOf[namehash];
+        if (node == bytes32(0)) revert NameNotBound(namehash);
+        if (_isComputed(key)) revert ComputedKey(key);
+
+        MandateRegistry.Mandate memory m = registry.mandate(node);
+        if (msg.sender != m.owner) revert NotMandateOwner(node, msg.sender);
+
+        _stated[namehash][key] = value;
+        emit TextChanged(namehash, key, key, value);
+    }
+
+    /// @notice Whether a key is answered by the contracts rather than stored.
+    function isComputed(string calldata key) external pure returns (bool) {
+        return _isComputed(key);
+    }
+
+    function _isComputed(string memory key) private pure returns (bool) {
+        bytes32 k = keccak256(bytes(key));
+        return k == keccak256("cordon.node") || k == keccak256("cordon.registry")
+            || k == keccak256("cordon.vault") || k == keccak256("cordon.live")
+            || k == keccak256("cordon.revokedAt") || k == keccak256("cordon.headroom")
+            || k == keccak256("cordon.boundBy") || k == keccak256("cordon.budget")
+            || k == keccak256("cordon.owner") || k == keccak256("cordon.depth");
     }
 
     /* ------------------------------------------------------------------ */
@@ -177,12 +245,21 @@ contract CordonResolver {
             return boundBy == bytes32(0) ? "" : _hex32(boundBy);
         }
 
-        MandateRegistry.Mandate memory m = registry.mandate(node);
-        if (k == keccak256("cordon.budget")) return _usdc(m.budget6);
-        if (k == keccak256("cordon.owner")) return _hex20(m.owner);
-        if (k == keccak256("cordon.depth")) return _uint(m.depth);
+        if (
+            k == keccak256("cordon.budget") || k == keccak256("cordon.owner")
+                || k == keccak256("cordon.depth")
+        ) {
+            MandateRegistry.Mandate memory m = registry.mandate(node);
+            if (k == keccak256("cordon.budget")) return _usdc(m.budget6);
+            if (k == keccak256("cordon.owner")) return _hex20(m.owner);
+            return _uint(m.depth);
+        }
 
-        return "";
+        /* Everything else is the owner's own words, or absent. ENSIP-26's
+           `agent-endpoint[mcp]` and `agent-context` and ENSIP-25's
+           `agent-registration[...]` arrive here, as do ordinary ENS keys. An
+           unset key answers empty, which is what a resolver should say. */
+        return _stated[namehash][key];
     }
 
     /* ------------------------------------------------------------------ */

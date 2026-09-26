@@ -30,8 +30,15 @@ Tanggal audit: 25 Sep 2026. Commit: `a53e862`. Branch: `claude/sleepy-ride-ln2l8
 > yang sudah dicek (TOCTOU DNS rebinding), yang butuh dispatcher undici — satu
 > dependensi baru, dan `egress.ts` sudah jujur menuliskannya sebagai terbuka.
 >
-> Yang **belum**: **F-8** (biaya gas — harus dijawab secara naratif, bukan kode;
-> tabel gasnya ada di bawah dan itu bahan demo, bukan bug).
+> **F-8 juga ditutup, dengan cara yang dipakai proyek ini untuk menutup apa pun:
+> diukur dan dicatat.** `test/G9_Cost.t.sol` (gate G9) mengukur biaya setiap
+> jalur dan meng-assert plafonnya; `COST` di `packages/fixtures` memegang
+> angkanya supaya situs bisa mencetak angka nyata alih-alih diam. Suite kontrak
+> sekarang **122 hijau**.
+>
+> Tidak ada temuan yang masih terbuka selain satu: pinning koneksi egress
+> (separuh F-12), yang butuh dependensi undici dan sudah dituliskan sebagai
+> terbuka oleh `egress.ts` sendiri.
 
 ---
 
@@ -249,7 +256,7 @@ Dan `pollMs: 250` di Sepolia adalah persis footgun rate-limit yang
 Satu lagi: `DEPLOYMENT` (singular) di `deployment.gen.ts` masih nunjuk Arc,
 padahal `DEPLOYMENTS[11155111]` adalah deploy hari ini.
 
-### F-8 · Biaya gas belum pernah dihadapi
+### F-8 · Biaya gas belum pernah dihadapi — DITUTUP (diukur, gate G9)
 **Severity: High (thesis risk).** Aku ukur di shape tree demo sendiri, harga
 `STRUCTURING_UNIT6` = $0.008:
 
@@ -272,6 +279,31 @@ sudah dia tahu akan refuse (`gate.ts` drawInTurn — dan itu keputusan yang
 Ini bukan bug. Ini pertanyaan pertama yang akan ditanya juri manapun yang pernah
 deploy ke mainnet, dan repo ini belum punya jawabannya di mana pun. Arc dan
 Sepolia dua-duanya gas-nya gratis, jadi masalahnya tidak pernah muncul.
+
+**Sudah ditutup: `test/G9_Cost.t.sol` (gate G9) + `COST` di fixtures.** Diukur
+pada solc 0.8.28, optimizer 200 runs, 26 Sep 2026:
+
+| Jalur | Gas |
+|---|---|
+| draw depth 0, cold | 206,181 |
+| draw depth 1, cold | 179,738 |
+| draw depth 2, cold | 198,914 |
+| **draw depth 2, warm** (steady state) | **93,546** |
+| draw di `MAX_TREE_DEPTH` (8) | 848,276 |
+| refusal depth 2 | 161,850 |
+| `evaluate` (view), cold / warm | 101,684 / 30,684 |
+| `headroom` (view) | 26,767 |
+| draw depth 255, *sebelum* plafon | 14,000,356 |
+
+Gate-nya meng-assert **plafon**, bukan kesamaan: compiler bump menggeser angka
+sedikit tanpa bikin merah, regresi nyata tetap ketangkep. Dan angka-angka itu
+sekarang bisa dicetak di situs dari `COST`, bukan dihafal.
+
+**Cara menyebutnya di demo:** sebut sendiri sebelum ditanya. *"198,000 gas to
+bound an $0.008 purchase — three orders of magnitude of overhead. That's an
+argument for an L2, not an argument that the mechanism is wrong: the cost is
+linear in depth because every ancestor is debited, and the ancestor debit is the
+only reason delegation isn't a bypass. Here's the table."*
 
 Aku juga coba fix yang paling obvious — `_evaluate` sudah membaca mandate setiap
 leluhur, `_commit` membacanya **lagi**. Aku patch supaya array-nya diteruskan:

@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   contracts:
-    name: contracts (G1, G4, G5, G6, G8)
+    name: contracts (G1, G4, G5, G6, G8, G9)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,6 +63,7 @@ jobs:
           node scripts/record-gate.mjs G5 'test/G5_*'
           node scripts/record-gate.mjs G6 'test/G6_*'
           node scripts/record-gate.mjs G8 'test/G8_*'
+          node scripts/record-gate.mjs G9 'test/G9_*'
       - name: No gate drift
         run: |
           git diff --exit-code -- packages/fixtures/src/gates.gen.ts \

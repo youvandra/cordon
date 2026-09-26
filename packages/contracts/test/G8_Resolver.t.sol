@@ -148,6 +148,83 @@ contract G8_Resolver is Base {
         assertEq(resolver.text(_nh(), "com.twitter"), "");
     }
 
+    /* ------------------------------------------------------------------ */
+    /* The owner's stated records — ENSIP-25 and ENSIP-26                   */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * A resolver that computes the bound must still carry the records nothing
+     * enforces, or it is a downgrade: an agent with a live bound and no endpoint
+     * is one a caller cannot reach.
+     */
+    function test_the_owner_may_state_the_records_no_contract_can_answer() public {
+        vm.prank(owner);
+        resolver.bind(_nh(), grandchild);
+
+        vm.startPrank(owner);
+        resolver.setText(_nh(), "agent-endpoint[mcp]", "https://probe.example/mcp");
+        resolver.setText(_nh(), "agent-context", "buys market data, nothing else");
+        resolver.setText(_nh(), "agent-registration[0x0001...][42]", "1");
+        vm.stopPrank();
+
+        assertEq(resolver.text(_nh(), "agent-endpoint[mcp]"), "https://probe.example/mcp");
+        assertEq(resolver.text(_nh(), "agent-context"), "buys market data, nothing else");
+        assertEq(resolver.text(_nh(), "agent-registration[0x0001...][42]"), "1");
+    }
+
+    /**
+     * The rule that keeps the two kinds apart. An owner who could write
+     * `cordon.headroom` could quote a seller a figure the vault never agreed
+     * to — which is exactly the drift this resolver exists to remove, smuggled
+     * back in through the one party allowed to write.
+     */
+    function test_a_stated_record_may_never_shadow_a_computed_one() public {
+        vm.prank(owner);
+        resolver.bind(_nh(), grandchild);
+
+        string[10] memory computed = [
+            "cordon.node", "cordon.registry", "cordon.vault", "cordon.live",
+            "cordon.revokedAt", "cordon.headroom", "cordon.boundBy",
+            "cordon.budget", "cordon.owner", "cordon.depth"
+        ];
+        for (uint256 i = 0; i < computed.length; ++i) {
+            assertTrue(resolver.isComputed(computed[i]), "listed as computed");
+            vm.prank(owner);
+            vm.expectRevert(abi.encodeWithSelector(CordonResolver.ComputedKey.selector, computed[i]));
+            resolver.setText(_nh(), computed[i], "9999.000000");
+        }
+
+        /* And the computed answers are untouched by the attempts. */
+        assertEq(resolver.text(_nh(), "cordon.live"), "true");
+    }
+
+    function test_the_operator_may_not_describe_itself() public {
+        vm.prank(owner);
+        resolver.bind(_nh(), grandchild);
+
+        vm.prank(opG);
+        vm.expectRevert(abi.encodeWithSelector(CordonResolver.NotMandateOwner.selector, grandchild, opG));
+        resolver.setText(_nh(), "agent-endpoint[mcp]", "https://attacker.example/mcp");
+    }
+
+    function test_an_unbound_name_cannot_be_described_at_all() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(CordonResolver.NameNotBound.selector, _nh()));
+        resolver.setText(_nh(), "agent-context", "nobody's agent");
+    }
+
+    /// A stated record resolves through ENSIP-10 like any other text.
+    function test_stated_records_resolve_through_ensip10_too() public {
+        vm.startPrank(owner);
+        resolver.bind(_nh(), grandchild);
+        resolver.setText(_nh(), "agent-context", "buys market data");
+        vm.stopPrank();
+
+        bytes memory wire = WIRE;
+        bytes memory call_ = abi.encodeWithSelector(bytes4(0x59d1d43c), _nh(), "agent-context");
+        assertEq(abi.decode(resolver.resolve(wire, call_), (string)), "buys market data");
+    }
+
     /* ---- local formatters, so the assertions state the expected text ---- */
 
     function _usdc(uint128 base6) internal pure returns (string memory) {
