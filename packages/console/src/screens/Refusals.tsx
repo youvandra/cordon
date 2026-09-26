@@ -40,12 +40,12 @@ export default function Refusals() {
     root?.node ?? null,
   );
   const purposes = usePurposes(nodes.map((node) => node.node));
-  const names = useAgentNames(nodes.map((node) => node.operator));
+  const names = useAgentNames(nodes);
   /* Its name, then what it said it was for, then its id — the same order every
      screen here uses, because a reader who learns one learns all of them. */
   const called = (node: string) => {
     const match = nodes.find((n) => n.node.toLowerCase() === node.toLowerCase());
-    return (match && names.of(match.operator)) ?? purposes.of(node);
+    return (match && (names.ofNode(match.node) ?? names.of(match.operator))) ?? purposes.of(node);
   };
   const [params, setParams] = useSearchParams();
   const [filter, setFilter] = useState<Filter>("all");

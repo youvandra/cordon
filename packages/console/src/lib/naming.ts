@@ -207,7 +207,12 @@ export function useNameAgent(expected: string | null) {
           account,
         } as never);
 
+        /* The name itself, alongside the binding. A namehash cannot be turned
+           back into the label a person typed, so a node read back from the
+           contract alone would know it is bound and not know what to call it.
+           This is what the Agents table reads forward. */
         for (const [key, value] of [
+          ["cordon.name", plan.fullName],
           ["agent-endpoint[mcp]", records?.endpoint],
           ["agent-context", records?.context],
         ] as const) {

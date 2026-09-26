@@ -32,10 +32,10 @@ export default function Agents() {
   /* An agent's ENS name, where it has one. A name beats a stated purpose
      because a reader can take it away and resolve it themselves, and it beats
      an id because an id means nothing to a person. */
-  const names = useAgentNames(nodes.map((node) => node.operator));
+  const names = useAgentNames(nodes);
   /** What to call this agent: its name, then what it said it was for, then its id. */
   const label = (node: { node: `0x${string}`; operator: `0x${string}` }) =>
-    names.of(node.operator) ?? purposes.of(node.node);
+    names.ofNode(node.node) ?? names.of(node.operator) ?? purposes.of(node.node);
 
   const selectedId = params.get("node");
   const select = (id: string | null) => {
@@ -65,7 +65,7 @@ export default function Agents() {
     /* The purpose is searched too, because it is now the thing on screen: a
        reader who can see "Social feed reader" and cannot search for it is
        being shown a name the search does not believe in. */
-    const said = `${names.of(node.operator) ?? ""} ${purposes.of(node.node) ?? ""}`.toLowerCase();
+    const said = `${names.ofNode(node.node) ?? names.of(node.operator) ?? ""} ${purposes.of(node.node) ?? ""}`.toLowerCase();
     if (
       needle &&
       !node.node.toLowerCase().includes(needle) &&
@@ -274,7 +274,7 @@ export default function Agents() {
                     reissuing is not an owner action this screen invites, and a
                     second name bound to one mandate is two answers to the same
                     question. */}
-                {names.of(selected.operator) ? null : (
+                {names.ofNode(selected.node) ?? names.of(selected.operator) ? null : (
                   <Button variant="secondary" onClick={() => setNaming(selected)}>
                     Name this agent
                   </Button>
@@ -313,7 +313,8 @@ export default function Agents() {
               owner={owner}
               parentName={
                 naming.parent
-                  ? names.of(nodes.find((n) => n.node === naming.parent)?.operator ?? "0x")
+                  ? (names.ofNode(naming.parent) ??
+                    names.of(nodes.find((n) => n.node === naming.parent)?.operator ?? "0x"))
                   : undefined
               }
             />

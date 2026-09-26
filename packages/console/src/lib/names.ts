@@ -7,69 +7,162 @@
  * cannot tell which agent is which. Once the agents have names, the console
  * should use them.
  *
- * Reverse resolution is what makes it possible without a second index: the
- * operator's address is in the mandate, and ENS answers what that address is
- * called. Nothing here trusts the answer on its own — viem's `getEnsName`
- * resolves the name forward again and returns nothing unless it comes back to
- * the same address, so a name somebody else pointed at this operator is not
- * reported as theirs.
+ * Reverse resolution used to be the only way in, and it cannot carry a name the
+ * console issues: setting a reverse record needs two accounts — the operator
+ * claims its own reverse node, an owner writes the name — and an agent named
+ * from here has no operator present to claim. So the naming flow writes the
+ * name beside the binding as the stated record `cordon.name`, and this reads
+ * it back **forward**: the resolver's own `Bound` events give the node its
+ * namehash, and the record gives the string. Reverse resolution stays as the
+ * fallback for names somebody else published.
  *
- * An agent with no name is not a failure. It is an agent nobody has named yet,
- * and the screens fall back to the id they always showed.
+ * Nothing here trusts a name on its own. A record is only used when hashing it
+ * returns the namehash the resolver attached it to, so a stated name cannot be
+ * swapped for another one and reported as this agent's.
  */
 import { useEffect, useState } from "react";
-import { createPublicClient, http, type Address } from "viem";
-import { ENSV2 } from "@cordon/fixtures";
+import { createPublicClient, http, namehash, parseAbi, parseAbiItem, type Address, type Hex } from "viem";
+import { DEPLOYMENTS, ENSV2, SEPOLIA } from "@cordon/fixtures";
 import { CHAIN, chain } from "./chain";
+import { placeOf } from "./ens-plan";
 
 /* This package's own chain, which carries ENSv2's Universal Resolver.
-   `viem/chains`'s Sepolia carries ENSv1's, and the reverse record this reads
-   was written in ENSv2 — resolving through v1 leaves every name column
-   falling back to hexadecimal. `chain.ts` says nothing else in this package
-   names a chain; this file used to. */
+   `viem/chains`'s Sepolia carries ENSv1's. `chain.ts` says nothing else in this
+   package names a chain; this file used to. */
 const client =
   CHAIN.chainId === ENSV2.chainId
     ? createPublicClient({ chain, transport: http(CHAIN.rpc) })
     : null;
 
+const RESOLVER_ABI = parseAbi(["function text(bytes32 namehash, string key) view returns (string)"]);
+
+/** Where a node's namehash can be read from, once it is bound. */
+const BOUND = parseAbiItem(
+  "event Bound(bytes32 indexed namehash, bytes32 indexed node, address indexed by)",
+);
+
+/**
+ * The stated record the naming flow writes with the binding.
+ *
+ * The name a person typed. The namehash alone identifies the node to the
+ * contracts and cannot be reversed into the string a seller would resolve, so
+ * the string is carried here and checked against its own namehash on read.
+ */
+const NAME_KEY = "cordon.name";
+
 export interface AgentNames {
   /** What this operator's address is called, or nothing. */
   of(operator: string): string | undefined;
+  /** What this node is called, which is the figure the naming flow wrote. */
+  ofNode(node: string): string | undefined;
   /** True until the first answer, so "not yet" is not read as "no name". */
   reading: boolean;
 }
 
-export function useAgentNames(operators: Address[]): AgentNames {
-  const [found, setFound] = useState<Map<string, string> | null>(null);
+type Agent = { node: `0x${string}`; operator: `0x${string}` };
+
+export function useAgentNames(agents: Agent[]): AgentNames {
+  const [byOperator, setByOperator] = useState<Map<string, string> | null>(null);
+  const [byNode, setByNode] = useState<Map<string, string> | null>(null);
   const [reading, setReading] = useState(false);
   /* The identity of the list, not the array, so a re-render with an equal list
      does not ask the chain again. */
-  const key = operators.join(",");
+  const key = agents.map((agent) => `${agent.node}:${agent.operator}`).join(",");
 
   useEffect(() => {
-    if (!client || operators.length === 0) {
-      setFound(null);
+    if (!client || agents.length === 0) {
+      setByOperator(null);
+      setByNode(null);
       return;
     }
     let live = true;
     setReading(true);
 
     (async () => {
-      const names = new Map<string, string>();
-      /* One at a time. Reverse resolution is two reads each, and a dozen
-         agents leaving at once is a burst a public endpoint answers with
-         429s — the same reason the tree read batches. */
-      for (const operator of operators) {
+      const nodes = new Map<string, string>();
+      const operators = new Map<string, string>();
+      const wanted = new Map(agents.map((agent) => [agent.node.toLowerCase(), agent.operator.toLowerCase()]));
+
+      /* Reverse first, one at a time. It names the operators somebody else
+         already published, and — more usefully — it is the only way to learn
+         which resolver answers for this tree, because `getLogs` on this
+         endpoint refuses a query with no address. A dozen agents leaving at
+         once is a burst a public endpoint answers with 429s, the same reason
+         the tree read batches. */
+      for (const agent of agents) {
+        const operator = agent.operator.toLowerCase();
+        if (operators.has(operator)) continue;
         try {
-          const name = await client!.getEnsName({ address: operator });
-          if (name) names.set(operator.toLowerCase(), name);
+          const name = await client.getEnsName({ address: agent.operator });
+          if (name) operators.set(operator, name);
         } catch {
           /* One address that cannot be resolved leaves the rest readable. */
         }
         if (!live) return;
       }
+
+      /* Forward, seeded from the names reverse found: every binding on the
+         resolver those names resolve through, then the stated record that
+         carries the string. A tree's binds all land on the nearest ancestor's
+         resolver, so one resolver usually covers the whole tree. */
+      const resolvers = new Set<Address>();
+      for (const name of new Set(operators.values())) {
+        try {
+          const place = await placeOf(client, name);
+          if (place.resolver) resolvers.add(place.resolver);
+        } catch {
+          /* A name reverse returned that will not walk leaves the rest. */
+        }
+      }
+
+      const at = new Map<string, { resolver: Address; namehash: Hex }>();
+      const from = BigInt(DEPLOYMENTS[SEPOLIA.chainId]?.fromBlock ?? 0);
+      for (const resolver of resolvers) {
+        try {
+          const logs = await client.getLogs({
+            address: resolver,
+            event: BOUND,
+            fromBlock: from,
+            toBlock: "latest",
+          });
+          /* Oldest first, and the last binding for a node is the current one:
+             a name reissued under the same node advances the pointer, and an
+             earlier namehash would answer with the record it used to carry. */
+          for (const log of logs) {
+            const node = String(log.args.node).toLowerCase();
+            if (wanted.has(node)) {
+              at.set(node, { resolver, namehash: log.args.namehash as Hex });
+            }
+          }
+        } catch {
+          /* A range a public endpoint refuses leaves the rest readable. */
+        }
+      }
+
+      for (const [node, where] of at) {
+        if (!live) return;
+        try {
+          const name = await client.readContract({
+            address: where.resolver,
+            abi: RESOLVER_ABI,
+            functionName: "text",
+            args: [where.namehash, NAME_KEY],
+          });
+          /* A stated name is only this agent's when hashing it lands on the
+             namehash the resolver bound. A record anybody could move would
+             otherwise rename an agent the chain still bounds by another. */
+          if (name && namehash(name) === where.namehash) {
+            nodes.set(node, name);
+            operators.set(wanted.get(node)!, name);
+          }
+        } catch {
+          /* One resolver that will not answer leaves the rest readable. */
+        }
+      }
+
       if (!live) return;
-      setFound(names);
+      setByOperator(operators);
+      setByNode(nodes);
       setReading(false);
     })();
 
@@ -80,7 +173,8 @@ export function useAgentNames(operators: Address[]): AgentNames {
   }, [key]);
 
   return {
-    of: (operator) => found?.get(String(operator).toLowerCase()),
+    of: (operator) => byOperator?.get(String(operator).toLowerCase()),
+    ofNode: (node) => byNode?.get(String(node).toLowerCase()),
     reading,
   };
 }

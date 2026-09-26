@@ -53,11 +53,11 @@ export default function Overview() {
      naming them on one and not the other is how the first screen a stranger
      opens becomes the one that says least. */
   const purposes = usePurposes(nodes.map((node) => node.node));
-  const names = useAgentNames(nodes.map((node) => node.operator));
+  const names = useAgentNames(nodes);
   /* Its name, then what it said it was for, then its id. */
   const called = (node: string) => {
     const match = nodes.find((n) => n.node.toLowerCase() === node.toLowerCase());
-    return (match && names.of(match.operator)) ?? purposes.of(node);
+    return (match && (names.ofNode(match.node) ?? names.of(match.operator))) ?? purposes.of(node);
   };
 
   if (!ready || chain.state === "looking") return <PageSkeleton />;
