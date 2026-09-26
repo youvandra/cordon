@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { motion, useInView } from "framer-motion";
 import { Surface } from "cordon-ui";
-import { DRILL_RUN, REASON_MEANING, SETTLEMENT, chainFacts, formatUsdc, shortAddress } from "@cordon/fixtures";
+import { ARC, DRILL_RUN, REASON_MEANING, SETTLEMENT, chainFacts, formatUsdc, shortAddress } from "@cordon/fixtures";
 import { shortTx, txUrl } from "@cordon/fixtures/preview";
 import { useEntrance } from "./motion";
 
@@ -30,7 +30,8 @@ interface Step {
   title: string;
   body: ReactNode;
   code?: string;
-  tx?: { label: string; hash: string };
+  /** The chain the hash is on, so the link opens the explorer that holds it. */
+  tx?: { label: string; hash: string; chainId: number };
   record?: string;
   verdict?: "released" | "refused";
 }
@@ -99,7 +100,7 @@ const SCENARIOS: Record<ScenarioId, { label: string; steps: Step[] }> = {
             this agent and charged to every parent above it. All pass.
           </>
         ),
-        tx: { label: "draw", hash: SETTLEMENT.drawTx },
+        tx: { label: "draw", hash: SETTLEMENT.drawTx, chainId: SETTLEMENT.chainId },
         verdict: "released",
       },
       {
@@ -107,14 +108,14 @@ const SCENARIOS: Record<ScenarioId, { label: string; steps: Step[] }> = {
         to: 1,
         title: "One tranche leaves the vault.",
         body: <>Circle's Gateway lands it in this agent's own balance. One purchase worth, never more.</>,
-        tx: { label: "gateway release", hash: SETTLEMENT.mintTx },
+        tx: { label: "gateway release", hash: SETTLEMENT.mintTx, chainId: SETTLEMENT.chainId },
       },
       {
         from: 1,
         to: 3,
         title: "The seller collects the price.",
         body: <>The key signs an EIP-3009 authorisation for exactly {PRICE}, and the seller submits it.</>,
-        tx: { label: "collection", hash: SETTLEMENT.collectTx },
+        tx: { label: "collection", hash: SETTLEMENT.collectTx, chainId: SETTLEMENT.chainId },
       },
       {
         from: 3,
@@ -153,7 +154,7 @@ const SCENARIOS: Record<ScenarioId, { label: string; steps: Step[] }> = {
             draw returns instead of reverting, so the refusal stays on chain.
           </>
         ),
-        tx: { label: "refusal", hash: REFUSAL.tx },
+        tx: { label: "refusal", hash: REFUSAL.tx, chainId: ARC.chainId },
         verdict: "refused",
       },
       {
@@ -351,7 +352,7 @@ export function PurchasePath() {
           <div className="buy__proof">
             {step.code ? <code className="buy__code mono">{step.code}</code> : null}
             {step.tx ? (
-              <a className="buy__tx mono" href={txUrl(step.tx.hash)} target="_blank" rel="noreferrer">
+              <a className="buy__tx mono" href={txUrl(step.tx.hash, step.tx.chainId)} target="_blank" rel="noreferrer">
                 {step.tx.label} {shortTx(step.tx.hash)}
               </a>
             ) : null}

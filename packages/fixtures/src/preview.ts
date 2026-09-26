@@ -14,7 +14,7 @@
  * Rule 1: the console may not display a number the contract does not enforce.
  * Each figure below therefore carries the function that produces it.
  */
-import { MANDATE, ENFORCED_BY, DEFAULT_CHAIN, PENDING_ADDRESS } from "./index.ts";
+import { MANDATE, ENFORCED_BY, DEFAULT_CHAIN, PENDING_ADDRESS, chainFacts } from "./index.ts";
 import { DEPLOYMENT } from "./deployment.gen.ts";
 
 export type NodeId = string;
@@ -440,15 +440,24 @@ export const AGENT_PROFILE = {
 };
 
 /**
- * Explorer links for the chain the record pages read.
+ * Explorer links for the chain the hash is actually on.
  *
  * `DEFAULT_CHAIN`, not Arc. These are called with live hashes — a refusal read
  * from the meter, the transaction that attested it — on pages whose own
  * eyebrow prints `DEFAULT_CHAIN.name`. Held at Arc's explorer, the page named
  * one chain and linked to another's, and the link resolved to nothing.
+ *
+ * The chain is a parameter now. The `One purchase` figure walks an **Arc**
+ * run — the purchase that settled end to end — and its links were still built
+ * from the default chain, so every hash opened in Sepolia's explorer and
+ * resolved to nothing. A caller that knows which chain its hash is on passes
+ * it; a caller that does not keeps the default, which is the chain the record
+ * pages read.
  */
-export const txUrl = (tx: string) => `${DEFAULT_CHAIN.explorer}/tx/${tx}`;
-export const addrUrl = (a: string) => `${DEFAULT_CHAIN.explorer}/address/${a}`;
+export const txUrl = (tx: string, chainId: number = DEFAULT_CHAIN.chainId) =>
+  `${chainFacts(chainId)?.explorer ?? DEFAULT_CHAIN.explorer}/tx/${tx}`;
+export const addrUrl = (a: string, chainId: number = DEFAULT_CHAIN.chainId) =>
+  `${chainFacts(chainId)?.explorer ?? DEFAULT_CHAIN.explorer}/address/${a}`;
 export const shortTx = (tx: string) => `${tx.slice(0, 10)}…${tx.slice(-6)}`;
 
 /* ------------------------------------------------------------------ */
