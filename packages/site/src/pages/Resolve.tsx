@@ -7,10 +7,12 @@ import {
   Container,
   Enforced,
   Headline,
+  Icon,
   Stack,
   Tag,
   Text,
   TextField,
+  Tooltip,
   usePageMeta,
 } from "cordon-ui";
 import { verify, type Result, type Verified } from "@cordon/verify";
@@ -98,10 +100,54 @@ function useLookup(subject: string): Lookup {
 }
 
 /**
+ * The explanation, behind an information icon.
+ *
+ * These sentences sat beside their values and turned a table back into prose.
+ * A seller decides on two lines — is it live, and what may it draw — and the
+ * rest belongs there for the reader who asks, not in the way of the one who
+ * does not. The pattern is the one a field's `info` already uses.
+ */
+function Info({ children }: { children: React.ReactNode }) {
+  return (
+    <Tooltip content={children} placement="bottom">
+      {/* A button rather than a span: reachable by keyboard, and the tooltip
+          opens on focus as well as on hover. The explanation is the accessible
+          name, so a screen reader is read the sentence and not "info". */}
+      <button
+        type="button"
+        className="cordon-field__info"
+        aria-label={typeof children === "string" ? children : "More about this row"}
+      >
+        <Icon name="info" />
+      </button>
+    </Tooltip>
+  );
+}
+
+/** One labelled row, with anything that needs saying behind the icon. */
+function Row({
+  label,
+  info,
+  children,
+}: {
+  label: string;
+  info?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <dt>
+        {label}
+        {info !== undefined ? <Info>{info}</Info> : null}
+      </dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
+/**
  * The answers a seller acts on, one labelled row each.
  *
- * These were paragraphs, which reads as prose and hides the two lines a
- * decision is made on — whether the agent is live, and what it may still draw.
  * The rows are the same shape the record pages use, so a reader who has met one
  * Cordon page has met this one.
  */
@@ -111,85 +157,67 @@ function Found({ agent }: { agent: Verified }) {
       <CardBody>
         <Stack direction="column" gap="lg" align="start">
           <dl className="kv kv--rows">
-            <div>
-              <dt>status</dt>
-              <dd>
-                <Tag tone={agent.live ? "positive" : "critical"} size="sm" dot>
-                  {agent.live ? "live" : "cut"}
-                </Tag>
-              </dd>
-            </div>
-            <div>
-              <dt>name</dt>
-              <dd className="mono">{agent.name}</dd>
-            </div>
-            <div>
-              <dt>operator</dt>
-              <dd className="mono">
-                {shortAddress(agent.address)}
+            <Row label="status">
+              <Tag tone={agent.live ? "positive" : "critical"} size="sm" dot>
+                {agent.live ? "live" : "cut"}
+              </Tag>
+            </Row>
+            <Row label="name">
+              <span className="mono">{agent.name}</span>
+            </Row>
+            <Row
+              label="operator"
+              info="The key that signs for this agent. It holds no money of its own: the vault releases one purchase at a time."
+            >
+              <span className="mono">{shortAddress(agent.address)}</span>
+            </Row>
+            <Row
+              label="can draw now"
+              info="The tightest remaining window on the path to the root, capped by what the tree actually holds. The node named below is the one that limits it — often an ancestor."
+            >
+              {agent.headroom6 !== null ? (
+                <>
+                  <Enforced>{formatUsdc(agent.headroom6)}</Enforced>
+                  {agent.boundBy ? (
+                    <Text variant="micro" tone="dim" as="p">
+                      held by <span className="mono">{shortId(agent.boundBy)}</span>
+                    </Text>
+                  ) : null}
+                </>
+              ) : (
                 <Text variant="micro" tone="dim" as="span">
-                  {" "}
-                  the key that signs for it, holding no money
+                  not answered — this build has no vault configured
                 </Text>
-              </dd>
-            </div>
-            <div>
-              <dt>can draw now</dt>
-              <dd>
-                {agent.headroom6 !== null ? (
-                  <>
-                    <Enforced>{formatUsdc(agent.headroom6)}</Enforced>
-                    {agent.boundBy ? (
-                      <Text variant="micro" tone="dim" as="span">
-                        {" "}
-                        held by <span className="mono">{shortId(agent.boundBy)}</span>, often an
-                        ancestor rather than this agent
-                      </Text>
-                    ) : null}
-                  </>
-                ) : (
-                  <Text variant="micro" tone="dim" as="span">
-                    not answered — this build has no vault configured
-                  </Text>
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>owner</dt>
-              <dd className="mono">
-                {shortAddress(agent.owner)}
-                <Text variant="micro" tone="dim" as="span">
-                  {" "}
-                  funded the tree; the only account that can cut it
-                </Text>
-              </dd>
-            </div>
-            <div>
-              <dt>depth</dt>
-              <dd>{agent.depth}</dd>
-            </div>
+              )}
+            </Row>
+            <Row
+              label="owner"
+              info="Funded the whole tree, and the only account that can cut any branch of it."
+            >
+              <span className="mono">{shortAddress(agent.owner)}</span>
+            </Row>
+            <Row label="depth">{agent.depth}</Row>
             {agent.revokedAt ? (
-              <div>
-                <dt>cut at</dt>
-                <dd className="mono">{shortId(agent.revokedAt)}</dd>
-              </div>
+              <Row label="cut at" info="Which node's revocation killed this branch.">
+                <span className="mono">{shortId(agent.revokedAt)}</span>
+              </Row>
             ) : null}
-            <div>
-              <dt>name vs chain</dt>
-              <dd>
-                {agent.nameAgrees === null
-                  ? "the name carries no computed record of its own"
-                  : agent.nameAgrees
-                    ? "the name and the contract agree"
-                    : "they disagree — believe the contract"}
-              </dd>
-            </div>
+            <Row
+              label="name vs chain"
+              info="The name computes its records from these contracts. A disagreement means the name is answered from somewhere that no longer matches the chain — and the contract is the one to believe."
+            >
+              {agent.nameAgrees === null
+                ? "the name carries no computed record of its own"
+                : agent.nameAgrees
+                  ? "the name and the contract agree"
+                  : "they disagree — believe the contract"}
+            </Row>
           </dl>
 
           {agent.endpoint ? (
             <div>
               <Text variant="micro" tone="dim" as="p">
-                Endpoint, stated by the owner and enforced by nothing
+                Endpoint <Info>Stated by the owner of the name. No contract reads it and nothing enforces it.</Info>
               </Text>
               <Text variant="body" tone="copy" as="p" className="mono kv__break">
                 {agent.endpoint}
