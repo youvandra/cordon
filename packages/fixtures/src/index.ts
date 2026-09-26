@@ -242,14 +242,26 @@ export const ENSV2 = {
   rootRegistry: "0x9703dbd26dab89504490994138cf2c575251a9ce",
   registrar: "0xabe76f6c8dfced81aa5a2bb8034202a7136b94ca",
   universalResolver: "0x5d25c1d6acbb71b7a28aa7899618a3412a8303e3",
-  permissionedResolverImpl: "0x14f09fd05d4585759e54844dc9b00147131cf243",
+  /**
+   * The implementations the factory's proxies run, and **not** the ones from
+   * the factory's own deployment.
+   *
+   * Sepolia carries two ENSv2 deployments, and the pair is deliberate: the
+   * resolving set's `UserRegistry` and `PermissionedResolver` implementations
+   * predate `initialize(address,uint256)`, which the factory calls on every
+   * proxy it makes — so a proxy pointed at them reverts in `deployProxy` and no
+   * subregistry can be created at all. The other set's implementations answer
+   * that call. `script/ens/README.md` says the same in prose; these two
+   * addresses are the ones `AttachSubregistry` reads from `.env.ens`.
+   */
+  permissionedResolverImpl: "0xdcE5205A553573FFd47629327DDdf36186022FfA",
   /**
    * How a name gets subnames: they live in a registry of their own, a
    * UserRegistry proxy the parent deploys through this factory and then points
    * at with `setSubregistry`. A mandate tree is a tree of these.
    */
   verifiableFactory: "0x9e726eb570beb6bceb495ab8cda7df517d4e841c",
-  userRegistryImpl: "0xa80338aaa8d23831cea25e858d1774534abb0263",
+  userRegistryImpl: "0x0F99e7Ea74903AfCB7224d0354fD7428A6f92917",
   /**
    * What the registrar charges, and the reason this set is the right one.
    *
