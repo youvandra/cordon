@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Architecture } from "../../parts/Architecture";
-import { MCP_CONFIG } from "@cordon/fixtures";
+import { ARC, DEFAULT_CHAIN, MCP_CONFIG } from "@cordon/fixtures";
 import { C, Code, Defs, H2, Lead, Note, OL, P, Table, UL } from "../parts";
 
 export function Introduction() {
@@ -125,8 +125,12 @@ export function Quickstart() {
         two ways in that are not an MCP client.
       </Note>
       <Note tone="info" title="Testnet only">
-        Arc mainnet has not launched. Everything below runs against the testnet,
-        where the gas token and the money are both test USDC.
+        Neither chain Cordon runs on is a mainnet. Everything below runs
+        against {DEFAULT_CHAIN.name}, where gas is{" "}
+        {DEFAULT_CHAIN.nativeSymbol} and USDC is a separate ERC-20. On{" "}
+        {ARC.name} the gas token and the money are both test USDC, which is a
+        difference worth knowing before you fund anything: an operator there
+        needs one asset, and here it needs two.
       </Note>
 
       <H2 id="one-configure-the-client">1. Configure the client</H2>

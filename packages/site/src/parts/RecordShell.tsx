@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Logo, Text } from "cordon-ui";
-import { ARC } from "@cordon/fixtures";
+import { DEFAULT_CHAIN } from "@cordon/fixtures";
 import { SiteNav } from "./SiteNav";
 
 /**
@@ -41,8 +41,8 @@ export function RecordShell({ children }: { children: ReactNode }) {
                 nobody looks at, which is how the `SURFACES` fixture sat here
                 for a week describing a shipped surface as pending. */}
             <Link to="/refusal/3">One refusal</Link>
-            <a href={ARC.explorer} target="_blank" rel="noreferrer">
-              Arc explorer
+            <a href={DEFAULT_CHAIN.explorer} target="_blank" rel="noreferrer">
+              {DEFAULT_CHAIN.name} explorer
             </a>
           </nav>
         </div>

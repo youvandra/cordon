@@ -242,10 +242,10 @@ export function Walkthrough() {
       </Lead>
 
       <Note tone="info" title="What you need first">
-        A wallet on Arc testnet holding test USDC from{" "}
-        <a href="https://faucet.circle.com">faucet.circle.com</a> — it is both
-        the gas and the money — Node 23.6 or newer, and a clone of the
-        repository.
+        A wallet on {DEFAULT_CHAIN.name} holding test USDC, plus{" "}
+        {DEFAULT_CHAIN.nativeSymbol} for gas — on Arc one balance of test USDC
+        from <a href="https://faucet.circle.com">faucet.circle.com</a> is both
+        — Node 23.6 or newer, and a clone of the repository.
       </Note>
 
       <Note tone="warn" title="Keys before the mandate">

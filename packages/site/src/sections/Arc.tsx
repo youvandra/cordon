@@ -1,5 +1,5 @@
 import { BarChart, DotText, Surface, Tag } from "cordon-ui";
-import { ARC, ENDPOINTS, MARKETPLACE } from "@cordon/fixtures";
+import { ARC, SEPOLIA, ENDPOINTS, MARKETPLACE } from "@cordon/fixtures";
 import { Reveal } from "../parts/Reveal";
 
 /**
@@ -10,14 +10,18 @@ export function Arc() {
     <section id="arc" className="section">
       <div className="wrap">
         <Reveal>
-          <p className="eyebrow">Why Arc</p>
+          <p className="eyebrow">Why the chain matters</p>
           <h2 className="display display--page" style={{ maxWidth: "18ch" }}>
             Small tranche, <span className="display__dim">tight leash.</span>
           </h2>
           <p className="lede">
             How small a tranche can be depends on what it costs to settle one
-            and how long it takes. Arc makes both close to zero. On Ethereum
-            this design would not work.
+            and how long it takes. Arc makes both close to zero, which is what
+            lets a tranche be the size of a single purchase. The bound is the
+            same wherever the contracts run &mdash; Cordon is on {SEPOLIA.name}{" "}
+            too, because that is where ENSv2 is &mdash; what changes is how
+            small a leash stays affordable. At mainnet gas prices this design
+            wants an L2.
           </p>
         </Reveal>
 
@@ -81,8 +85,8 @@ export function Arc() {
             {ARC.mainnetLaunched
               ? "Arc mainnet is live, and Cordon runs on it."
               : `Arc mainnet has not launched yet. Everything Cordon does today
-                 happens on the testnet, and every transaction on this site
-                 opens in a public explorer.`}
+                 happens on a testnet — Arc's, and Ethereum Sepolia — and every
+                 transaction on this site opens in a public explorer.`}
           </p>
           <div style={{ display: "flex", gap: 8, marginTop: "var(--cordon-space-5)", flexWrap: "wrap" }}>
             <Tag tone="caution" size="sm" dot>

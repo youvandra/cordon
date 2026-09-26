@@ -21,7 +21,7 @@
 const LANES = [
   { x: 120, name: "Agent", holds: "holds nothing" },
   { x: 380, name: "Daemon", holds: "holds the operator keys" },
-  { x: 640, name: "Arc", holds: "the vault, and the record" },
+  { x: 640, name: "The chain", holds: "the vault, and the record" },
   { x: 900, name: "Seller", holds: "names its price and payee" },
 ] as const;
 
@@ -106,7 +106,7 @@ export function Architecture({ className }: { className?: string }) {
       <svg
         viewBox="0 0 1020 700"
         role="img"
-        aria-label="The path one purchase takes, as four lanes with time running downward. The agent, which holds nothing, asks the daemon for a URL. The daemon, which holds the operator keys, requests it and gets back a 402 challenge naming the seller's own price and payee. It asks the vault on Arc for a tranche of exactly that size for exactly that payee. The contract charges every node from the agent up to the root and moves the money into that agent's own payment balance, or refuses; if any bound fails nothing moves and the refusal is written on chain and published to the ERC-8004 reputation registry. Only after a release does the daemon sign the payment off chain and ask again, and the seller returns the body. The owner's own wallet is not in this path: it opens the mandate, and it is the only key that can release a refusal or cut a branch."
+        aria-label="The path one purchase takes, as four lanes with time running downward. The agent, which holds nothing, asks the daemon for a URL. The daemon, which holds the operator keys, requests it and gets back a 402 challenge naming the seller's own price and payee. It asks the vault on chain for a tranche of exactly that size for exactly that payee. The contract charges every node from the agent up to the root and moves the money into that agent's own payment balance, or refuses; if any bound fails nothing moves and the refusal is written on chain and published to the ERC-8004 reputation registry. Only after a release does the daemon sign the payment off chain and ask again, and the seller returns the body. The owner's own wallet is not in this path: it opens the mandate, and it is the only key that can release a refusal or cut a branch."
       >
         <defs>
           <marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">

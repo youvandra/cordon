@@ -208,7 +208,7 @@ export function Console() {
       <Table
         head={["", "Without a wallet", "With a wallet"]}
         rows={[
-          ["What it shows", "the public tree Cordon runs on Arc", "your own tree"],
+          ["What it shows", `the public tree Cordon runs on ${SEPOLIA.name}`, "your own tree"],
           ["Signs", "nothing", "with your key, one action at a time"],
           ["Controls", "none are drawn", "fund, spawn, revoke, release"],
         ]}
@@ -280,9 +280,11 @@ export function Console() {
         authority</Link>.
       </P>
       <Note tone="info" title="It reads Sepolia">
-        ENSv2 is deployed on one chain, so this screen reads that chain while
-        the rest of the console answers for the Arc tree. The bar at the top
-        names whichever chain the screen in front of you is reading.
+        ENSv2 is deployed on one chain, and the console moved to that chain so
+        the tree it draws and the names it resolves are the same tree. The bar
+        at the top names the chain the screen in front of you is reading. The
+        Arc deployment is unchanged and still running; nothing in the console
+        points at it.
       </Note>
 
       <H2 id="new-mandate">New mandate</H2>
@@ -343,8 +345,8 @@ export function Troubleshooting() {
       <H2 id="range-too-large">requested range too large</H2>
       <Code>{`{"code":-32012,"message":"requested range too large"}`}</Code>
       <P>
-        Arc's public RPC caps how many blocks one <C>eth_getLogs</C> may span,
-        and the cap differs between the nodes behind that name — one answers
+        A public RPC caps how many blocks one <C>eth_getLogs</C> may span, and
+        the cap differs between the nodes behind one name — one answers
         20,000 and refuses 50,000, another names 100,000 in its own error. Read
         in windows, and expect a <C>429</C> if you fire them in parallel.
       </P>

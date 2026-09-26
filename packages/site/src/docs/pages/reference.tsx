@@ -165,11 +165,11 @@ export function Configuration() {
           [<C key="id">CORDON_IDENTITY</C>, "the live ERC-8004 Identity registry"],
           [<C key="rpc">CORDON_RPC</C>, DEFAULT_CHAIN.rpc],
           [<C key="cid">CORDON_CHAIN_ID</C>, `${DEFAULT_CHAIN.chainId} · ${DEFAULT_CHAIN.name}`],
-          [<C key="usdc">CORDON_USDC</C>, "the 6 decimal view of USDC on Arc"],
+          [<C key="usdc">CORDON_USDC</C>, `the 6 decimal view of USDC on ${DEFAULT_CHAIN.name}`],
           [<C key="net">CORDON_NETWORKS</C>, "the networks this daemon will settle on"],
           [<C key="as">CORDON_ASSETS</C>, "the assets it will pay in"],
           [<C key="port">CORDON_PORT</C>, "8402"],
-          [<C key="poll">CORDON_POLL_MS</C>, "250, matched to Arc's finality rather than to viem's 4,000"],
+          [<C key="poll">CORDON_POLL_MS</C>, "250 on Arc, matched to its sub second finality, and 4,000 elsewhere"],
           [
             <C key="mcpnode">CORDON_MCP_NODE</C>,
             "unset, and then the MCP server speaks for whichever key parsed first. Read only by the MCP server, which serves one node",
@@ -233,7 +233,7 @@ export function Configuration() {
         <C>CORDON_METER_MAX_BLOCKS</C>, <C>CORDON_METER_CHUNK</C>,{" "}
         <C>CORDON_METER_PACE_MS</C> and <C>CORDON_METER_INTERVAL_MS</C>, so a
         host being rate limited can be told to ask for less without a rebuild.
-        Arc's public RPC refuses a range wider than about fifteen hundred blocks
+        A public RPC refuses a range wider than about fifteen hundred blocks
         and calls it a rate limit; the meter narrows its span until the endpoint
         answers rather than trusting a number written here.
       </P>
@@ -244,7 +244,7 @@ export function Configuration() {
         rows={[
           [<C key="ak">CORDON_ATTEST_KEY</C>, "the account that submits settlements and pays their gas. Required"],
           [<C key="ap">CORDON_ATTEST_PAYTO</C>, "who is paid. Defaults to the submitter's own address"],
-          [<C key="aa">CORDON_ATTEST_ASSET</C>, "the token payments arrive in. Defaults to the 6 decimal view of USDC on Arc"],
+          [<C key="aa">CORDON_ATTEST_ASSET</C>, `the token payments arrive in. Defaults to the 6 decimal view of USDC on ${DEFAULT_CHAIN.name}`],
           [<C key="ao">CORDON_ATTEST_PORT</C>, "8405"],
         ]}
       />
@@ -484,7 +484,7 @@ export function Faq() {
 
       <H2 id="is-it-live">Is any of this live money?</H2>
       <P>
-        Not yet. Arc mainnet has not launched, so everything runs on the
+        Not yet. Neither chain Cordon runs on is a mainnet, so everything runs on the
         testnet. The contracts are the same ones that would run on mainnet, with
         no upgrade path and no owner.
       </P>
@@ -516,7 +516,7 @@ export function Faq() {
 
       <H2 id="what-does-it-cost">What does Cordon cost to run?</H2>
       <P>
-        There is no fee to Cordon. The costs are gas on Arc for a draw or a
+        There is no fee to Cordon. The costs are gas for a draw or a
         refusal, both of which are cents on testnet, and Circle's own Gateway
         fee on a settlement, which is charged on top of the purchase. Nothing is
         taken by us, because there is nowhere for it to be taken to: the
@@ -525,7 +525,7 @@ export function Faq() {
 
       <H2 id="does-it-slow-payments-down">Does the fence slow a payment down?</H2>
       <P>
-        The draw is a transaction on Arc, which has sub second finality, and it
+        The draw is a transaction on the chain, and on Arc, which has sub second finality, it
         happens once per purchase before the payment. The payment itself is an
         off chain signature and Cordon adds nothing to it — the fast path stays
         exactly as fast as it was.

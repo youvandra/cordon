@@ -16,6 +16,7 @@ import {
 } from "cordon-ui";
 import {
   ARC,
+  DEFAULT_CHAIN,
   ATTEST,
   DEPLOYMENT,
   ENFORCED_BY,
@@ -96,7 +97,11 @@ function liveAttestation(data: LiveConduct): Attestation {
       vault: DEPLOYMENT?.vault ?? PENDING_ADDRESS,
       registry: DEPLOYMENT?.registry ?? PENDING_ADDRESS,
       record: DEPLOYMENT?.record ?? PENDING_ADDRESS,
-      explorer: ARC.explorer,
+      /* The chain those three addresses are on, which is the default chain
+         and no longer always Arc. `SETTLEMENT`'s hashes below are Arc's and
+         keep Arc's explorer — an address and a transaction on this page can
+         belong to different chains. */
+      explorer: DEFAULT_CHAIN.explorer,
     },
   };
 }

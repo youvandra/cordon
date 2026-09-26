@@ -254,7 +254,8 @@ export function Meter() {
   return (
     <>
       <Lead>
-        The meter folds Arc's events into the shape the record pages render. It
+        The meter folds the chain's events into the shape the record pages render.
+        It
         is a cache in the strict sense: delete it, replay from block zero, and
         the same ledger comes back.
       </Lead>
