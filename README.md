@@ -29,6 +29,7 @@ of them can see — and no agent in the tree holds a key.
 | **Documentation** | <https://getcordon.xyz/docs> |
 | **Owner's console** | <https://getcordon.xyz/console/> |
 | **Look around, no wallet** | <https://getcordon.xyz/console> |
+| **Resolve an agent by name, no wallet** | <https://getcordon.xyz/resolve?q=trade.olivia.eth> |
 | **A refusal, on chain and published** | <https://getcordon.xyz/refusal/9> |
 | **The hostile drill, published whichever way it came out** | <https://getcordon.xyz/drill> |
 | **A conduct record, read from the chain** | <https://getcordon.xyz/agent/894130> |
@@ -182,13 +183,18 @@ down still counts against what the person at the top signed.
 **What this does not do yet.** Cordon runs on testnets, and marketplace
 sellers settle on mainnet chains, so a Cordon mandate cannot pay one of them
 today — Circle's catalogue listed 929 services on 13 September and none on a
-testnet. So there are two sellers of our own to point at:
-`attest.getcordon.xyz`, a conduct record at a cent, and
-`demo-seller.getcordon.xyz/arc/snapshot`, a live reading of Arc at **$1** — a
-seller that is not the record, priced so the bound that refuses it is plain.
-Bought live on 13 September: node `0xe4516a46…` with a $1 tranche cap paid,
-draw `0xd01e5976…`, settlement `0x0b1e6a31…`; node `0x08bd7e42…` with a
-$0.0005 cap was refused, `tranche-cap`, **refusal 13**.
+testnet. So there are three sellers of our own to point at:
+`attest.getcordon.xyz`, a conduct record at a cent; `demo-seller` on Arc, a
+live reading at **$1**, priced so the bound that refuses it is plain; and
+**Beacon**, a five-endpoint catalogue at `getcordon.xyz/market`, priced across
+a per-draw cap so an agent can be refused for asking the expensive one.
+
+On Arc a settlement is three transactions — the draw, Circle's Gateway landing
+the tranche, and the seller's collection. On Sepolia, where there is no
+Gateway, the vault is deployed against `LocalGateway` and a purchase settles in
+two: the draw deposits the tranche straight into the operator's own wallet, and
+the seller collects the authorisation. The recorded purchase is Sepolia's, in
+`packages/fixtures`.
 
 ---
 
@@ -253,7 +259,7 @@ sequenceDiagram
     participant Dm as Daemon
     participant Sl as Seller
     participant TV as TreeVault
-    participant GW as Circle Gateway
+    participant GW as The rail
     participant CR as ConductRecord
 
     Ag->>Dm: cordon_fetch(url)
@@ -266,6 +272,7 @@ sequenceDiagram
     alt every bound passes
         TV-->>Dm: Drawn — every ancestor debited
         TV->>GW: the tranche, into this operator's balance
+        Note over GW: Circle's Gateway on Arc;<br/>LocalGateway on Sepolia
         Dm->>Sl: EIP-3009 authorisation, signed off chain
         Sl-->>Dm: 200, the body
         Dm-->>Ag: the body
@@ -398,19 +405,22 @@ unchanged and still running.
 | `ConductRecord` | [`0x779fbd573212532513a6773561f785094f212ac9`](https://sepolia.etherscan.io/address/0x779fbd573212532513a6773561f785094f212ac9) |
 <!-- deployed:11155111:end -->
 
-Circle's Gateway does not exist here, so settlement goes through
+Circle's Gateway does not exist here, so the vault is deployed against a
 `LocalGateway` at
-[`0xa50d9454e71acf152399c872815ae6895cb53229`](https://sepolia.etherscan.io/address/0xa50d9454e71acf152399c872815ae6895cb53229).
+[`0x67cb382b8a6c75858790bbb1ff3636add7e8800f`](https://sepolia.etherscan.io/address/0x67cb382b8a6c75858790bbb1ff3636add7e8800f):
+a draw lands in the operator's own wallet and settlement is the authorisation
+alone, with no fee on top of the price. A purchase settles on Sepolia end to
+end; the recorded one is `SETTLEMENT` in `packages/fixtures`.
 
 The same deployer at the same nonce produces the same address on any chain, so
 read the chain beside an address before reading the address — Sepolia's first
 `ConductRecord` and Arc's `MandateRegistry` shared one until the 26 September
 redeploy moved it.
 
-The live tree hangs from **`mira.eth`**, and `sentinel.mira.eth` is an agent
-under it. Resolve either at
-[getcordon.xyz/console/resolve](https://getcordon.xyz/console/resolve) — no
-wallet, no permission.
+The live tree hangs from **`olivia.eth`**, with `trade`, `research` and `data`
+under it. Resolve any of them at
+[getcordon.xyz/resolve](https://getcordon.xyz/resolve) — no wallet, no
+permission.
 
 > **Testnet only, on both chains.** Arc mainnet has not launched. The gas token
 > and the money are test USDC, and every transaction linked from this repository
@@ -715,8 +725,8 @@ and there is a test that says so.
 Two clocks. The slow one is on chain and is guarded; the fast one is off chain,
 costs nothing, and Cordon does not touch it.
 
-One purchase, read back off Arc on **11 September 2026**, is three
-transactions:
+A purchase settles differently by chain, and the number of transactions is the
+rail's. On **Arc** it is three:
 
 | | Transaction |
 |---|---|
@@ -730,6 +740,14 @@ is refused for `required 0.0135`. So a tranche can only pay for its own
 settlement when it is larger than the fee, and that floor — not a pricing
 decision — is why the attestation endpoint costs $0.01. The other rail,
 `GatewayWallet.withdraw`, takes fourteen days.
+
+On **Sepolia**, where Circle's Gateway does not exist, the rail is direct:
+`LocalGateway.depositFor` puts the tranche in the operator's own wallet inside
+the draw's own transaction, so the purchase is **two** transactions — the draw
+and the seller's collection — and nothing is charged on top of the price.
+`packages/daemon/scripts/record-settlement.mjs` reads either: two hashes for
+the direct rail, three for the Gateway, and writes what it read into
+`packages/fixtures`.
 
 The seller is named in `destinationRecipient`, a field inside a burn intent
 signed off chain and handed to Circle's API. No contract sees it. The
@@ -886,8 +904,8 @@ because a mandate narrows monotonically and no contract here can widen one.
 That mirror is checkable rather than claimed:
 
 ```bash
-node packages/daemon/scripts/check-authority.ts sentinel.mira.eth
-node packages/daemon/scripts/resolve-agent.ts  0x88ee…   # as a seller receives it
+node packages/daemon/scripts/check-authority.ts trade.olivia.eth
+node packages/daemon/scripts/resolve-agent.ts  0xFda26a51…  # as a seller receives it
 ```
 
 The first walks the registries down to an agent's own, reads the mandate its
