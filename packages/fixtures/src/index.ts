@@ -24,6 +24,10 @@ export const VERIFIED_ON = "2026-09-06";
 export const ARC = {
   chainId: 5042002,
   name: "Arc testnet",
+  /** For a label with a row to sit in. Derived from `name` it cannot be:
+   *  the first word of "Ethereum Sepolia" is "Ethereum" and the last word of
+   *  "Arc testnet" is "testnet", so either slice is wrong on one chain. */
+  shortName: "Arc",
   rpc: "https://rpc.testnet.arc.io",
   explorer: "https://testnet.arcscan.app",
   faucet: "https://faucet.circle.com",
@@ -103,6 +107,7 @@ export function scaleUsdc(
 export const SEPOLIA = {
   chainId: 11155111,
   name: "Ethereum Sepolia",
+  shortName: "Sepolia",
   /* Answered `eth_getBalance`, `eth_getCode` and `eth_call` on 25 Sep 2026;
      the other two public endpoints tried that day returned 404 and a paywall. */
   rpc: "https://ethereum-sepolia-rpc.publicnode.com",
@@ -145,6 +150,7 @@ export const SEPOLIA = {
 export const ANVIL = {
   chainId: 31337,
   name: "Anvil",
+  shortName: "Anvil",
   rpc: "http://127.0.0.1:8545",
   explorer: "",
   faucet: "",
@@ -196,6 +202,8 @@ export const DEFAULT_CHAIN = SEPOLIA;
 export interface ChainFacts {
   chainId: number;
   name: string;
+  /** The name where a column or a row is the constraint. */
+  shortName: string;
   rpc: string;
   explorer: string;
   nativeDecimals: number;

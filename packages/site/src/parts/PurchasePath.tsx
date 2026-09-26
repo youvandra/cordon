@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { motion, useInView } from "framer-motion";
 import { Surface } from "cordon-ui";
-import { DRILL_RUN, REASON_MEANING, SETTLEMENT, formatUsdc, shortAddress } from "@cordon/fixtures";
+import { DRILL_RUN, REASON_MEANING, SETTLEMENT, chainFacts, formatUsdc, shortAddress } from "@cordon/fixtures";
 import { shortTx, txUrl } from "@cordon/fixtures/preview";
 import { useEntrance } from "./motion";
 
@@ -37,10 +37,18 @@ interface Step {
 
 type ScenarioId = "paid" | "refused";
 
+/* The vault's station is named after the chain the run below it happened on,
+   read from the run rather than written here. Both scenarios are Arc runs
+   today, so this renders "Arc" exactly as it did — the point is that it cannot
+   keep saying Arc once the recording moves, which is how the two footers on
+   this site came to name the wrong chain for a fortnight. `shortName`, because
+   these four labels sit in a row and `SEPOLIA.name` is "Ethereum Sepolia". */
+const VAULT_CHAIN = chainFacts(SETTLEMENT.chainId)?.shortName ?? "chain";
+
 const STATIONS: { name: string; sub: string; glyph: ReactNode }[] = [
   { name: "Agent", sub: "holds no key", glyph: <AgentGlyph /> },
   { name: "Cordon", sub: "holds the key", glyph: <FenceGlyph /> },
-  { name: "Arc", sub: "TreeVault", glyph: <VaultGlyph /> },
+  { name: VAULT_CHAIN, sub: "TreeVault", glyph: <VaultGlyph /> },
   { name: "Seller", sub: "x402 API", glyph: <SellerGlyph /> },
 ];
 
