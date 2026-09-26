@@ -58,6 +58,14 @@ interface Beat {
   say: string | ((tree: LiveTree | null) => string);
   /** What the hand does while the mouth says it. */
   act: string;
+  /**
+   * The command, exactly as typed.
+   *
+   * Written out rather than described, because a beat described is a beat
+   * retyped from memory at the worst possible moment. Every one of these runs
+   * from `packages/daemon`, which is the one directory the demo needs.
+   */
+  run?: string;
   /** What the room should be looking at when it lands. */
   shows: string | ((tree: LiveTree | null) => string);
   /** Shown as it appears on screen rather than described. Set in mono,
@@ -87,10 +95,11 @@ const BEATS: Beat[] = [
     id: "name",
     title: "A name that points, never states",
     say: "This agent has a name. Ask the name what it may spend and it will not tell you — it points at the contract that decides.",
-    act: "Console → Resolve. Paste the agent's name.",
+    act: "One command, and it is the whole beat. The console's Resolve screen is the same two reads with a wallet attached — use it only if the room wants to see a UI.",
+    run: "node scripts/resolve-agent.ts probe.mira.eth",
     shows:
-      "Three records and no figure among them: cordon.node, cordon.registry, cordon.chain. Then the bound itself, read from the registry the records name.",
-    open: { label: "Open Resolve", to: "/console/resolve" },
+      "The round trip first — address to name and back, because without the second half anyone can point a name at somebody else's address and claim their bound. Then three records with no figure among them, and then the bound itself, read from the registry the records name.",
+    open: { label: "The same thing with a wallet", to: "/console/resolve" },
     ifItFails:
       "The resolver is one RPC away from the room's wifi. Read the records off this page instead and go straight to beat 2 — the point is that they are a pointer, not that they loaded fast.",
     sellerFree: true,
@@ -100,7 +109,8 @@ const BEATS: Beat[] = [
     id: "bound",
     title: "The bound is the contract's",
     say: "A cap copied into a text record is a copy, and a copy drifts. The mandate can narrow a minute from now while the record still quotes the old number to a seller deciding whether to serve.",
-    act: "Stay on Resolve. Point at the figures under the records.",
+    act: "The lower half of what beat 1 already printed. Run this one only if a judge pushes on whether the name could lie about its bound — it walks the registries down to the agent's own and compares the grant to the mandate line by line.",
+    run: "node scripts/check-authority.ts worker1.probe.mira.eth",
     /* The window and the lifetime cap come off the live root where there is
        one. The tranche cap, the concentration bound and the depth limit are
        the vault's own constants and the same for every tree, so they stay
@@ -120,7 +130,9 @@ const BEATS: Beat[] = [
     id: "refusal",
     title: "A refusal is a transaction",
     say: "It did not fail. It was refused, by name, and the refusal is on chain with the transaction that holds it.",
-    act: "Ask the agent for a purchase above the tranche cap. Read the daemon's answer aloud.",
+    act: "Ask for a purchase above the tranche cap, and read the answer aloud. A refusal comes back 200, not 5xx — the agent asked a valid question and got a real answer: no.",
+    run: `curl -s 127.0.0.1:8402/fetch -H 'content-type: application/json' \\
+  -d '{"node":"0x<worker>","url":"https://attest.getcordon.xyz/attest/894124"}' | jq`,
     shows:
       "The daemon's answer, and then the refusal page it points at — which names the record it was published under in a registry nobody here controls.",
     snippet:
@@ -144,7 +156,9 @@ const BEATS: Beat[] = [
         ? `This grandchild has ${formatUsdc(BigInt(grandchild.budget6), 0)} of its own window untouched. Ask what it may actually draw.`
         : "This grandchild has its own window untouched. Ask what it may actually draw.";
     },
-    act: "TreeVault.headroom(node) — the console shows it per node, and it returns the node that bound it.",
+    act: "One read, every node the daemon holds a key for. `headroom` returns two things and the second is the beat: the node that bound it.",
+    run: `curl -s 127.0.0.1:8402/status \\
+  | jq '.nodes[] | {node, available: .headroom.available, boundBy: .headroom.boundBy}'`,
     shows:
       "Zero, and an ancestor's id beside it. The root is spent, so nothing beneath it draws, however much room a child's own window has left. Give every agent its own wallet and there is no way to write that down.",
     open: { label: "Agents", to: "/console/agents" },
@@ -157,13 +171,66 @@ const BEATS: Beat[] = [
     id: "cut",
     title: "Cut the branch",
     say: "One signature, from the owner's own wallet, and that node and everything under it draws nothing. Revoked is checked first, before any bound.",
-    act: "Console → Agents → the node → Revoke. One signature.",
+    act: "Console → Agents → the node → Revoke. One signature, from the owner's wallet — there is no command for this one, and that is the point: the daemon holds keys that can spend and none that can revoke.",
     shows:
       "The branch goes dead in the tree, and the next draw beneath it is refused with reason `revoked` rather than with a bound.",
     open: { label: "Agents", to: "/console/agents" },
     ifItFails:
       "If the wallet will not connect, say the sentence and show a revoked node from an earlier run. Do not spend the last minutes fighting a wallet in front of a room.",
     sellerFree: true,
+  },
+];
+
+/**
+ * What has to be true before the walk to the table, and when to do each part.
+ *
+ * Staged by time rather than listed, because the failure this prevents is
+ * doing all of it at T-2 and discovering the daemon will not start — it
+ * refuses to start misconfigured, on purpose, and that refusal is worth
+ * hitting half an hour out rather than in the queue.
+ */
+const PREP: { when: string; what: string; run?: string }[] = [
+  {
+    when: "T-30",
+    what: "Start the daemon. It prints the nodes it holds keys for and refuses to start misconfigured, so this is the step that tells you the key file and the node ids still agree with the chain.",
+    run: 'node --env-file=.env.live --env-file="$HOME/.cordon/cordon.env" src/main.ts',
+  },
+  {
+    when: "T-20",
+    what: "Read the tree back. Every node, its headroom and its mandate — the same call beat 4 makes, so a beat that will not work is a beat that fails here instead of on stage.",
+    run: "curl -s 127.0.0.1:8402/status | jq",
+  },
+  {
+    when: "T-15",
+    what: "Reload this page and read the pre-flight above. It is asking the meter, which is a different path to the same chain: a figure here that disagrees with /status means one of the two is behind, and the contract is the tie-breaker.",
+  },
+  {
+    when: "T-10",
+    what: "Open the tabs now, while there is wifi. A loaded tab does not care that the RPC went away: the agent's record, one refusal on the explorer, and the console on Agents.",
+  },
+  {
+    when: "T-2",
+    what: "Terminal font up. Two windows, no more — one for the daemon's log, one to type in. Clear the typing one.",
+  },
+];
+
+/** The four that come every time, and the shape of the answer. */
+const ASKED: { q: string; a: string }[] = [
+  {
+    q: "Why on chain, and not a policy server?",
+    a: "A policy server can be turned off by whoever runs the agent. This contract cannot be reached by the agent at all. And the refusal is a public record a seller can read before it serves, which a server's private 403 is not.",
+  },
+  {
+    q: "Isn't this just a spending limit?",
+    a: "Beat 4, immediately. A spending limit cannot express a bound its holder did not set — that is the whole of the difference, and it is one command.",
+  },
+  {
+    q: "Can the agent just pay itself?",
+    a: "Yes. Say it plainly, fast, without defending: the agent chooses the URL and the payee comes from that URL's 402, and an address is free. What is enforced is how much and how fast, against every ancestor, with every refusal on chain. The site says this in the same words — it was corrected there after we shipped the wrong claim.",
+  },
+  {
+    q: "Is any of this live?",
+    a: "Testnet, and name the reason before they infer one: Circle's catalogue listed 929 services on 13 September and none of them on a testnet, so a Cordon mandate structurally cannot pay one yet. Hence two sellers of our own.",
   },
 ];
 
@@ -200,11 +267,71 @@ export default function Demo() {
 
         <Preflight tree={tree} />
 
+        <Surface radius="5" elevation="tile" className="runbook__note">
+          <Text variant="micro" tone="dim" as="p" className="eyebrow">
+            before you walk up
+          </Text>
+          <dl className="kv kv--rows">
+            {PREP.map((step) => (
+              <div key={step.when}>
+                <dt className="mono">{step.when}</dt>
+                <dd>
+                  {step.what}
+                  {step.run ? <pre className="code beat__snippet mono">{step.run}</pre> : null}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <Text variant="micro" tone="dim" as="p">
+            Every command on this page runs from <span className="mono">packages/daemon</span>.
+          </Text>
+        </Surface>
+
         <ol className="beats">
           {BEATS.map((beat) => (
             <Beat key={beat.id} beat={beat} tree={tree.state === "live" ? tree.data : null} />
           ))}
         </ol>
+
+        {/* A table is not a stage. Judges interrupt, and they are on project
+            thirty-something — so the beats above stop being an order and
+            become a map to jump around. */}
+        <Surface radius="5" elevation="tile" className="runbook__note">
+          <Text variant="micro" tone="dim" as="p" className="eyebrow">
+            at a judging table
+          </Text>
+          <Text as="p" tone="copy">
+            Open with the thing that cannot be built the other way, not with
+            the architecture:
+          </Text>
+          <blockquote className="beat__say">
+            Give every agent its own wallet, then try to write this rule down:
+            a purchase made three delegations down still counts against what
+            the person at the top signed. You can't. That is the one thing
+            Cordon adds, and a contract enforces it, not our server.
+          </blockquote>
+          <Text as="p" tone="copy">
+            Then <b>beat 4 first</b>, not beat 1 — it is the only beat showing
+            something that exists nowhere else, and it is a view function, so
+            no seller and no wifi can take it away. Beat 1 lands as "ENS
+            integration" to a judge who has seen five of those today.
+          </Text>
+          <Text as="p" tone="copy">
+            Then spend real time on <Link to="/drill">the drill</Link>: an
+            agent told to spend everything, and the number published whichever
+            way it came out. Every other team is showing what works. Showing
+            the measurement that could have disproved the product is the part
+            they will remember.
+          </Text>
+          <dl className="kv kv--rows">
+            {ASKED.map((item) => (
+              <div key={item.q}>
+                <dt>{item.q}</dt>
+                <dd>{item.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </Surface>
 
         <Surface radius="5" elevation="tile" className="runbook__note">
           <Text variant="micro" tone="dim" as="p" className="eyebrow">
@@ -248,7 +375,10 @@ function Beat({ beat, tree }: { beat: Beat; tree: LiveTree | null }) {
       <dl className="kv kv--rows">
         <div>
           <dt>Do</dt>
-          <dd>{beat.act}</dd>
+          <dd>
+            {beat.act}
+            {beat.run ? <pre className="code beat__snippet mono">{beat.run}</pre> : null}
+          </dd>
         </div>
         <div>
           <dt>On screen</dt>
