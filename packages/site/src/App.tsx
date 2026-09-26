@@ -7,6 +7,7 @@ import { useEntranceFailsafe } from "./parts/motion";
 import Landing from "./pages/Landing";
 import Docs from "./docs/Docs";
 import Drill from "./pages/Drill";
+import Demo from "./pages/Demo";
 import AgentRecord from "./pages/AgentRecord";
 import Attest from "./pages/Attest";
 import Refusal from "./pages/Refusal";
@@ -99,6 +100,11 @@ export function App() {
         <Route path="/docs/:slug" element={<Docs />} />
 
         <Route path="/drill" element={<Drill />} />
+
+        {/* The run of show, for the presenter's phone. Nothing links to it
+            and it sets `noindex`: it carries the lines to say, which is
+            backstage rather than secret. */}
+        <Route path="/demo" element={<Demo />} />
         <Route path="/agent/:id" element={<AgentRecord />} />
         <Route path="/attest/:id" element={<Attest />} />
 

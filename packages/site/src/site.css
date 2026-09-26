@@ -1483,3 +1483,128 @@ main { flex: 1 1 auto; }
     display: none;
   }
 }
+
+/* ---- /demo, the run of show ---------------------------------------------- */
+/* Read one-handed, on a phone, by somebody who is also talking. So: one
+   column at every width, the beat number legible at arm's length, and the
+   sentence to say set apart from everything that merely supports it. */
+
+.preflight {
+  padding: var(--cordon-space-6);
+}
+
+.preflight__rows {
+  margin: 0;
+}
+
+.preflight__rows dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px var(--cordon-space-3);
+}
+
+.preflight__value {
+  color: var(--cordon-ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The note is the half a presenter acts on — what to do about a row that is
+   not ready — so it takes the whole width rather than trailing the value. */
+.preflight__note {
+  flex: 1 0 100%;
+}
+
+.beats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cordon-space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.beat {
+  padding: var(--cordon-space-6) 0 0;
+  border-top: 1px solid var(--cordon-hairline-soft);
+}
+
+.beat__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cordon-space-3);
+  margin: 0 0 var(--cordon-space-4);
+}
+
+/* Large because it is read at a glance, mid-sentence, by somebody who has
+   looked away and come back and needs to find their place again. */
+.beat__n {
+  flex: 0 0 auto;
+  min-width: 34px;
+  color: var(--cordon-accent);
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.beat__title {
+  margin: 0;
+  color: var(--cordon-ink-strong);
+  font-size: clamp(19px, 2.6vw, 24px);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+}
+
+/* The line to say. Set as a quotation because that is what it is — the only
+   text on the page meant to leave the presenter's mouth rather than inform a
+   decision. */
+.beat__say {
+  margin: 0 0 var(--cordon-space-5);
+  padding-left: var(--cordon-space-5);
+  border-left: 2px solid var(--cordon-accent);
+  color: var(--cordon-ink);
+  font-size: clamp(16px, 2.2vw, 19px);
+  line-height: 1.55;
+}
+
+.beat__open {
+  display: inline-block;
+  margin-top: var(--cordon-space-4);
+  font-size: var(--cordon-size-caption);
+  font-weight: 600;
+}
+
+.runbook__note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cordon-space-4);
+  padding: var(--cordon-space-6);
+}
+
+/* A 168px label column leaves a phone about 180px for the answer, and these
+   answers are sentences rather than figures. Below that width the label goes
+   above the thing it labels. */
+@media (max-width: 560px) {
+  .beat .kv--rows > div,
+  .preflight__rows > div {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .beat .kv--rows dt,
+  .preflight__rows dt {
+    flex: 0 0 auto;
+  }
+}
+
+/* The daemon's answer, as the presenter will read it off their own screen.
+   `.code` sets the well; this only stops a one-line JSON body inheriting the
+   row's prose measure and keeps it inside a phone. */
+.beat__snippet {
+  margin: var(--cordon-space-3) 0 0;
+  padding: var(--cordon-space-4);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.6;
+}

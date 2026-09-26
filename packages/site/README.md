@@ -48,6 +48,7 @@ pages the chain itself points at.
 | `/agent/:id` | a node's conduct, by ERC-8004 identity |
 | `/attest/:id` | what the paid endpoint answers, as a page |
 | `/drill` | G3 and G4 in public, whichever way they came out |
+| `/demo` | the run of show, for the phone in the presenter's hand. `noindex`, and nothing links to it |
 
 ### The docs are a list, not a folder
 
@@ -62,7 +63,7 @@ screen.
 
 | | |
 |---|---|
-| `VITE_METER_URL` | where `/refusal/:id` and `/agent/:id` read from. Unset, they fall back to the preview rows and say so |
+| `VITE_METER_URL` | where `/refusal/:id`, `/agent/:id` and `/demo`'s pre-flight read from. Unset, the record pages fall back to the preview rows and say so, and the pre-flight says it checked nothing |
 
 `ConductRecord.RECORD_BASE` is a Solidity constant, so the ids in the registry
 are the chain's rather than the illustration's. Pointing the build at the meter

@@ -37,6 +37,12 @@ during it is `8aa6e22`.
   operators who could cut it off.
 - `resolve-agent.ts` and `check-authority.ts` — the check a seller makes, and a
   run that fails when a name grants authority the contract refuses.
+- **`/demo`, the run of show**, for the phone in the presenter's hand: five
+  beats, the line to say, and an exit for each one that does not land. Its
+  pre-flight block reads the tree from the meter on load rather than stating
+  its condition from memory — a rehearsal that cut a branch or emptied the
+  treasury shows up there instead of on stage. The two beats that quote a
+  figure quote the live one. `noindex`, and nothing links to it.
 
 ### Changed
 

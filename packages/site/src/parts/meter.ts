@@ -177,3 +177,44 @@ export function useLiveRefusal(id: string | undefined): Loaded<LiveRefusal> {
 export function useLiveAgent(id: string | undefined): Loaded<LiveConduct> {
   return useMeter<LiveConduct>(id && /^\d+$/.test(id) ? `/agent/${id}` : null);
 }
+
+/** One node of a tree, as `/tree/:root` sends it. Figures arrive as decimal
+ *  strings, because a base-6 amount does not survive `JSON.parse` as a
+ *  number. */
+export interface LiveNode {
+  node: string;
+  parent: string | null;
+  root: string;
+  operator: string;
+  depth: number;
+  budget6: string;
+  lifetimeCap6: string;
+  revoked: boolean;
+  agentId: string | null;
+  draws: number;
+  refusals: number;
+  /** Refusals where THIS node's bound stopped a descendant's draw. */
+  breaches: number;
+  drawn6: string;
+  refused6: string;
+  /** Money a human signed out after a refusal, rather than drawn inside the
+   *  bound. It leaves the treasury exactly as a draw does. */
+  releasedTo6: string;
+  debited6: string;
+}
+
+/** What `/tree/:root` answers: the subtree, and the treasury movements the
+ *  root has seen. `truncated` is not decoration — a tree drawn from a capped
+ *  page is part of a tree presented as all of it. */
+export interface LiveTree extends Range {
+  funded6: string;
+  withdrawn6: string;
+  total: number;
+  truncated: boolean;
+  nodes: LiveNode[];
+}
+
+/** A whole tree by its root node id, which is how an owner addresses one. */
+export function useLiveTree(root: string | undefined): Loaded<LiveTree> {
+  return useMeter<LiveTree>(root && /^0x[0-9a-fA-F]{64}$/.test(root) ? `/tree/${root}` : null);
+}
