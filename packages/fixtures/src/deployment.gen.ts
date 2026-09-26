@@ -21,12 +21,12 @@ export type Deployment = {
 
 export const DEPLOYMENT: Deployment | null = {
   chainId: 11155111,
-  registry: "0xe799edc4aa6bcaf6915c7a5eadbdc4e709aef4b2",
-  vault: "0x22d539bdf23e08a856fc80bc991e34948921ad46",
-  record: "0x5c026b1b129a9e2171e53c5024f76052006ef1e0",
-  fromBlock: "11784955",
-  commit: "6c83270702ecca055240055c5dbe9340fbfa867f",
-  deployedAt: "2026-09-26T08:09:50.086Z",
+  registry: "0x4542b831854bb9d1b3133269784b13c2d39545a1",
+  vault: "0xd6ea46d29df179f607e628fc49e8d6ec4b947ee8",
+  record: "0x779fbd573212532513a6773561f785094f212ac9",
+  fromBlock: "11788360",
+  commit: "025e0ea7df65e84ee6227d6cb400312ebe4fb482",
+  deployedAt: "2026-09-26T19:48:49.698Z",
 };
 
 /** Every chain Cordon is deployed on, keyed by chain id. */
@@ -42,11 +42,11 @@ export const DEPLOYMENTS: Record<number, Deployment> = {
   },
   11155111: {
     chainId: 11155111,
-    registry: "0xe799edc4aa6bcaf6915c7a5eadbdc4e709aef4b2",
-    vault: "0x22d539bdf23e08a856fc80bc991e34948921ad46",
-    record: "0x5c026b1b129a9e2171e53c5024f76052006ef1e0",
-    fromBlock: "11784955",
-    commit: "6c83270702ecca055240055c5dbe9340fbfa867f",
-    deployedAt: "2026-09-26T08:09:50.086Z",
+    registry: "0x4542b831854bb9d1b3133269784b13c2d39545a1",
+    vault: "0xd6ea46d29df179f607e628fc49e8d6ec4b947ee8",
+    record: "0x779fbd573212532513a6773561f785094f212ac9",
+    fromBlock: "11788360",
+    commit: "025e0ea7df65e84ee6227d6cb400312ebe4fb482",
+    deployedAt: "2026-09-26T19:48:49.698Z",
   },
 };

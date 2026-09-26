@@ -393,9 +393,9 @@ unchanged and still running.
 <!-- deployed:11155111:start -->
 | Contract | Address |
 |---|---|
-| `MandateRegistry` | [`0xe799edc4aa6bcaf6915c7a5eadbdc4e709aef4b2`](https://sepolia.etherscan.io/address/0xe799edc4aa6bcaf6915c7a5eadbdc4e709aef4b2) |
-| `TreeVault` | [`0x22d539bdf23e08a856fc80bc991e34948921ad46`](https://sepolia.etherscan.io/address/0x22d539bdf23e08a856fc80bc991e34948921ad46) |
-| `ConductRecord` | [`0x5c026b1b129a9e2171e53c5024f76052006ef1e0`](https://sepolia.etherscan.io/address/0x5c026b1b129a9e2171e53c5024f76052006ef1e0) |
+| `MandateRegistry` | [`0x4542b831854bb9d1b3133269784b13c2d39545a1`](https://sepolia.etherscan.io/address/0x4542b831854bb9d1b3133269784b13c2d39545a1) |
+| `TreeVault` | [`0xd6ea46d29df179f607e628fc49e8d6ec4b947ee8`](https://sepolia.etherscan.io/address/0xd6ea46d29df179f607e628fc49e8d6ec4b947ee8) |
+| `ConductRecord` | [`0x779fbd573212532513a6773561f785094f212ac9`](https://sepolia.etherscan.io/address/0x779fbd573212532513a6773561f785094f212ac9) |
 <!-- deployed:11155111:end -->
 
 Circle's Gateway does not exist here, so settlement goes through

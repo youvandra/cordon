@@ -1,13 +1,13 @@
 {
   "chainId": 11155111,
-  "deployedAt": "2026-09-26T08:09:50.086Z",
-  "fromBlock": "11784955",
-  "registry": "0xe799edc4aa6bcaf6915c7a5eadbdc4e709aef4b2",
-  "vault": "0x22d539bdf23e08a856fc80bc991e34948921ad46",
-  "record": "0x5c026b1b129a9e2171e53c5024f76052006ef1e0",
+  "deployedAt": "2026-09-26T19:48:49.698Z",
+  "fromBlock": "11788360",
+  "registry": "0x4542b831854bb9d1b3133269784b13c2d39545a1",
+  "vault": "0xd6ea46d29df179f607e628fc49e8d6ec4b947ee8",
+  "record": "0x779fbd573212532513a6773561f785094f212ac9",
   "usdc": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
-  "gateway": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+  "gateway": "0x67cb382b8a6c75858790bbb1ff3636add7e8800f",
   "identity": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
   "reputation": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
-  "commit": "6c83270702ecca055240055c5dbe9340fbfa867f"
+  "commit": "025e0ea7df65e84ee6227d6cb400312ebe4fb482"
 }
