@@ -4,6 +4,7 @@ import { Stack } from "../sections/Stack";
 import { Claim } from "../sections/Claim";
 import { Counterfactual } from "../sections/Counterfactual";
 import { Purchase } from "../sections/Purchase";
+import { Seller } from "../sections/Seller";
 import { Arc } from "../sections/Arc";
 import { Record } from "../sections/Record";
 import { Names } from "../sections/Names";
@@ -30,6 +31,7 @@ export default function Landing() {
       <Claim />
       <Counterfactual />
       <Purchase />
+      <Seller />
       <Arc />
       <Record />
       <Names />
