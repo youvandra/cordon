@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Button,
@@ -7,226 +7,216 @@ import {
   Container,
   Enforced,
   Headline,
-  Icon,
   Stack,
   Tag,
   Text,
   TextField,
-  Tooltip,
   usePageMeta,
 } from "cordon-ui";
-import { verify, type Result, type Verified } from "@cordon/verify";
-import {
-  chainFacts,
-  DEPLOYMENTS,
-  ENSV2,
-  formatUsdc,
-  SEPOLIA,
-  shortAddress,
-  shortId,
-} from "@cordon/fixtures";
+import { chainFacts, formatUsdc, SEPOLIA, shortAddress, shortId } from "@cordon/fixtures";
+/* The console's reader, reused so the public page and the console show the
+   same answer — including the identity, the name compared against the chain,
+   and the authority path. */
+import { useResolvedAgent, type Resolved, type Rung } from "@cordon/console-resolve";
 import { RecordShell } from "../parts/RecordShell";
 
 /**
  * /resolve — the seller's question, on the public site.
  *
  * A stranger holds an agent's name, or the address in a payment, and nothing
- * else: no wallet, no relationship, no account. This answers what the console
- * has answered for a while, but from the front door rather than from a room
- * named "Console" that reads as the owner's.
- *
- * The check itself is `@cordon/verify` — the package a seller integrates —
- * rather than a second copy. A page that resolved a name its own way would be
- * a surface that can disagree with the one a seller actually runs.
+ * else: no wallet, no account, no relationship. This answers what the console
+ * answers, from the front door rather than from a room named "Console", and it
+ * reads through the same code so the two cannot disagree.
  */
-const facts = chainFacts(SEPOLIA.chainId)!;
+const EXPLORER = chainFacts(SEPOLIA.chainId)?.explorer ?? SEPOLIA.explorer;
 
-/**
- * The chain, as a literal.
- *
- * `viem` arrives with `@cordon/verify`, which this page loads on demand, so it
- * is not named here — the fields below are the only ones the resolver reads.
- */
-const CHAIN = {
-  id: facts.chainId,
-  name: facts.name,
-  nativeCurrency: { name: facts.nativeName, symbol: facts.nativeSymbol, decimals: facts.nativeDecimals },
-  rpcUrls: { default: { http: [facts.rpc] } },
-  blockExplorers: { default: { name: "explorer", url: facts.explorer } },
-} as const;
-
-const VAULT = DEPLOYMENTS[SEPOLIA.chainId]?.vault as `0x${string}` | undefined;
-
-type Lookup =
-  | { state: "idle" }
-  | { state: "looking" }
-  | { state: "done"; subject: string; result: Result };
-
-function useLookup(subject: string): Lookup {
-  const [state, setState] = useState<Lookup>({ state: "idle" });
-
-  useEffect(() => {
-    const asked = subject.trim();
-    if (!asked) {
-      setState({ state: "idle" });
-      return;
-    }
-    let live = true;
-    setState({ state: "looking" });
-    verify(asked, {
-      chain: CHAIN,
-      rpcUrl: facts.rpc,
-      universalResolver: ENSV2.universalResolver as `0x${string}`,
-      vault: VAULT,
-    })
-      .then((result) => {
-        if (live) setState({ state: "done", subject: asked, result });
-      })
-      .catch((error: unknown) => {
-        if (live) {
-          setState({
-            state: "done",
-            subject: asked,
-            result: { ok: false, reason: "failed", why: (error as Error).message },
-          });
-        }
-      });
-    return () => {
-      live = false;
-    };
-  }, [subject]);
-
-  return state;
-}
-
-/**
- * The explanation, behind an information icon.
- *
- * These sentences sat beside their values and turned a table back into prose.
- * A seller decides on two lines — is it live, and what may it draw — and the
- * rest belongs there for the reader who asks, not in the way of the one who
- * does not. The pattern is the one a field's `info` already uses.
- */
-function Info({ children }: { children: React.ReactNode }) {
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <Tooltip content={children} placement="bottom">
-      {/* A button rather than a span: reachable by keyboard, and the tooltip
-          opens on focus as well as on hover. The explanation is the accessible
-          name, so a screen reader is read the sentence and not "info". */}
-      <button
-        type="button"
-        className="cordon-field__info"
-        aria-label={typeof children === "string" ? children : "More about this row"}
-      >
-        <Icon name="info" />
-      </button>
-    </Tooltip>
-  );
-}
-
-/** One labelled row, with anything that needs saying behind the icon. */
-function Row({
-  label,
-  info,
-  children,
-}: {
-  label: string;
-  info?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <dt>
+    <div
+      style={{
+        display: "flex",
+        gap: "var(--cordon-space-5)",
+        alignItems: "baseline",
+        padding: "10px 0",
+        borderBottom: "1px solid var(--cordon-hairline-soft)",
+        width: "100%",
+      }}
+    >
+      <Text variant="micro" tone="dim" as="span" style={{ flex: "0 0 148px" }}>
         {label}
-        {info !== undefined ? <Info>{info}</Info> : null}
-      </dt>
-      <dd>{children}</dd>
+      </Text>
+      <Text variant="caption" tone="ink" as="span" style={{ minWidth: 0 }}>
+        {children}
+      </Text>
     </div>
   );
 }
 
-/**
- * The answers a seller acts on, one labelled row each.
- *
- * The rows are the same shape the record pages use, so a reader who has met one
- * Cordon page has met this one.
- */
-function Found({ agent }: { agent: Verified }) {
+function Link2({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Card>
-      <CardBody>
-        <Stack direction="column" gap="lg" align="start">
-          <dl className="kv kv--rows">
-            <Row label="status">
+    <a className="mono" href={href} target="_blank" rel="noreferrer" style={{ wordBreak: "break-all" }}>
+      {children}
+    </a>
+  );
+}
+
+/** The authority path, leaf at the top, owner at the end. */
+function Authority({ rungs, owner, boundBy }: { rungs: Rung[]; owner: string; boundBy: string | null }) {
+  return (
+    <Stack direction="column" gap="xs" align="start">
+      {rungs.map((rung) => (
+        <Text variant="body" tone="copy" as="p" key={rung.node}>
+          <span className="mono">{rung.self ? "this agent" : rung.depth === 0 ? "the root" : `depth ${rung.depth}`}</span>{" "}
+          · <span className="mono">{shortId(rung.node)}</span> · operator{" "}
+          <span className="mono">{shortAddress(rung.operator)}</span> · {formatUsdc(rung.budget6)}
+          {boundBy === rung.node ? <Tag tone="caution" size="sm">the binding limit</Tag> : null}
+        </Text>
+      ))}
+      <Text variant="body" tone="copy" as="p">
+        <span className="mono">the owner</span> · <span className="mono">{shortAddress(owner)}</span> — funded the
+        tree, and the only account that can cut any branch of it.
+      </Text>
+    </Stack>
+  );
+}
+
+function Found({ agent }: { agent: Resolved }) {
+  return (
+    <>
+      <Card>
+        <CardBody>
+          <Stack direction="column" gap="xs" align="start">
+            <Stack direction="row" gap="sm" align="center" wrap>
               <Tag tone={agent.live ? "positive" : "critical"} size="sm" dot>
                 {agent.live ? "live" : "cut"}
               </Tag>
-            </Row>
-            <Row label="name">
-              <span className="mono">{agent.name}</span>
-            </Row>
-            <Row
-              label="operator"
-              info="The key that signs for this agent. It holds no money of its own: the vault releases one purchase at a time."
-            >
-              <span className="mono">{shortAddress(agent.address)}</span>
-            </Row>
-            <Row
-              label="can draw now"
-              info="The tightest remaining window on the path to the root, capped by what the tree actually holds. The node named below is the one that limits it — often an ancestor."
-            >
-              {agent.headroom6 !== null ? (
-                <>
-                  <Enforced>{formatUsdc(agent.headroom6)}</Enforced>
-                  {agent.boundBy ? (
-                    <Text variant="micro" tone="dim" as="p">
-                      held by <span className="mono">{shortId(agent.boundBy)}</span>
-                    </Text>
-                  ) : null}
-                </>
-              ) : (
-                <Text variant="micro" tone="dim" as="span">
-                  not answered — this build has no vault configured
-                </Text>
-              )}
-            </Row>
-            <Row
-              label="owner"
-              info="Funded the whole tree, and the only account that can cut any branch of it."
-            >
-              <span className="mono">{shortAddress(agent.owner)}</span>
-            </Row>
-            <Row label="depth">{agent.depth}</Row>
-            {agent.revokedAt ? (
-              <Row label="cut at" info="Which node's revocation killed this branch.">
-                <span className="mono">{shortId(agent.revokedAt)}</span>
-              </Row>
-            ) : null}
-            <Row
-              label="name vs chain"
-              info="The name computes its records from these contracts. A disagreement means the name is answered from somewhere that no longer matches the chain — and the contract is the one to believe."
-            >
-              {agent.nameAgrees === null
-                ? "the name carries no computed record of its own"
-                : agent.nameAgrees
-                  ? "the name and the contract agree"
-                  : "they disagree — believe the contract"}
-            </Row>
-          </dl>
+              <Text variant="body" tone="ink" as="span" className="mono">
+                {agent.name}
+              </Text>
+            </Stack>
 
-          {agent.endpoint ? (
-            <div>
+            <Fact label="Address">
+              <Link2 href={`${EXPLORER}/address/${agent.address}`}>{agent.address}</Link2>
+            </Fact>
+            <Fact label="Budget">
+              <Enforced>{formatUsdc(agent.budget6)}</Enforced>
+            </Fact>
+            {agent.headroom6 !== null ? (
+              <Fact label="May still draw">
+                <Enforced>{formatUsdc(agent.headroom6)}</Enforced>
+              </Fact>
+            ) : null}
+            {agent.cutAt ? (
+              <Fact label="Cut at">
+                <span className="mono">{shortId(agent.cutAt)}</span>
+                {agent.cutAt === agent.node ? " — this node" : " — an ancestor"}
+              </Fact>
+            ) : null}
+            <Fact label="Mandate">
+              <span className="mono">{shortId(agent.node)}</span> in{" "}
+              <Link2 href={`${EXPLORER}/address/${agent.registry}`}>{shortAddress(agent.registry)}</Link2>
+            </Fact>
+            <Fact label="Identity">
+              {agent.agentId === null ? (
+                "bound to no ERC-8004 agent"
+              ) : (
+                <>
+                  <span className="mono">{String(agent.agentId)}</span>{" "}
+                  {agent.attested ? (
+                    <Tag tone="positive" size="sm">the name attests to it</Tag>
+                  ) : (
+                    <Tag tone="critical" size="sm">the name does not attest to it</Tag>
+                  )}
+                </>
+              )}
+            </Fact>
+          </Stack>
+        </CardBody>
+      </Card>
+
+      {agent.viaEns.computed ? (
+        <Card>
+          <CardBody>
+            <Stack direction="column" gap="xs" align="start">
+              <Text variant="micro" tone="dim" as="p" className="eyebrow">
+                what the name itself answered
+              </Text>
+              <Text variant="body" tone="copy" as="p">
+                Everything above came from the contracts. These came from an ordinary ENS text lookup — the
+                call every ENS library already makes — and they are not stored anywhere. This name is on a
+                resolver that reads the registry and the vault while it answers, so a revocation reaches the
+                namespace in the transaction that revokes it and there is no record to go stale.
+              </Text>
+              <dl className="kv kv--rows">
+                <div>
+                  <dt>cordon.live</dt>
+                  <dd className="mono">{agent.viaEns.live}</dd>
+                </div>
+                {agent.viaEns.headroom ? (
+                  <div>
+                    <dt>cordon.headroom</dt>
+                    <dd className="mono">{agent.viaEns.headroom}</dd>
+                  </div>
+                ) : null}
+                {agent.viaEns.boundBy ? (
+                  <div>
+                    <dt>cordon.boundBy</dt>
+                    <dd className="mono kv__break">{agent.viaEns.boundBy}</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt>Agreement</dt>
+                  <dd>
+                    {agent.viaEns.agrees ? (
+                      <Tag tone="positive" size="sm">the name and the chain agree</Tag>
+                    ) : (
+                      <Tag tone="critical" size="sm">the name and the chain disagree</Tag>
+                    )}
+                  </dd>
+                </div>
+              </dl>
               <Text variant="micro" tone="dim" as="p">
-                Endpoint <Info>Stated by the owner of the name. No contract reads it and nothing enforces it.</Info>
+                Compared rather than assumed. If these ever diverge, the name is pointing at a resolver that
+                stores figures instead of computing them, and the contract is the one to believe.
               </Text>
-              <Text variant="body" tone="copy" as="p" className="mono kv__break">
-                {agent.endpoint}
+            </Stack>
+          </CardBody>
+        </Card>
+      ) : null}
+
+      <Card>
+        <CardBody>
+          <Stack direction="column" gap="xs" align="start">
+            <Text variant="micro" tone="dim" as="p" className="eyebrow">
+              who can cut it off
+            </Text>
+            <Authority rungs={agent.chain} owner={agent.owner} boundBy={agent.boundBy} />
+          </Stack>
+        </CardBody>
+      </Card>
+
+      {agent.endpoint || agent.context ? (
+        <Card>
+          <CardBody>
+            <Stack direction="column" gap="xs" align="start">
+              <Text variant="micro" tone="dim" as="p" className="eyebrow">
+                what it says about itself
               </Text>
-            </div>
-          ) : null}
-        </Stack>
-      </CardBody>
-    </Card>
+              <Text variant="body" tone="copy" as="p">
+                Text records, written by the owner of the name. No contract reads them and nothing here enforces
+                them.
+              </Text>
+              {agent.endpoint ? (
+                <Fact label="Endpoint">
+                  <span className="mono kv__break">{agent.endpoint}</span>
+                </Fact>
+              ) : null}
+              {agent.context ? <Fact label="Context">{agent.context}</Fact> : null}
+            </Stack>
+          </CardBody>
+        </Card>
+      ) : null}
+    </>
   );
 }
 
@@ -257,7 +247,7 @@ export default function Resolve() {
   const [params, setParams] = useSearchParams();
   const asked = params.get("q") ?? "";
   const [typed, setTyped] = useState(asked);
-  const lookup = useLookup(asked);
+  const lookup = useResolvedAgent(asked);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -273,9 +263,8 @@ export default function Resolve() {
           </Text>
           <Headline lines={["Ask an agent", "what it may spend."]} />
           <Text variant="lead" tone="copy" as="p" className="public__lede">
-            A name, or the address in a payment. The name says which contract to ask; the
-            contract says what this agent may still draw, and who can cut it off. No wallet,
-            no account, no permission from us.
+            A name, or the address in a payment. The name says which contract to ask; the contract says what
+            this agent may still draw, and who can cut it off. No wallet, no account, no permission from us.
           </Text>
         </header>
 
@@ -298,34 +287,29 @@ export default function Resolve() {
         </Card>
 
         {lookup.state === "looking" ? (
-          <Notice title="Asking ENS, then the contract.">
-            A resolver, then a registry read, then the vault.
-          </Notice>
+          <Notice title="Asking ENS, then the contract.">A resolver, then a registry read, then the vault.</Notice>
         ) : null}
 
-        {lookup.state === "done" && lookup.result.ok ? <Found agent={lookup.result.agent} /> : null}
+        {lookup.state === "found" ? <Found agent={lookup.agent} /> : null}
 
-        {lookup.state === "done" && !lookup.result.ok && lookup.result.reason === "unnamed" ? (
+        {lookup.state === "unnamed" ? (
           <Notice title="Nothing here can be verified.">
-            <span className="mono">{lookup.result.subject}</span> has no name that resolves back
-            to it. Either it never had one, or the name it had has stopped resolving — because
-            it was unregistered, or because a name above it was. ENS answers all three the same
-            way. A seller whose gate is this lookup refuses here, before serving.
+            <span className="mono">{lookup.subject}</span> has no name that resolves back to it. Either it never
+            had one, or the name it had has stopped resolving — because it was unregistered, or because a name
+            above it was. ENS answers all three the same way. A seller whose gate is this lookup refuses here,
+            before serving.
           </Notice>
         ) : null}
 
-        {lookup.state === "done" && !lookup.result.ok && lookup.result.reason === "unbound" ? (
+        {lookup.state === "unbound" ? (
           <Notice title="A name, and no bound.">
-            <span className="mono">{lookup.result.name}</span> resolves to{" "}
-            <span className="mono">{shortAddress(lookup.result.address)}</span> and publishes no
-            mandate. It says nothing about what it may spend, so there is nothing to check it
-            against.
+            <span className="mono">{lookup.name}</span> resolves to{" "}
+            <span className="mono">{shortAddress(lookup.address)}</span> and publishes no mandate. It says
+            nothing about what it may spend, so there is nothing to check it against.
           </Notice>
         ) : null}
 
-        {lookup.state === "done" && !lookup.result.ok && lookup.result.reason === "failed" ? (
-          <Notice title="The lookup itself failed.">{lookup.result.why}</Notice>
-        ) : null}
+        {lookup.state === "failed" ? <Notice title="The lookup itself failed.">{lookup.why}</Notice> : null}
       </Container>
     </RecordShell>
   );

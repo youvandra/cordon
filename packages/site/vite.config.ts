@@ -46,6 +46,11 @@ export default defineConfig({
          resolved a name its own way is a second copy that can disagree with
          the package a seller integrates. */
       { find: /^@cordon\/verify$/, replacement: local("../verify/src/index.ts") },
+      /* The console's reader, reused for the public page so both show the same
+         answer. It is the detailed one — identity, the name compared against
+         the chain, the authority path — and a second implementation here would
+         be a page that could disagree with the console it mirrors. */
+      { find: /^@cordon\/console-resolve$/, replacement: local("../console/src/lib/resolveName.ts") },
       { find: /^react$/, replacement: pkg("react") },
       { find: /^react-dom$/, replacement: pkg("react-dom") },
       { find: /^framer-motion$/, replacement: pkg("framer-motion") },

@@ -35,6 +35,9 @@
       "@cordon/verify": [
         "../verify/src/index.ts"
       ],
+      "@cordon/console-resolve": [
+        "../console/src/lib/resolveName.ts"
+      ],
       "react": [
         "./node_modules/@types/react"
       ],
