@@ -15,7 +15,7 @@
  * Circle's own number rather than failing vaguely.
  */
 import { parseAbi, type Address, type Hex, type PublicClient, type WalletClient } from "viem";
-import { GATEWAY } from "../../fixtures/src/index.ts";
+import { ARC, GATEWAY } from "../../fixtures/src/index.ts";
 import { MAX_AUTH_SECONDS } from "./challenge.ts";
 import {
   GatewayApi,
@@ -426,4 +426,26 @@ function baseUnits(decimal: string): bigint {
 function randomNonce(): Hex {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   return `0x${Buffer.from(bytes).toString("hex")}` as Hex;
+}
+
+/**
+ * Which rail settles a purchase on a given chain.
+ *
+ * Circle's Gateway exists on Arc and nowhere else this project runs, and
+ * `CircleSettler` is built around it: a burn intent, an expiration height and
+ * a wait for Circle's indexer. On a chain without it the vault deposits into
+ * the operator's own balance, so settlement is the authorisation alone.
+ *
+ * Chosen by chain rather than by configuration, because it is a fact about the
+ * chain rather than a preference.
+ *
+ * It lives here because it was written twice and only one copy was right. The
+ * MCP server chose by chain; `daemon/src/main.ts` constructed `CircleSettler`
+ * outright, so the daemon on Sepolia drew a tranche, deposited it into the
+ * operator's own balance, then waited for Circle to report a balance on a chain
+ * Circle has never heard of and failed the purchase — after the draw had
+ * already debited the window. Both callers read this now.
+ */
+export function settlerFor(chainId: number, options: CircleOptions): Settler {
+  return chainId === ARC.chainId ? new CircleSettler(options) : new DirectSettler(options);
 }

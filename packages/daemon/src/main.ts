@@ -3,7 +3,7 @@
  */
 import { load } from "./config.ts";
 import { Gate } from "./gate.ts";
-import { CircleSettler } from "./settle.ts";
+import { settlerFor } from "./settle.ts";
 import { createDaemon } from "./server.ts";
 import { keyFileAt } from "./keyfile.ts";
 import { dirname, join } from "node:path";
@@ -23,7 +23,12 @@ const server = createDaemon({
     live: (node) => gate.isLive(node),
     file: join(dirname(config.keyFile), "released-spent.json"),
   }),
-  settler: new CircleSettler({
+  /* By chain, never hardcoded: Circle's Gateway is on Arc alone, and this
+     constructed `CircleSettler` outright. On Sepolia that drew the tranche,
+     deposited it into the operator's own balance, and then waited for Circle
+     to report a balance on a chain Circle has never heard of — failing the
+     purchase after the window had already been debited. */
+  settler: settlerFor(config.chainId, {
     publicClient: gate.publicClientForSettlement,
     walletFor: (node) => gate.signerFor(node),
     chainId: config.chainId,
