@@ -13,8 +13,9 @@ export interface SettledPurchase {
   price6: bigint;
   drawTx: string;
   drawBlock: bigint;
-  mintTx: string;
-  mintBlock: bigint;
+  /** Absent on the direct rail, where the draw is the deposit. */
+  mintTx?: string;
+  mintBlock?: bigint;
   collectTx: string;
   collectBlock: bigint;
 }

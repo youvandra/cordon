@@ -24,6 +24,7 @@ import {
   PENDING_ADDRESS,
   REGISTRY_BASELINE,
   SETTLEMENT,
+  chainFacts,
   formatUsdc,
 } from "@cordon/fixtures";
 import { TREE, attestationOf, flatten, type Attestation } from "@cordon/fixtures/preview";
@@ -341,20 +342,21 @@ export default function Attest() {
                     On {SETTLEMENT.recordedAt.slice(0, 10)} an agent bought this
                     answer end to end: the contract released{" "}
                     {formatUsdc(SETTLEMENT.price6)} against every bound above
-                    it, Circle's Gateway put that tranche into the operator's
-                    own balance, and the seller collected the authorisation it
-                    was handed. Three transactions, none of them ours to edit.
+                    it,{" "}
+                    {SETTLEMENT.mintTx
+                      ? "Circle's Gateway put that tranche into the operator's own balance, and the seller collected the authorisation it was handed. Three transactions, none of them ours to edit."
+                      : "the draw put that tranche straight into the operator's own wallet, and the seller collected the authorisation it was handed. Two transactions, none of them ours to edit."}
                   </Text>
                   <Stack direction="column" gap="xs" align="start">
-                    {[
+                    {([
                       ["draw", SETTLEMENT.drawTx],
-                      ["release", SETTLEMENT.mintTx],
+                      ...(SETTLEMENT.mintTx ? [["release", SETTLEMENT.mintTx]] : []),
                       ["collect", SETTLEMENT.collectTx],
-                    ].map(([label, tx]) => (
+                    ] as [string, string][]).map(([label, tx]) => (
                       <a
                         key={label}
                         className="mono"
-                        href={`${ARC.explorer}/tx/${tx}`}
+                        href={`${chainFacts(SETTLEMENT.chainId)?.explorer ?? ARC.explorer}/tx/${tx}`}
                         target="_blank"
                         rel="noreferrer"
                       >
@@ -362,14 +364,22 @@ export default function Attest() {
                       </a>
                     ))}
                   </Stack>
-                  <Text variant="micro" tone="dim" as="p">
-                    Settling it cost {formatUsdc(GATEWAY.baseFee6)} in Circle's
-                    fee and about {formatUsdc(GATEWAY.mintGas6)} in gas, both
-                    from the operator's own float and neither inside the
-                    mandate. That floor is why this call is priced at{" "}
-                    {formatUsdc(ATTEST.price6)}: a tranche smaller than the fee
-                    cannot pay for its own release.
-                  </Text>
+                  {SETTLEMENT.mintTx ? (
+                    <Text variant="micro" tone="dim" as="p">
+                      Settling it cost {formatUsdc(GATEWAY.baseFee6)} in Circle's
+                      fee and about {formatUsdc(GATEWAY.mintGas6)} in gas, both
+                      from the operator's own float and neither inside the
+                      mandate. That floor is why this call is priced at{" "}
+                      {formatUsdc(ATTEST.price6)}: a tranche smaller than the fee
+                      cannot pay for its own release.
+                    </Text>
+                  ) : (
+                    <Text variant="micro" tone="dim" as="p">
+                      The direct rail charges nothing on top of the price, so
+                      there is no floor under this one — the price is the
+                      catalogue's median, not a fee.
+                    </Text>
+                  )}
                 </Stack>
               </CardBody>
             </Card>

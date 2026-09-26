@@ -1,8 +1,12 @@
 import { Link } from "react-router-dom";
-import { ARC, ATTEST, GATEWAY, MARKETPLACE, SETTLEMENT, formatUsdc, SEPOLIA } from "@cordon/fixtures";
+import { ARC, ATTEST, GATEWAY, MARKETPLACE, SETTLEMENT, chainFacts, formatUsdc, SEPOLIA } from "@cordon/fixtures";
 import { C, Code, H2, H3, Lead, Note, OL, P, Table } from "../parts";
 
-const tx = (hash: string) => `${ARC.explorer}/tx/${hash}`;
+/* The chain the recorded purchase settled on — Arc while its rail is Circle's
+   Gateway, Sepolia on the direct rail. Held at Arc's explorer, a Sepolia hash
+   would open in an explorer that has never seen it. */
+const tx = (hash: string) =>
+  `${chainFacts(SETTLEMENT.chainId)?.explorer ?? ARC.explorer}/tx/${hash}`;
 const short = (hash: string) => `${hash.slice(0, 10)}…${hash.slice(-6)}`;
 
 /**
@@ -39,7 +43,9 @@ export function Settlement() {
         Cordon bounds is the money that reaches the key doing the signing.
       </P>
 
-      <H2 id="one-purchase">One purchase, as three transactions</H2>
+      <H2 id="one-purchase">
+        One purchase, as {SETTLEMENT.mintTx ? "three" : "two"} transactions
+      </H2>
       <P>
         This is a real one, read back off the chain on{" "}
         {SETTLEMENT.recordedAt.slice(0, 10)}: {formatUsdc(SETTLEMENT.price6)} to
@@ -48,19 +54,24 @@ export function Settlement() {
       <OL>
         <li>
           <b>The draw.</b> The vault checks every node from this one to the
-          root, charges them all, and moves the tranche into this operator's own
-          Gateway balance — nobody else's.{" "}
+          root, charges them all, and moves the tranche into this operator's own{" "}
+          {SETTLEMENT.mintTx ? "Gateway balance" : "wallet"} — nobody else's.{" "}
           <a href={tx(SETTLEMENT.drawTx)} target="_blank" rel="noreferrer">
             <C>{short(SETTLEMENT.drawTx)}</C>
           </a>
         </li>
-        <li>
-          <b>The mint.</b> Circle's Gateway lands the balance where the
-          operator can spend it.{" "}
-          <a href={tx(SETTLEMENT.mintTx)} target="_blank" rel="noreferrer">
-            <C>{short(SETTLEMENT.mintTx)}</C>
-          </a>
-        </li>
+        {/* The second step belongs to Circle's Gateway, which only Arc has. On
+            the direct rail the draw above is the deposit, and the list is two
+            long rather than padded with a step that did not happen. */}
+        {SETTLEMENT.mintTx ? (
+          <li>
+            <b>The mint.</b> Circle's Gateway lands the balance where the
+            operator can spend it.{" "}
+            <a href={tx(SETTLEMENT.mintTx)} target="_blank" rel="noreferrer">
+              <C>{short(SETTLEMENT.mintTx)}</C>
+            </a>
+          </li>
+        ) : null}
         <li>
           <b>The collection.</b> The operator signs an EIP-3009 authorisation
           for exactly the price, and the seller collects it.{" "}

@@ -107,8 +107,17 @@ const SCENARIOS: Record<ScenarioId, { label: string; steps: Step[] }> = {
         from: 2,
         to: 1,
         title: "One tranche leaves the vault.",
-        body: <>Circle's Gateway lands it in this agent's own balance. One purchase worth, never more.</>,
-        tx: { label: "gateway release", hash: SETTLEMENT.mintTx, chainId: SETTLEMENT.chainId },
+        /* Two rails. Arc's Gateway lands the tranche in a second transaction;
+           on the direct rail the draw itself deposits it, so there is no
+           release to open and the copy says which one this is. */
+        body: SETTLEMENT.mintTx ? (
+          <>Circle's Gateway lands it in this agent's own balance. One purchase worth, never more.</>
+        ) : (
+          <>The draw deposits it straight into this agent's own wallet — no Gateway on this chain, and no fee on top of the price. One purchase worth, never more.</>
+        ),
+        ...(SETTLEMENT.mintTx
+          ? { tx: { label: "gateway release", hash: SETTLEMENT.mintTx, chainId: SETTLEMENT.chainId } }
+          : {}),
       },
       {
         from: 1,
