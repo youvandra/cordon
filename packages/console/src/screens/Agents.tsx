@@ -253,83 +253,85 @@ export default function Agents() {
         size={460}
         title={selected && names.ofNode(selected.node) ? names.ofNode(selected.node) : "Agent"}
         description={selected ? shortId(selected.node, 10, 8) : undefined}
-      >
-        {selected ? (
-          <>
-            {/* The actions sit at the top of the panel rather than in a footer.
-                A control at the sheet's bottom edge opened its menu off the
-                screen, which read as a button that did nothing; and a panel
-                read top-down should offer what may be done with the agent
-                before it lists what the agent is. */}
-            {mine && (!isCut(selected.node) || selected.parent === null) ? (
-              (() => {
-                const cut = isCut(selected.node);
-                const named = names.ofNode(selected.node) ?? names.of(selected.operator);
-                /* One obvious action and a menu. Five buttons in a row made the
-                   panel read as a toolbar: the thing an owner does nine times
-                   out of ten — spawn beneath this agent — sat beside four
-                   others of equal weight, and revoke, which is irreversible,
-                   sat beside them too. */
-                const more: DropdownButtonProps["items"] = [
-                  ...(cut
-                    ? []
-                    : [
-                        {
-                          id: "fuel",
-                          label: "Send gas to the operator",
-                          onSelect: () => setFueling(selected),
-                        },
-                      ]),
-                  /* Only where the agent has no name. A named agent is named;
-                     reissuing is not an owner action this screen invites, and a
-                     second name bound to one mandate is two answers to the same
-                     question. */
-                  ...(cut || named
-                    ? []
-                    : [{ id: "name", label: "Name this agent", onSelect: () => setNaming(selected) }]),
-                  ...(selected.parent === null
-                    ? [
-                        {
-                          id: "withdraw",
-                          label: "Withdraw from the vault",
-                          onSelect: () => setWithdrawing(selected),
-                        },
-                      ]
-                    : []),
-                  ...(cut
-                    ? []
-                    : [
-                        "separator" as const,
-                        {
-                          id: "revoke",
-                          label: "Revoke this branch",
-                          destructive: true,
-                          onSelect: () => setRevoking(selected),
-                        },
-                      ]),
-                ];
+        footer={
+          /* A revoked root keeps its footer: its vault can still be emptied,
+             and that is the one thing left to do with it. */
+          mine && selected && (!isCut(selected.node) || selected.parent === null) ? (
+            (() => {
+              const cut = isCut(selected.node);
+              const named = names.ofNode(selected.node) ?? names.of(selected.operator);
+              /* One obvious action and a menu. Five buttons in a row made the
+                 panel read as a toolbar: the thing an owner does nine times out
+                 of ten — spawn beneath this agent — sat beside four others of
+                 equal weight, and revoke, which is irreversible, sat beside
+                 them too. */
+              const more: DropdownButtonProps["items"] = [
+                ...(cut
+                  ? []
+                  : [
+                      {
+                        id: "fuel",
+                        label: "Send gas to the operator",
+                        onSelect: () => setFueling(selected),
+                      },
+                    ]),
+                /* Only where the agent has no name. A named agent is named;
+                   reissuing is not an owner action this screen invites, and a
+                   second name bound to one mandate is two answers to the same
+                   question. */
+                ...(cut || named
+                  ? []
+                  : [{ id: "name", label: "Name this agent", onSelect: () => setNaming(selected) }]),
+                ...(selected.parent === null
+                  ? [
+                      {
+                        id: "withdraw",
+                        label: "Withdraw from the vault",
+                        onSelect: () => setWithdrawing(selected),
+                      },
+                    ]
+                  : []),
+                ...(cut
+                  ? []
+                  : [
+                      "separator" as const,
+                      {
+                        id: "revoke",
+                        label: "Revoke this branch",
+                        destructive: true,
+                        onSelect: () => setRevoking(selected),
+                      },
+                    ]),
+              ];
 
-                return (
-                  <div className="agent-actions">
-                    {cut ? null : (
-                      <Button
-                        variant="primary"
-                        iconStart="plus"
-                        disabled={selected.depth + 1 > selected.maxDepth}
-                        onClick={() => setSpawnParent(selected)}
-                      >
-                        {selected.depth + 1 > selected.maxDepth ? "At max depth" : "Spawn under this agent"}
-                      </Button>
-                    )}
-                    <DropdownButton variant="secondary" align="start" items={more}>
+              return (
+                <div className="sheet-actions">
+                  {cut ? null : (
+                    <Button
+                      variant="primary"
+                      iconStart="plus"
+                      disabled={selected.depth + 1 > selected.maxDepth}
+                      onClick={() => setSpawnParent(selected)}
+                    >
+                      {selected.depth + 1 > selected.maxDepth ? "At max depth" : "Spawn under this agent"}
+                    </Button>
+                  )}
+                  <span className="sheet-actions__end">
+                    {/* Opens upward. The footer is the sheet's bottom edge, so a
+                        panel below it is off the screen — which is what made
+                        this read as a button that did nothing. */}
+                    <DropdownButton variant="secondary" align="end" side="top" items={more}>
                       More
                     </DropdownButton>
-                  </div>
-                );
-              })()
-            ) : null}
-            <NodeDetail node={selected} all={nodes} cut={isCut(selected.node)} names={names} />
-          </>
+                  </span>
+                </div>
+              );
+            })()
+          ) : undefined
+        }
+      >
+        {selected ? (
+          <NodeDetail node={selected} all={nodes} cut={isCut(selected.node)} names={names} />
         ) : null}
       </Sheet>
 

@@ -623,15 +623,6 @@ html.entrance-done .cordon-card {
   gap: 8px;
 }
 
-/* The agent panel's actions, at the top of the sheet. Left-aligned, so the
-   menu opens down over the detail rather than off the panel's bottom edge. */
-.agent-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: var(--cordon-space-4);
-}
-
 /* ---- composing a mandate -------------------------------------------------- */
 
 .compose {
