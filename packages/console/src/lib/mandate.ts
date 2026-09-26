@@ -113,7 +113,14 @@ export function useOpenMandate(expected?: string | null) {
         const provider = await wallet.getEthereumProvider();
         const account = wallet.address as `0x${string}`;
         const walletClient = createWalletClient({ account, chain: arc, transport: custom(provider) });
-        const publicClient = createPublicClient({ chain: arc, transport: custom(provider) });
+        /* The chain over HTTP for the reads and the receipt, for the same
+           reason `signerFor` does it: the wallet provider is for signing. */
+        const publicClient = createPublicClient({
+          chain: arc,
+          transport: http(CHAIN.rpc),
+          pollingInterval: 1_000,
+          cacheTime: 0,
+        });
 
         const call = {
           address: REGISTRY,
@@ -311,7 +318,15 @@ export type ActionState =
   | { status: "done"; hash: Hex }
   | { status: "failed"; why: string };
 
-/** The wallet the screen is showing, and a client that can sign with it. */
+/**
+ * The wallet the screen is showing, and a client that can sign with it.
+ *
+ * The reader is the chain over HTTP, not the wallet's own provider. Every
+ * action here ends by waiting for a receipt, and a provider that answers that
+ * poll slowly — or not at all — leaves the dialog spinning while the
+ * transaction is long mined. viem's default poll is four seconds; this one is
+ * one, against an endpoint that is only asked to read.
+ */
 export async function signerFor(wallets: ReturnType<typeof useWallets>["wallets"], expected: string) {
   const wallet = wallets.find((w) => w.address.toLowerCase() === expected.toLowerCase());
   if (!wallet) throw new Error("the wallet shown here is not one this page can sign with");
@@ -321,7 +336,12 @@ export async function signerFor(wallets: ReturnType<typeof useWallets>["wallets"
   return {
     account,
     wallet: createWalletClient({ account, chain: arc, transport: custom(provider) }),
-    reader: createPublicClient({ chain: arc, transport: custom(provider) }),
+    reader: createPublicClient({
+      chain: arc,
+      transport: http(CHAIN.rpc),
+      pollingInterval: 1_000,
+      cacheTime: 0,
+    }),
   };
 }
 

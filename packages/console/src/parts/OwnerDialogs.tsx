@@ -6,9 +6,16 @@ import { useNameAgent, useParentCheck } from "../lib/naming";
 import type { ChainNode } from "../lib/tree";
 import { shortId, usdc6 } from "../lib/format";
 
-/** A reload a moment later, so the toast that said what happened is read first. */
+/**
+ * A reload a moment later, so the toast that said what happened is read first.
+ *
+ * Short, because by the time this fires the receipt is already in hand — the
+ * wait that made these dialogs feel stuck was the receipt poll, not this — and
+ * every extra second is another second the screen shows the state before the
+ * transaction it just confirmed.
+ */
 function reloadSoon() {
-  window.setTimeout(() => window.location.reload(), 1400);
+  window.setTimeout(() => window.location.reload(), 700);
 }
 
 /**
