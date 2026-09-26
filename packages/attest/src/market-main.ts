@@ -20,7 +20,21 @@ import { createMarket } from "./market.ts";
 import type { Terms } from "./payment.ts";
 
 const chainId = Number(process.env.CORDON_CHAIN_ID ?? DEFAULT_CHAIN.chainId);
-const rpc = process.env.CORDON_RPC ?? DEFAULT_CHAIN.rpc;
+
+/**
+ * Beacon's own RPC, ahead of the shared one.
+ *
+ * On the box this runs beside `attest`, reads the same `.env.attest` for the
+ * key, and that file carries `CORDON_RPC` pointing at Arc — because `attest`
+ * is on Arc. Beacon is on Sepolia. Taking `CORDON_RPC` from there gave it a
+ * Sepolia chain id and an Arc endpoint, so it looked up Sepolia's USDC on Arc,
+ * found no contract, and died on a `DOMAIN_SEPARATOR` that read as a bad token
+ * rather than as a wrong network.
+ *
+ * `CORDON_MARKET_RPC` cannot collide with the other seller's, which is the
+ * whole reason it has its own name.
+ */
+const rpc = process.env.CORDON_MARKET_RPC ?? process.env.CORDON_RPC ?? DEFAULT_CHAIN.rpc;
 const port = Number(process.env.CORDON_MARKET_PORT ?? MARKET.port);
 const bind = process.env.CORDON_BIND ?? "127.0.0.1";
 
@@ -53,6 +67,23 @@ const client = createPublicClient({
   pollingInterval: 250,
   cacheTime: 250,
 }) as PublicClient;
+
+/**
+ * The endpoint has to be on the chain it was told to serve.
+ *
+ * Every address below is chosen by chain id — the asset from `facts.erc20`,
+ * the domain read from that asset — while every call goes to `rpc`. Let the
+ * two disagree and the failure surfaces as whatever the other chain happens
+ * to hold at those addresses, which is a token that looks broken or, worse, a
+ * real contract that is not the one meant. So it is checked once, here, before
+ * a price is quoted to anybody.
+ */
+const live = await client.getChainId();
+if (live !== chainId) {
+  console.error(`CORDON_CHAIN_ID is ${chainId} and the RPC answers ${live}.`);
+  console.error("Set CORDON_MARKET_RPC to an endpoint for the chain this seller serves.");
+  process.exit(2);
+}
 
 const asset = (process.env.CORDON_ATTEST_ASSET ?? facts.erc20) as Address;
 const domain = await resolveDomain(client, asset, chainId);

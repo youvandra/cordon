@@ -27,7 +27,17 @@ Environment=NODE_ENV=production
 # starts asking for settlement somewhere the payer did not sign for.
 Environment=CORDON_CHAIN_ID=11155111
 Environment=CORDON_MARKET_PORT=8409
+# The key, and nothing else this unit relies on. The file also carries
+# `CORDON_RPC`, which is Arc's, because the endpoint it was written for is on
+# Arc — hence `CORDON_MARKET_RPC` below rather than a second copy of the key in
+# a file of our own.
 EnvironmentFile=/home/ubuntu/cordon/.env.attest
+# Sepolia's endpoint, under a name the other seller does not read. Without it
+# Beacon took Arc's RPC from the file above while addressing Sepolia's USDC,
+# and refused to start once it began checking. It checks now: a chain id from
+# the RPC that disagrees with CORDON_CHAIN_ID exits 2 rather than quoting a
+# price against the wrong network.
+Environment=CORDON_MARKET_RPC=https://ethereum-sepolia-rpc.publicnode.com
 ExecStart=/usr/bin/node src/market-main.ts
 Restart=on-failure
 RestartSec=5s
