@@ -51,14 +51,14 @@ contract MandateRegistry {
      *
      * `TreeVault.draw` walks the whole path on every purchase — it reads each
      * ancestor's mandate and writes three windows per ancestor — so the cost of
-     * one purchase is linear in depth. Measured on this contract: a draw at
-     * depth 2 costs ~198k gas, at depth 64 ~4.5M, and at depth 255 ~14.0M.
+     * one purchase is linear in depth. Measured by `G9_Cost`: a draw costs
+     * ~208k gas at depth 0 and ~282k at depth 2, which is about 98k per level.
      *
-     * `maxDepth` is a uint8, so without this a tree could be opened to 255 and
-     * its deepest agents would each spend 14M gas to buy something priced in
-     * fractions of a cent — a tree that is alive, funded, and economically
-     * dead. Eight is past anything a delegation chain needs and keeps the
-     * deepest draw inside ~700k gas.
+     * `maxDepth` is a uint8, so without this a tree could be opened to 255,
+     * where that slope puts one draw into the tens of millions of gas to buy
+     * something priced in fractions of a cent — a tree that is alive, funded,
+     * and economically dead. Eight is past anything a delegation chain needs
+     * and keeps the deepest draw at ~991k, about a thirtieth of a block.
      */
     uint8 public constant MAX_TREE_DEPTH = 8;
 

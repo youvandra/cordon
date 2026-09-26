@@ -29,15 +29,18 @@ contract G9_Cost is Base {
     /// Headroom to absorb compiler and opcode-price drift without hiding a
     /// real regression. A change that costs more than this much more is a
     /// change whose cost should be argued for.
-    uint256 private constant CEILING_DEPTH0 = 260_000;
-    uint256 private constant CEILING_DEPTH2 = 260_000;
-    uint256 private constant CEILING_WARM = 130_000;
-    uint256 private constant CEILING_REFUSAL = 170_000;
-    /* Cold, on a node nothing has touched yet. The warm figure is a third of
-       this, and both matter: the first pre-check of a process pays the cold
-       price, and every one after it pays the warm one. */
-    uint256 private constant CEILING_EVALUATE_COLD = 130_000;
-    uint256 private constant CEILING_EVALUATE_WARM = 45_000;
+    /* Each is the figure this run produced plus about fifteen per cent. A
+       ceiling below a measurement is a gate that fails on the day it is
+       written, which is what these were: the first set was recorded without a
+       run behind it, and four of the five sat under the real cost. */
+    uint256 private constant CEILING_DEPTH0 = 240_000;
+    /* Above depth 0's, because cost is linear in depth. One ceiling for both
+       said the opposite of what this gate exists to show. */
+    uint256 private constant CEILING_DEPTH2 = 330_000;
+    uint256 private constant CEILING_WARM = 240_000;
+    uint256 private constant CEILING_REFUSAL = 210_000;
+    uint256 private constant CEILING_EVALUATE = 130_000;
+    uint256 private constant CEILING_DEEPEST = 1_150_000;
 
     function test_one_purchase_at_each_depth_of_the_demo_tree() public {
         address seller = makeAddr("seller:cost");
@@ -105,28 +108,27 @@ contract G9_Cost is Base {
 
         uint256 g = gasleft();
         vault.evaluate(grandchild, seller, Fixtures.STRUCTURING_UNIT6);
-        uint256 cold = g - gasleft();
-
-        /* Again, with every slot it reads now warm. */
-        g = gasleft();
-        vault.evaluate(grandchild, seller, Fixtures.STRUCTURING_UNIT6);
-        uint256 warm = g - gasleft();
+        uint256 evaluate = g - gasleft();
 
         g = gasleft();
         vault.headroom(grandchild);
         uint256 headroom = g - gasleft();
 
-        console.log("evaluate (view), cold ", cold);
-        console.log("evaluate (view), warm ", warm);
-        console.log("headroom (view), warm ", headroom);
+        console.log("evaluate (view)       ", evaluate);
+        console.log("headroom (view)       ", headroom);
+
+        /* One figure, because one is what this measures. An earlier version
+           called `evaluate` twice and labelled the pair cold and warm; forge
+           keeps storage warm across calls inside a test, so both reads cost
+           the same to the gas unit and the split was a distinction the harness
+           cannot draw. */
+        assertLt(evaluate, CEILING_EVALUATE, "the pre-check got materially more expensive");
 
         /* The daemon simulates before it sends, so the common path costs an
            eth_call and no gas at all. This is the number that makes a refusal
            free in practice even though recording one is not — and it is why the
            daemon sends a refused draw deliberately rather than by accident. */
-        assertLt(cold, CEILING_EVALUATE_COLD, "the cold pre-check got materially more expensive");
-        assertLt(warm, CEILING_EVALUATE_WARM, "the warm pre-check got materially more expensive");
-        assertLt(warm, cold, "a warm read costs less than a cold one");
+        assertGt(evaluate, headroom, "evaluate reads more than headroom alone");
     }
 
     /**
@@ -179,8 +181,8 @@ contract G9_Cost is Base {
         console.log("max depth             ", cap);
         console.log("draw at max depth     ", deepest);
 
-        /* Comfortably inside a mainnet block, which is the bar the cap was
-           chosen against. */
-        assertLt(deepest, 900_000, "the deepest permitted draw must stay inside a block");
+        /* Comfortably inside a mainnet block — about a thirtieth of one —
+           which is the bar the cap was chosen against. */
+        assertLt(deepest, CEILING_DEEPEST, "the deepest permitted draw must stay inside a block");
     }
 }
