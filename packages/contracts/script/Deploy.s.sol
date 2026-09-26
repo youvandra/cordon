@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {Script, console} from "forge-std/Script.sol";
 import {MandateRegistry} from "../src/MandateRegistry.sol";
 import {TreeVault} from "../src/TreeVault.sol";
+import {LocalGateway} from "../src/LocalGateway.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IGatewayWallet} from "../src/interfaces/IGatewayWallet.sol";
 import {ConductRecord} from "../src/ConductRecord.sol";
@@ -35,18 +36,30 @@ import {Fixtures} from "../test/Fixtures.gen.sol";
 contract Deploy is Script {
     function run() external {
         address usdc = vm.envOr("CORDON_USDC", Fixtures.USDC);
-        address gateway = vm.envOr("CORDON_GATEWAY", Fixtures.GATEWAY_WALLET);
+        /* A gateway the caller names is used as given. Left unset, this chain
+           has no Circle Gateway and the local rail is deployed instead: without
+           it a draw credits a balance inside a ledger the operator cannot spend
+           from, and every settlement signs against a wallet that never received
+           the money. `script/deploy.sh` names Arc's from the fixtures, so Arc
+           never reaches this branch. */
+        address gateway = vm.envOr("CORDON_GATEWAY", address(0));
+        /* Arc has Circle's Gateway, so a direct run there keeps it without the
+           caller having to say so. Everywhere else has none. */
+        if (gateway == address(0) && block.chainid == Fixtures.CHAIN_ID) {
+            gateway = Fixtures.GATEWAY_WALLET;
+        }
         address identity = vm.envOr("CORDON_IDENTITY", Fixtures.IDENTITY_REGISTRY);
         address reputation = vm.envOr("CORDON_REPUTATION", Fixtures.REPUTATION_REGISTRY);
 
         require(usdc.code.length > 0, "USDC has no code on this chain");
-        require(gateway.code.length > 0, "GatewayWallet has no code on this chain");
         require(identity.code.length > 0, "ERC-8004 Identity has no code on this chain");
         require(reputation.code.length > 0, "ERC-8004 Reputation has no code on this chain");
 
         vm.startBroadcast();
 
         MandateRegistry registry = new MandateRegistry();
+        if (gateway == address(0)) gateway = address(new LocalGateway());
+        require(gateway.code.length > 0, "the gateway has no code on this chain");
         TreeVault vault = new TreeVault(IERC20(usdc), registry, IGatewayWallet(gateway));
         ConductRecord record =
             new ConductRecord(vault, IIdentityRegistry(identity), IReputationRegistry(reputation));

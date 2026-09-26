@@ -74,9 +74,11 @@ writeFileSync(
       vault: deployed.TreeVault,
       record: deployed.ConductRecord,
       /* Not ours, and not deployed by this script — recorded so a reader can
-         see what the vault was pointed at without reading a constructor. */
+         see what the vault was pointed at without reading a constructor. A
+         chain with no Circle Gateway gets a `LocalGateway` from the deploy
+         itself, and that address is only knowable from the broadcast. */
       usdc: process.env.CORDON_USDC ?? null,
-      gateway: process.env.CORDON_GATEWAY ?? null,
+      gateway: deployed.LocalGateway ?? process.env.CORDON_GATEWAY ?? null,
       /* Live already, at deterministic addresses across 40+ chains. Recorded
          for the same reason as the two above: so a reader can see where the
          conduct record goes without reading a constructor argument. */

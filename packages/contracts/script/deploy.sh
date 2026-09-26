@@ -50,17 +50,23 @@ echo "account   $ACCOUNT (keystore)"
 # stale copy of any of them.
 node ../fixtures/scripts/emit-solidity.ts
 
-# The same four addresses, exported so the recorder writes what the script
-# deployed against rather than leaving nulls beside real addresses. Solidity
-# reads them through vm.envOr and falls back to the same fixtures, so there is
-# still exactly one source.
+# The same addresses, exported so the recorder writes what the script deployed
+# against rather than leaving nulls beside real addresses. Solidity reads them
+# through vm.envOr and falls back to the same fixtures, so there is still
+# exactly one source. USDC is read for the chain being deployed to: Arc's token
+# is not Sepolia's, and pointing the vault at the wrong one is a deployment
+# that reads correctly and holds the wrong money.
 fixture() { node -e "import('../fixtures/src/index.ts').then((f) => console.log($1))"; }
-export CORDON_USDC="${CORDON_USDC:-$(fixture 'f.ARC.erc20')}"
-export CORDON_GATEWAY="${CORDON_GATEWAY:-$(fixture 'f.GATEWAY.wallet')}"
+export CORDON_USDC="${CORDON_USDC:-$(node -e "import('../fixtures/src/index.ts').then((f) => console.log(f.chainFacts($CHAIN_ID).erc20))")}"
+# Circle's GatewayWallet is on Arc. A chain that has none is left without a
+# gateway, so Deploy.s.sol puts the local rail in front of the vault instead.
+if [ -z "${CORDON_GATEWAY:-}" ] && [ "$CHAIN_ID" = "5042002" ]; then
+  export CORDON_GATEWAY="$(fixture 'f.GATEWAY.wallet')"
+fi
 export CORDON_IDENTITY="${CORDON_IDENTITY:-$(fixture 'f.ERC8004.identity')}"
 export CORDON_REPUTATION="${CORDON_REPUTATION:-$(fixture 'f.ERC8004.reputation')}"
 echo "usdc      $CORDON_USDC"
-echo "gateway   $CORDON_GATEWAY"
+echo "gateway   ${CORDON_GATEWAY:-(deployed locally by Deploy.s.sol)}"
 echo "identity  $CORDON_IDENTITY"
 echo "reputatn  $CORDON_REPUTATION"
 
