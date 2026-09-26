@@ -100,6 +100,25 @@ touched.
 
 ### Corrected
 
+- **The demo's own runbook was written from the repo rather than from a run.**
+  `/demo` printed six commands and four were wrong in ways that only show on
+  stage: two passed no environment, so `resolve-agent.ts` ran, looked like it
+  worked and silently dropped the bound it exists to print; the prep step named
+  `.env.live`, which holds Arc's chain and Arc's addresses, so T-30 started the
+  daemon against the wrong chain; and beat 3 asked a $0.01 endpoint to breach a
+  $1 cap, so the beat about a refusal would have settled. Every command is now
+  one that was run against the live tree first.
+- **`DEMOS[11155111]` still held the tree from before the 26 September
+  redeploy.** That root answers `isLive: false` and `agentIdOf: 0`, so the meter
+  answered "no such tree in this range" and every surface keyed on it fell back
+  to its labelled preview rows — including `/demo`'s pre-flight, whose whole job
+  is to report the tree's real condition.
+- **Beat 4 asserted its own outcome.** It reads "zero, and an ancestor's id
+  beside it"; on a freshly funded tree `headroom` answers with the node's own
+  budget and the node's own id, which is a true answer and the one thing the
+  beat exists to rule out. It now reads the comparison, says which case it is
+  in, and the pre-flight carries the check — the five checks around it describe
+  the tree's shape, and this one depends on where the money sits inside it.
 - **"An agent that can buy things and cannot move money" was not true**, and it
   was on npm, in the README, in the agent's own skill and on the docs page. The
   agent chooses the URL and the payee comes from that URL's 402, so a hostile
