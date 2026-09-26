@@ -29,8 +29,8 @@ const APP_ID: string | undefined =
 
 /* Neither chain Cordon runs on is anybody's default, so the wallet is told
    about the one this console speaks for, from the same place every other
-   surface reads it. */
-const arc = chain;
+   surface reads it. Named for the chain it is rather than for Arc, which is
+   what it held when there was only one. */
 
 interface WalletState {
   address: string | null;
@@ -177,8 +177,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         /* An owner who logs in with an email has no wallet yet, and the
            mandate needs one. */
         embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" } },
-        defaultChain: arc,
-        supportedChains: [arc],
+        defaultChain: chain,
+        supportedChains: [chain],
       }}
     >
       <PrivyWallet>{children}</PrivyWallet>

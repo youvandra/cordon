@@ -6,6 +6,7 @@ of them can see — and no agent in the tree holds a key.
 
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-363636)](packages/contracts)
 [![EVM](https://img.shields.io/badge/EVM-Shanghai-363636)](packages/contracts/foundry.toml)
+[![Sepolia](https://img.shields.io/badge/Ethereum%20Sepolia-11155111-000000)](https://sepolia.etherscan.io)
 [![Arc](https://img.shields.io/badge/Arc%20testnet-5042002-000000)](https://testnet.arcscan.app)
 [![Node](https://img.shields.io/badge/Node-23.6%2B-5FA04E)](#running-it)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6)](packages/daemon/package.json)
@@ -37,8 +38,9 @@ of them can see — and no agent in the tree holds a key.
 ## What existed before this weekend, and what was built during it
 
 Cordon is entered at **ETHGlobal Tokyo 2026** on the **Continuity track**. It
-was built for ETHOnline 2026 and has been running on Arc testnet since
-September. The boundary is a tag rather than a claim:
+was built for ETHOnline 2026, has been running on Arc testnet since
+September, and now runs on Ethereum Sepolia as well — which is where ENSv2
+is, so where the names are. The boundary is a tag rather than a claim:
 
 ```bash
 git log  v0.1.0..HEAD      # the weekend's work, and nothing else
@@ -177,7 +179,7 @@ permission to use them. The settlement rail is the same one; what Cordon adds
 is the part a wallet cannot express — that a purchase made three delegations
 down still counts against what the person at the top signed.
 
-**What this does not do yet.** Cordon runs on Arc testnet, and marketplace
+**What this does not do yet.** Cordon runs on testnets, and marketplace
 sellers settle on mainnet chains, so a Cordon mandate cannot pay one of them
 today — Circle's catalogue listed 929 services on 13 September and none on a
 testnet. So there are two sellers of our own to point at:
@@ -207,7 +209,7 @@ flowchart TB
         D["cordonFetch<br/><i>reads the seller's 402, asks the vault,<br/>signs the payment</i>"]
     end
 
-    subgraph chain[" Enforcement — Arc testnet 5042002 "]
+    subgraph chain[" Enforcement — the contracts, on either chain "]
         direction LR
         MR["MandateRegistry<br/><i>the tree, and narrowing</i>"]
         TV["TreeVault<br/><i>the money, and ancestor debit</i>"]
@@ -217,7 +219,7 @@ flowchart TB
     end
 
     subgraph record[" The record — not ours "]
-        E8["ERC-8004 Identity + Reputation<br/><i>already live on Arc</i>"]
+        E8["ERC-8004 Identity + Reputation<br/><i>already live, same address on both</i>"]
     end
 
     subgraph read[" Readers "]
@@ -238,7 +240,7 @@ flowchart TB
 ```
 
 **The contracts decide.** Nothing above them can permit what they refuse.
-**The meter** reduces Arc's events into the shape the pages render and is
+**The meter** reduces the chain's events into the shape the pages render and is
 rebuildable from the chain, so our own database is never the authority on what
 happened. **The console** is where a person signs. **The agent** holds nothing.
 
@@ -366,19 +368,19 @@ another in an agent's instructions.
 Arc testnet, chain **5042002**. All three verified on
 [arcscan](https://testnet.arcscan.app).
 
-<!-- deployed:start -->
+<!-- deployed:5042002:start -->
 | Contract | Address |
 |---|---|
 | `MandateRegistry` | [`0xf86de085e63b00c9fba300b19807c883deb961e9`](https://testnet.arcscan.app/address/0xf86de085e63b00c9fba300b19807c883deb961e9) |
 | `TreeVault` | [`0x00ab57acd260c594a661b6101bdf7e92267af135`](https://testnet.arcscan.app/address/0x00ab57acd260c594a661b6101bdf7e92267af135) |
 | `ConductRecord` | [`0x2a8361ac23f5ffcfde9f0d7bc7618178770332d0`](https://testnet.arcscan.app/address/0x2a8361ac23f5ffcfde9f0d7bc7618178770332d0) |
-<!-- deployed:end -->
+<!-- deployed:5042002:end -->
 
-Addresses live in `packages/contracts/deployments/5042002.json` and nowhere
-else — including the table above, which `deploy.sh` rewrites from that file.
-Nothing in this repository hardcodes one.
+Addresses live in `packages/contracts/deployments/<chainId>.json` and nowhere
+else — including both tables here, which `deploy.sh` rewrites from those files
+into the markers naming each chain. Nothing in this repository hardcodes one.
 
-Also on Arc, and not ours: ERC-8004 **Identity** at
+On both chains, and not ours: ERC-8004 **Identity** at
 `0x8004A818BFB912233c491871b3d84c89A494BD9e` and **Reputation** at
 `0x8004B663056A597Dffe9eCcC1965A193B7388713`. Cordon writes into what is
 already there rather than standing up a registry nobody would read.
@@ -388,16 +390,22 @@ already there rather than standing up a registry nobody would read.
 Where ENSv2 is deployed, so where the agent names live. The Arc deployment is
 unchanged and still running.
 
+<!-- deployed:11155111:start -->
 | Contract | Address |
 |---|---|
-| `MandateRegistry` | [`0x045b2050aadaff4b80a2325d63648c09f15ab1f3`](https://sepolia.etherscan.io/address/0x045b2050aadaff4b80a2325d63648c09f15ab1f3) |
-| `TreeVault` | [`0x12d15135b5bba8eef0d1098aa65a15af503d09c9`](https://sepolia.etherscan.io/address/0x12d15135b5bba8eef0d1098aa65a15af503d09c9) |
-| `ConductRecord` | [`0xf86de085e63b00c9fba300b19807c883deb961e9`](https://sepolia.etherscan.io/address/0xf86de085e63b00c9fba300b19807c883deb961e9) |
-| `LocalGateway` | [`0xa50d9454e71acf152399c872815ae6895cb53229`](https://sepolia.etherscan.io/address/0xa50d9454e71acf152399c872815ae6895cb53229) |
+| `MandateRegistry` | [`0xe799edc4aa6bcaf6915c7a5eadbdc4e709aef4b2`](https://sepolia.etherscan.io/address/0xe799edc4aa6bcaf6915c7a5eadbdc4e709aef4b2) |
+| `TreeVault` | [`0x22d539bdf23e08a856fc80bc991e34948921ad46`](https://sepolia.etherscan.io/address/0x22d539bdf23e08a856fc80bc991e34948921ad46) |
+| `ConductRecord` | [`0x5c026b1b129a9e2171e53c5024f76052006ef1e0`](https://sepolia.etherscan.io/address/0x5c026b1b129a9e2171e53c5024f76052006ef1e0) |
+<!-- deployed:11155111:end -->
 
-`ConductRecord` here shares an address with `MandateRegistry` on Arc. The same
-deployer at the same nonce produces the same address on any chain, so read the
-chain beside an address before reading the address.
+Circle's Gateway does not exist here, so settlement goes through
+`LocalGateway` at
+[`0xa50d9454e71acf152399c872815ae6895cb53229`](https://sepolia.etherscan.io/address/0xa50d9454e71acf152399c872815ae6895cb53229).
+
+The same deployer at the same nonce produces the same address on any chain, so
+read the chain beside an address before reading the address — Sepolia's first
+`ConductRecord` and Arc's `MandateRegistry` shared one until the 26 September
+redeploy moved it.
 
 The live tree hangs from **`mira.eth`**, and `sentinel.mira.eth` is an agent
 under it. Resolve either at
@@ -534,7 +542,7 @@ cat > packages/daemon/.env.live <<'ENV'
 CORDON_VAULT=<TreeVault, from the table above>
 CORDON_REGISTRY=<MandateRegistry, from the same table>
 CORDON_RECORD=<ConductRecord — without it, refusals are enforced and never published>
-CORDON_RPC=https://rpc.testnet.arc.io
+CORDON_RPC=<the RPC for the chain those addresses are on>
 CORDON_PORT=8402
 ENV
 
@@ -911,12 +919,12 @@ itself.
 | Layer | Technology | Why this one |
 |---|---|---|
 | Contracts | Solidity 0.8.28, Foundry, EVM Shanghai | no proxy, no admin key, nothing upgradeable |
-| Chain | Arc testnet (5042002) | sub-second finality, USDC as gas — a tranche the size of one purchase is only affordable here |
+| Chain | Ethereum Sepolia (11155111) and Arc testnet (5042002) | Sepolia is where ENSv2 is, so where the names are; Arc has sub-second finality and USDC as gas, which is what makes a tranche the size of one purchase affordable |
 | Money | USDC, 6-decimal ERC-20 view at `0x3600…0000` | the same asset as the gas, with two decimal views of one balance |
 | Payments | x402 `exact`, EIP-3009, Circle Gateway | the seller's own challenge names the price and the payee |
 | Agent surface | `@modelcontextprotocol/sdk` | one config block into a client people already run |
 | Services | Node 23.6+, TypeScript 5.7, viem 2 | `.ts` sources run directly; no build step in the payment path |
-| Reads | a Node indexer over Arc events | rebuildable from the chain, never the authority |
+| Reads | a Node indexer over the chain's events | rebuildable from the chain, never the authority |
 | Surfaces | React 18, Vite, framer-motion, Privy | Privy holds the key, Cordon holds the bound |
 
 ### What of Circle's, Arc's and Privy's is actually used
@@ -926,7 +934,7 @@ list.
 
 | Circle | Where |
 |---|---|
-| **Arc** testnet, chain 5042002 | every contract, every transaction |
+| **Arc** testnet, chain 5042002 | the first deployment, and every transaction in the Circle work below |
 | **USDC** — native 18-decimal gas *and* the 6-decimal ERC-20 view at `0x3600…0000` | the money and the fee are the same asset |
 | **EIP-3009 `transferWithAuthorization`** | the authorisation the seller collects; the payer spends no gas |
 | **Circle Gateway** — `GatewayWallet.depositFor`, `GatewayMinter` | `TreeVault` deposits a tranche straight into the operator's own balance |
@@ -944,7 +952,7 @@ list.
 |---|---|
 | **`@privy-io/react-auth`** | the console's wallet gate |
 | **Embedded wallets**, `createOnLogin: "users-without-wallets"` | an owner who arrives without a wallet still signs their own mandate |
-| **`defaultChain` / `supportedChains`** with a viem-defined Arc | Arc is nobody's default chain |
+| **`defaultChain` / `supportedChains`** with a chain defined from `packages/fixtures` | neither chain Cordon runs on is anybody's default |
 | **`useWallets()`** as the signer | open, fund, spawn, revoke and release, each simulated before it is sent |
 
 ### Standards
@@ -971,7 +979,7 @@ packages/
   daemon/      holds the operator keys; reads 402s, draws, pays, publishes
   mcp/         the agent's surface — three tools, and SKILL.md
   proxy/       run.ts in front of an unmodified program; it sets the proxy variables
-  meter/       Arc events into a ledger, plus the read API
+  meter/       chain events into a ledger, plus the read API
   attest/      an x402 endpoint of our own: conduct, priced
   eval/        G7 — the gate that measures whether the fence lets work through
   fixtures/    every figure any surface displays, in one place

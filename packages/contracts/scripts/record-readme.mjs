@@ -10,6 +10,13 @@
  * The table is replaced between two markers, so the prose around it is
  * untouched and a reader editing the README cannot be surprised.
  *
+ * The markers carry the chain id, and the explorer comes from the fixtures
+ * for that chain. Both because of what one pair of markers and one hardcoded
+ * explorer did on 26 September 2026: a Sepolia deploy rewrote the Arc table
+ * with Sepolia addresses and linked every one of them to arcscan, so the most
+ * public file in the repository named the wrong chain for three contracts and
+ * pointed at a block explorer that has never heard of them.
+ *
  * Usage: node scripts/record-readme.mjs [chainId]
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -21,8 +28,8 @@ const chainId = Number(process.argv[2] ?? process.env.CORDON_CHAIN_ID ?? 5042002
 const source = resolve(here, `../deployments/${chainId}.json`);
 const readme = resolve(here, "../../../README.md");
 
-const START = "<!-- deployed:start -->";
-const END = "<!-- deployed:end -->";
+const START = `<!-- deployed:${chainId}:start -->`;
+const END = `<!-- deployed:${chainId}:end -->`;
 
 if (!existsSync(source)) {
   console.error(`no deployment at ${source}; README left alone`);
@@ -30,7 +37,16 @@ if (!existsSync(source)) {
 }
 
 const deployment = JSON.parse(readFileSync(source, "utf8"));
-const explorer = process.env.CORDON_EXPLORER ?? "https://testnet.arcscan.app";
+
+/* The chain's own explorer, from the one place chains are described. An
+   explorer that defaults to another chain's produces links that resolve to
+   nothing, which reads as a contract that was never deployed. */
+const { CHAINS } = await import("../../fixtures/src/index.ts");
+const explorer = process.env.CORDON_EXPLORER ?? CHAINS[chainId]?.explorer;
+if (!explorer) {
+  console.error(`chain ${chainId} has no explorer in packages/fixtures; README left alone`);
+  process.exit(1);
+}
 
 const row = (name, address) =>
   `| \`${name}\` | [\`${address}\`](${explorer}/address/${address}) |`;
@@ -48,6 +64,7 @@ const from = text.indexOf(START);
 const to = text.indexOf(END);
 if (from === -1 || to === -1 || to < from) {
   console.error(`README.md has no ${START} … ${END} block; nothing written`);
+  console.error(`Add the pair around chain ${chainId}'s table, or this deploy goes unrecorded.`);
   process.exit(1);
 }
 
