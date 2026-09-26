@@ -1,0 +1,50 @@
+[Unit]
+# Beacon: five paid endpoints on Sepolia, so a demo of the whole loop has
+# something to buy on the chain the agent names are on.
+#
+# The other two sellers take money on Arc. That was fine while the demo was on
+# Arc; it is not, so this exists. Four of its five items sit under a typical
+# per-draw cap and one sits above it, which is what makes a refusal happen
+# because an agent asked for the expensive thing rather than because anyone
+# staged one.
+#
+# It holds the attest endpoint's key, read from the same file, and does the
+# same one thing with it — submit an EIP-3009 authorisation a payer signed. It
+# indexes nothing and reads no upstream: every body it sells is a fixed sample
+# that says so in a field the reader cannot miss.
+Description=Cordon sample market, Beacon (x402 catalogue, on 127.0.0.1:8409)
+Documentation=https://getcordon.xyz/docs/surfaces
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/cordon/packages/attest
+Environment=NODE_ENV=production
+# Sepolia, named rather than defaulted. The default is already this chain, but
+# a seller whose chain moves when a fixture moves is a seller that quietly
+# starts asking for settlement somewhere the payer did not sign for.
+Environment=CORDON_CHAIN_ID=11155111
+Environment=CORDON_MARKET_PORT=8409
+EnvironmentFile=/home/ubuntu/cordon/.env.attest
+ExecStart=/usr/bin/node src/market-main.ts
+Restart=on-failure
+RestartSec=5s
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cordon-market
+
+[Install]
+WantedBy=multi-user.target

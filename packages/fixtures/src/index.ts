@@ -432,7 +432,22 @@ export const COST = {
 export const MARKET = {
   name: "Beacon",
   tagline: "Sample market data for agents",
-  host: "market.getcordon.xyz",
+  /**
+   * Where it answers in public.
+   *
+   * A path on the origin and not a name of its own, unlike the other two
+   * sellers. Those hold subdomains because their URLs were published before
+   * the endpoints existed; nothing had published Beacon's, so it went up
+   * behind `location /market/` and needed neither a certificate nor a DNS
+   * record. nginx strips the prefix, so the paths below are what the process
+   * serves and `https://getcordon.xyz/market` + path is what an agent asks
+   * for.
+   *
+   * Nothing reads this — the server matches on `path` alone and its 402 names
+   * a path, never an absolute URL. It is here so the next person does not
+   * have to find a vhost that was never written.
+   */
+  publicBase: "https://getcordon.xyz/market",
   port: 8409,
   maxTimeoutSeconds: 120,
   items: [

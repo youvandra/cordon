@@ -1,6 +1,6 @@
 # Serving Cordon
 
-Five surfaces, one box, three names.
+Six surfaces, one box, three names.
 
 | What | Where | How |
 |---|---|---|
@@ -10,11 +10,21 @@ Five surfaces, one box, three names.
 | meter read API, Arc | `https://getcordon.xyz/api/arc/` | `cordon-meter.service` on `127.0.0.1:8404`, proxied |
 | attest | `https://attest.getcordon.xyz/` | `cordon-attest.service` on `127.0.0.1:8405`, proxied |
 | demo seller | `https://demo-seller.getcordon.xyz/` | `cordon-demo-seller.service` on `127.0.0.1:8406`, proxied |
+| Beacon, the sample market | `https://getcordon.xyz/market/` | `cordon-market.service` on `127.0.0.1:8409`, proxied, prefix stripped |
 
 The demo seller sells a live reading of Arc at $1 so a demo buys from
 something that is not the record — Circle's marketplace has no testnet seller.
 It runs out of `packages/attest` with attest's key, from the same
 `.env.attest`, so it adds no key to the box.
+
+Beacon is the sixth and the only seller without a name of its own. The other
+two hold subdomains because their URLs were published before the endpoints
+existed; nothing had published Beacon's, so it went up behind a `location`
+block on the origin and cost neither a certificate nor a DNS record. It sells
+five things on Sepolia, priced across a per-draw cap so that four of them pay
+and one is refused — the refusal happens because an agent asked for the
+expensive one, not because anybody staged it. Like the demo seller it runs out
+of `packages/attest` on attest's key, so it adds no key to the box.
 
 The site and the console share one origin on purpose. The console asks the
 owner's wallet to sign typed data naming the contract, so a separate API host
@@ -134,6 +144,30 @@ curl -s https://demo-seller.getcordon.xyz/health
 
 It shares the `cordon_attest` rate-limit zone. `CORDON_DEMO_PAYTO` in
 `.env.attest` sends its sales to an address other than attest's.
+
+### Beacon, the sample market
+
+No certificate and no DNS record: it is a `location` in
+`ops/nginx/cordon-locations.conf`, which the origin vhost already includes, so
+publishing it is the origin's own reload.
+
+```bash
+sudo systemctl enable --now cordon-market      # copied with the other cordon-*.service units
+curl -s 127.0.0.1:8409/health                  # it answers before nginx is touched, or the unit is the problem
+sudo cp ops/nginx/cordon-locations.conf /etc/nginx/snippets/cordon-locations.conf
+sudo nginx -t && sudo systemctl reload nginx
+curl -s https://getcordon.xyz/market/health
+curl -si https://getcordon.xyz/market/v1/signal/btc | head -1   # expect 402, not 200
+```
+
+The trailing slash on its `proxy_pass` strips the `/market/` prefix, because
+Beacon serves `/v1/...` at its own root. Its 402 therefore names `resource` as
+the stripped path — harmless, and worth knowing before it surprises somebody:
+an x402 payer signs an amount and a payee, never a path.
+
+The 402 on the last line is the check that matters. A `200` there means the
+catalogue is being served without a price, and a `404` means the prefix is not
+coming off.
 
 `attest` will refuse to start if the USDC view cannot verify the EIP-712
 domain it would publish. On Arc it can — checked against the live chain, see
