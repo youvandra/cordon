@@ -57,6 +57,14 @@ contract BindSubname is Script {
 
         resolver.bind(namehash, node);
 
+        /* The name itself, so a console reading the node back knows what to
+           call it. Optional: without it the name still resolves, and only the
+           one screen that starts from a node id loses the string. */
+        string memory name = vm.envOr("ENS_NAME", string(""));
+        if (bytes(name).length != 0) {
+            resolver.setText(namehash, "cordon.name", name);
+        }
+
         /* The owner's own words, which the contracts cannot answer. Optional:
            a name resolves without them and a caller simply has no endpoint. */
         string memory endpoint = vm.envOr("ENS_ENDPOINT_MCP", string(""));

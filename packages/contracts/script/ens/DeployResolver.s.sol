@@ -52,6 +52,14 @@ contract DeployResolver is Script {
            a caller simply has no endpoint to use. `agentId` is read from the
            chain rather than passed in, so the registration record cannot claim
            an identity this node is not bound to. */
+        /* The name itself. A namehash cannot be turned back into the label a
+           person typed, so a console that reads a node back from the contracts
+           knows it is bound and not what to call it. `ENS_NAME` is the full
+           name, written where the Agents table reads it. */
+        string memory name = vm.envOr("ENS_NAME", string(""));
+        if (bytes(name).length != 0) {
+            resolver.setText(namehash, "cordon.name", name);
+        }
         string memory endpoint = vm.envOr("ENS_ENDPOINT_MCP", string(""));
         if (bytes(endpoint).length != 0) {
             resolver.setText(namehash, "agent-endpoint[mcp]", endpoint);
