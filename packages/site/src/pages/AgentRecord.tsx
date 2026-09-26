@@ -21,6 +21,7 @@ import type { Strength } from "cordon-ui";
 import {
   DEFAULT_CHAIN, ATTEST,
   ENFORCED_BY,
+  chainFacts,
   ERC8004,
   MANDATE,
   REGISTRY_BASELINE,
@@ -176,7 +177,18 @@ function LiveAgentRecord({ data }: { data: LiveConduct }) {
       <Container width="wide" className="stackpage">
         <header className="public__head">
           <Text variant="micro" tone="dim" as="p" className="eyebrow">
-            erc-8004 identity · token {data.agentId} · arc {data.chainId}
+            {/* Named from the id the meter replied with, rather than written
+                here. This said `arc` beside `data.chainId`, so on Sepolia it
+                read "arc 11155111" — Arc's name against Sepolia's number, in
+                the one line whose job is to say which chain answered. The
+                three sibling eyebrows on this page all derive it; only the
+                live branch did not, which is why it survived: it renders
+                just when a meter answers. The id stays the meter's own, so a
+                reader is told which chain replied rather than which one this
+                build prefers. */}
+            erc-8004 identity · token {data.agentId} ·{" "}
+            {chainFacts(data.chainId)?.name.toLowerCase() ?? `chain ${data.chainId}`}{" "}
+            {data.chainId}
           </Text>
           <Headline animate={animate} lines={["The RECORD", "read from chain"]} dotWord="RECORD" />
           <Text variant="lead" tone="copy" as="p" className="public__lede">
