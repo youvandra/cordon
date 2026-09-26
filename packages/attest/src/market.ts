@@ -1,5 +1,5 @@
 /**
- * `market.getcordon.xyz` — five paid endpoints, on whichever chain it is started against.
+ * `getcordon.xyz/market` — five paid endpoints, on whichever chain it is started against.
  *
  * Cordon's other two sellers take money on Arc while the agent names live on
  * Sepolia, so a demo of the whole loop on one chain had nothing to buy. This
