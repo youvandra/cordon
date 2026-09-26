@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ARC, DEFAULT_CHAIN, DRILL, ERC8004, EVAL, GATES, SEARCH, formatUsdc } from "@cordon/fixtures";
+import { DEFAULT_CHAIN, DRILL, ERC8004, EVAL, GATES, SEARCH, formatUsdc } from "@cordon/fixtures";
 import { C, Code, H2, H3, Lead, Note, P, Table, UL } from "../parts";
 
 export function Contracts() {
