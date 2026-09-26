@@ -38,9 +38,15 @@ export interface McpDeps {
 
 const text = (s: string) => ({ content: [{ type: "text" as const, text: s }] });
 
+/* The version a client is told, from the manifest that is published rather
+   than a literal beside it. Written as "0.1.0" while package.json said 0.2.0,
+   so every client would have been handed the version of the release before
+   this one. esbuild inlines this, so the bundle carries no runtime read. */
+import manifest from "../package.json" with { type: "json" };
+
 export function createMcpServer(deps: McpDeps): McpServer {
   const server = new McpServer(
-    { name: "cordon", version: "0.1.0" },
+    { name: "cordon", version: manifest.version },
     {
       instructions:
         "Cordon bounds what this agent can spend. Use cordon_fetch for any URL " +
