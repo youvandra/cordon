@@ -9,7 +9,7 @@
  * money exists, so a refusal is a refusal rather than a regret.
  */
 import type { Address, Hex } from "viem";
-import { parseChallenge, selectOffer, type Acceptable, type Offer } from "./challenge.ts";
+import { MAX_AUTH_SECONDS, parseChallenge, selectOffer, type Acceptable, type Offer } from "./challenge.ts";
 import type { Gate, DrawOutcome } from "./gate.ts";
 import type { Settler } from "./settle.ts";
 import http from "node:http";
@@ -233,10 +233,28 @@ export const httpTransport: Transport = (url, init) =>
  * name to decide whether to trust it and then let the client resolve it again to
  * decide where to go.
  */
+/**
+ * How long a seller gets to answer.
+ *
+ * Two figures, because the two requests are not alike. The unpaid probe only
+ * has to hand back a 402, so 30s is generous. The paid one may have to put a
+ * transaction on chain before it replies — Beacon submits the EIP-3009
+ * authorisation itself — and a Sepolia block is ~12s, so 30s expired on a
+ * seller that was working correctly. The purchase then failed *after* the draw
+ * had already debited the window, which is the worst place to give up.
+ *
+ * `MAX_AUTH_SECONDS` for the paid hop, because that is already the ceiling this
+ * daemon enforces on the seller's own `maxTimeoutSeconds`: past it the
+ * authorisation it signed has expired, so waiting longer buys nothing.
+ */
+const PROBE_TIMEOUT_MS = 30_000;
+const PAID_TIMEOUT_MS = MAX_AUTH_SECONDS * 1_000;
+
 function requestOnce(
   target: URL,
   init: { method: string; headers: Record<string, string>; body?: string },
   allow: AddressCheck,
+  timeoutMs: number,
 ): Promise<{ status: number; headers: Record<string, string>; body: string }> {
   const secure = target.protocol === "https:";
   const driver = secure ? https : http;
@@ -277,7 +295,9 @@ function requestOnce(
       },
     );
 
-    req.setTimeout(30_000, () => req.destroy(new EgressError(`${target.origin} did not answer in 30s`)));
+    req.setTimeout(timeoutMs, () =>
+      req.destroy(new EgressError(`${target.origin} did not answer in ${Math.round(timeoutMs / 1000)}s`)),
+    );
     req.on("error", reject);
     if (init.body !== undefined) req.write(init.body);
     req.end();
@@ -299,7 +319,12 @@ const httpTransportWith =
   for (let hop = 0; ; hop++) {
     /* Redirects are followed below rather than by the client, so every hop is
        checked and every hop is pinned. */
-    const response = await requestOnce(target, init, allow);
+    const response = await requestOnce(
+      target,
+      init,
+      allow,
+      carriesPayment ? PAID_TIMEOUT_MS : PROBE_TIMEOUT_MS,
+    );
 
     const location = response.headers["location"];
     if (response.status < 300 || response.status >= 400 || !location) {
