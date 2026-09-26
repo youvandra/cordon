@@ -74,8 +74,28 @@ jobs:
       - name: Gas report
         run: forge test --root packages/contracts --gas-report
 
+  # What a contributor without Foundry installed can run. Keeping this job
+  # honest is the point of it: if it ever needs a chain, the split has rotted
+  # and the README's claim that 98 of the daemon's tests need no node is no
+  # longer true. No Foundry step here, deliberately.
+  units:
+    name: no-foundry suites (fixtures, console, proxy, verify, daemon)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install workspaces
+        run: npm install --workspaces --include-workspace-root
+
+      - name: Test
+        run: npm run test:units
+
   node:
-    name: node suites (daemon, attest, meter, proxy, eval, fixtures)
+    name: every node suite, including the ones that start anvil
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -103,6 +123,14 @@ jobs:
         run: |
           node packages/fixtures/scripts/emit-solidity.ts
           forge build --root packages/contracts
+
+      # `abi.gen.ts` is committed so the suites above can run without Foundry.
+      # That only holds while the committed copy matches the contracts, so the
+      # job with a compiler checks it rather than trusting it.
+      - name: The committed ABI is the one the contracts produce
+        run: |
+          npm run abi --workspace packages/daemon
+          git diff --exit-code -- packages/daemon/src/abi.gen.ts
 
       - name: Test
         run: npm run test:node

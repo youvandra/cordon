@@ -992,6 +992,19 @@ runs that produced them, never by hand.
 
 ## Testing
 
+From the workspace root:
+
+```bash
+npm test                                     # contracts, then every node suite
+npm run test:units                           # the 155 that need no chain at all
+npm run typecheck                            # tsc --noEmit across every package
+```
+
+`test:units` is the one to reach for without Foundry installed, and CI runs it
+as its own job so that stays true.
+
+Suite by suite:
+
 ```bash
 cd packages/contracts && forge test          # G1, G4, G5, G6, G8, G9
 npm test --prefix packages/daemon            # the gate, the settler, the fetch path
@@ -1009,9 +1022,9 @@ Measured on 26 September 2026, every suite on one run: **120** contract tests,
 **111** daemon, **40** attest, **39** meter, **22** console, **18** proxy,
 **15** mcp, **10** eval, **10** fixtures, **7** verify.
 
-The daemon's split matters to anyone without Foundry: `npm run test:unit` is
-the **98** that need no chain, and `npm run test:chain` is the **13** that
-start anvil.
+Of those, **155** need no chain: fixtures, console, proxy, verify, and the
+daemon's `npm run test:unit` (**98**). The daemon's remaining **13** are
+`npm run test:chain`, which starts anvil, as do attest, meter, mcp and eval.
 
 `CORDON_G4_VARIANTS=3` runs the adversarial search coarse while iterating; the
 full sweep is most of the contract suite's runtime.
