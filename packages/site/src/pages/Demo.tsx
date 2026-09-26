@@ -65,25 +65,38 @@ function deepest(tree: LiveTree | null): LiveNode | null {
  * Whether an ancestor is what actually stops the deepest node — beat 4's
  * precondition, and the one condition this page could not see.
  *
+ * Every ancestor, not just the root. `headroom` returns the tightest bound
+ * anywhere up the tree; this compared the deepest node against the root alone,
+ * so on 27 September it reported "no" while the contract was naming the node's
+ * parent. Both answers were about real figures and only one was the question.
+ *
  * Deliberately a comparison of two figures rather than a headroom. `meter.ts`
  * computes no headroom on purpose: the window arithmetic belongs to the vault,
  * and an indexer that models it is a second implementation that can disagree
- * with the contract it reports on. So this reads what the meter does hold —
- * a node's budget and what has been debited to it — and answers the weaker
+ * with the thing it reports on. So this reads what the meter does hold — a
+ * node's budget and what has been debited to it — and answers the weaker
  * question it can answer honestly: is there less room above than below?
  *
  * That is necessary for beat 4 and not sufficient, which is why the check it
- * feeds sends the presenter to `/status` for the figure itself. What it catches
- * is the case that silently wastes the beat: a freshly funded tree, where the
- * root has more room left than the grandchild and `headroom` therefore returns
- * the grandchild's own budget with the grandchild's own id beside it.
+ * feeds sends the presenter to `/status` for the figure itself. Two things it
+ * cannot see: the treasury, which caps every node and belongs to the root, and
+ * the window's own clock. A thin treasury makes `headroom` small and names the
+ * root for a reason that says nothing about a bound — the "Behind the tree"
+ * check above is what catches that.
  */
 function bindsFromAbove(tree: LiveTree | null): boolean | null {
   const node = deepest(tree);
-  const root = tree?.nodes.find((n) => n.parent === null);
-  if (!node || !root || node.node === root.node) return null;
+  if (!tree || !node || node.parent === null) return null;
+  const byId = new Map(tree.nodes.map((n) => [n.node.toLowerCase(), n]));
   const left = (n: LiveNode) => BigInt(n.budget6) - BigInt(n.debited6);
-  return left(root) < left(node);
+
+  let tightest: bigint | null = null;
+  for (let up = byId.get(node.parent.toLowerCase()); up; ) {
+    const room = left(up);
+    if (tightest === null || room < tightest) tightest = room;
+    up = up.parent ? byId.get(up.parent.toLowerCase()) : undefined;
+  }
+  return tightest === null ? null : tightest < left(node);
 }
 
 interface Beat {
