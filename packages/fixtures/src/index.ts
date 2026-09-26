@@ -410,6 +410,65 @@ export const COST = {
   maxTreeDepth: 8,
 } as const;
 
+/**
+ * The sample market — five paid endpoints an agent can actually buy from.
+ *
+ * Cordon's other two sellers take money on Arc, and the names live on Sepolia,
+ * so a demo of the whole loop on one chain had nothing to buy. This is that:
+ * an outside seller, on whichever chain the process is started against, with
+ * a catalogue rather than a single resource.
+ *
+ * **The prices are the demo.** `tranche` is what one draw may be, and the
+ * catalogue is priced across it on purpose: four items sit under a typical
+ * per-draw cap and `flows` sits above it. Nothing about the refusal has to be
+ * staged — an agent asked for the expensive one and the contract is what
+ * noticed. A catalogue priced entirely under the cap would prove only that
+ * payment works.
+ *
+ * What each one returns is a fixed sample. The seller is the thing being
+ * demonstrated, and a live data source would add a second thing that can be
+ * down on the day.
+ */
+export const MARKET = {
+  name: "Beacon",
+  tagline: "Sample market data for agents",
+  host: "market.getcordon.xyz",
+  port: 8409,
+  maxTimeoutSeconds: 120,
+  items: [
+    {
+      path: "/v1/signal/btc",
+      title: "BTC directional signal, 4h",
+      price6: 50_000n,
+      description: "One directional call on BTC over the next four hours, with its confidence",
+    },
+    {
+      path: "/v1/sentiment/eth",
+      title: "ETH sentiment read",
+      price6: 100_000n,
+      description: "Aggregated sentiment for ETH across social and funding, scored once",
+    },
+    {
+      path: "/v1/paper/erc-8004",
+      title: "Research note — ERC-8004 adoption",
+      price6: 250_000n,
+      description: "A short research note on ERC-8004 registry adoption, with its figures",
+    },
+    {
+      path: "/v1/filing/circle",
+      title: "Filing summary — Circle",
+      price6: 750_000n,
+      description: "The latest filing for Circle, summarised to the numbers that moved",
+    },
+    {
+      path: "/v1/dataset/onchain-flows",
+      title: "Dataset — onchain stablecoin flows",
+      price6: 2_500_000n,
+      description: "Bulk stablecoin flow data. Priced above a per-draw cap on purpose",
+    },
+  ],
+} as const;
+
 /** Published ecosystem baseline. arxiv 2606.26028. We are the exception to it. */
 export const REGISTRY_BASELINE = {
   source: "arxiv 2606.26028",
