@@ -312,7 +312,7 @@ export type ActionState =
   | { status: "failed"; why: string };
 
 /** The wallet the screen is showing, and a client that can sign with it. */
-async function signerFor(wallets: ReturnType<typeof useWallets>["wallets"], expected: string) {
+export async function signerFor(wallets: ReturnType<typeof useWallets>["wallets"], expected: string) {
   const wallet = wallets.find((w) => w.address.toLowerCase() === expected.toLowerCase());
   if (!wallet) throw new Error("the wallet shown here is not one this page can sign with");
   await wallet.switchChain(CHAIN.chainId);

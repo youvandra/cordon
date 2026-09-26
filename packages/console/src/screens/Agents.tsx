@@ -5,7 +5,7 @@ import { formatUsdc } from "@cordon/fixtures";
 import { useTitle } from "../parts/Shell";
 import { Meter, PageHeader, PageSkeleton, Panel, ReadFailed } from "../parts/Page";
 import { NodeDetail } from "../parts/NodeDetail";
-import { RevokeDialog, SpawnDialog, WithdrawDialog } from "../parts/OwnerDialogs";
+import { NameDialog, RevokeDialog, SpawnDialog, WithdrawDialog } from "../parts/OwnerDialogs";
 import { TreeGraph, type GraphNode } from "../parts/TreeGraph";
 import { useConsoleTree } from "../lib/useConsoleTree";
 import { usePurposes } from "../lib/purpose";
@@ -25,6 +25,7 @@ export default function Agents() {
   const [spawnParent, setSpawnParent] = useState<ChainNode | null>(null);
   const [revoking, setRevoking] = useState<ChainNode | null>(null);
   const [withdrawing, setWithdrawing] = useState<ChainNode | null>(null);
+  const [naming, setNaming] = useState<ChainNode | null>(null);
   /* Read for every row at once, before the early returns below can skip it:
      a hook may not be called conditionally. */
   const purposes = usePurposes(nodes.map((node) => node.node));
@@ -269,6 +270,15 @@ export default function Agents() {
                 </Button>
               )}
               <span className="sheet-actions__end">
+                {/* Only where the agent has no name. A named agent is named;
+                    reissuing is not an owner action this screen invites, and a
+                    second name bound to one mandate is two answers to the same
+                    question. */}
+                {names.of(selected.operator) ? null : (
+                  <Button variant="secondary" onClick={() => setNaming(selected)}>
+                    Name this agent
+                  </Button>
+                )}
                 {selected.parent === null ? (
                   <Button variant="secondary" onClick={() => setWithdrawing(selected)}>
                     Withdraw
@@ -292,6 +302,22 @@ export default function Agents() {
           <SpawnDialog open={Boolean(spawnParent)} onClose={() => setSpawnParent(null)} parent={spawnParent ?? root} owner={owner} />
           <WithdrawDialog open={Boolean(withdrawing)} onClose={() => setWithdrawing(null)} root={withdrawing ?? root} owner={owner} />
           <RevokeDialog node={revoking} affected={revoking ? subtree(revoking) : 0} onClose={() => setRevoking(null)} owner={owner} />
+          {/* The parent's name comes from the same reverse resolution the table
+              already uses, so the dialog opens with it filled in rather than
+              asking an owner to retype a name the chain knows. */}
+          {naming ? (
+            <NameDialog
+              open
+              onClose={() => setNaming(null)}
+              node={naming}
+              owner={owner}
+              parentName={
+                naming.parent
+                  ? names.of(nodes.find((n) => n.node === naming.parent)?.operator ?? "0x")
+                  : undefined
+              }
+            />
+          ) : null}
         </>
       ) : null}
     </div>

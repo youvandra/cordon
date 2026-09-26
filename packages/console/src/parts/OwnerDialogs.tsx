@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Field, Modal, TextField, useNotify } from "cordon-ui";
 import { formatUsdc, isAddress } from "@cordon/fixtures";
 import { useFundVault, useRevoke, useSpawnChild, useTreasury, useWithdraw, type ActionState } from "../lib/mandate";
+import { useNameAgent } from "../lib/naming";
 import type { ChainNode } from "../lib/tree";
 import { shortId, usdc6 } from "../lib/format";
 
@@ -294,6 +295,124 @@ export function RevokeDialog({
       }
     >
       {node ? <p className="mono muted breakable">{shortId(node.node, 10, 8)}</p> : null}
+    </Modal>
+  );
+}
+
+/**
+ * Give an agent a name.
+ *
+ * The one owner action that touches the namespace rather than the tree. It
+ * existed only as three scripts run in order with a token id copied between
+ * them, so a spawned agent had a mandate at once and a name when somebody
+ * remembered — and an agent nobody names is one a seller can only identify by
+ * an address.
+ *
+ * Two things this asks for and one it refuses to ask for. The label is the
+ * owner's to choose. The parent's name it offers as a default, reverse-resolved
+ * from the parent's operator and verified forward, because an owner should not
+ * have to retype a name the chain already knows. The roles it never asks about:
+ * they are derived from the mandate in `naming.ts`, since a form that let an
+ * owner grant more than the mandate permits would publish authority the
+ * contract refuses.
+ *
+ * The plan is read before anything is signed and shown as sentences, because
+ * the failure worth preventing here is a half-finished name: a subname that
+ * reaches the tree's resolver unbound resolves *empty*, and empty reads exactly
+ * like an agent with no bound.
+ */
+export function NameDialog({
+  open,
+  onClose,
+  node,
+  owner,
+  parentName,
+}: {
+  open: boolean;
+  onClose: () => void;
+  node: ChainNode;
+  owner: string;
+  /** The parent's name where the console already knows it. */
+  parentName?: string;
+}) {
+  const { state, name } = useNameAgent(owner);
+  const [label, setLabel] = useState("");
+  const [parent, setParent] = useState(parentName ?? "");
+  const [endpoint, setEndpoint] = useState("");
+  const working = state.status === "working";
+
+  /* The default follows the parent the sheet is showing, and only until the
+     owner types over it. */
+  useEffect(() => {
+    if (open) setParent(parentName ?? "");
+  }, [open, parentName]);
+
+  const labelOk = /^[a-z0-9][a-z0-9-]{0,62}$/.test(label);
+  const parentOk = /^([a-z0-9-]+\.)+eth$/.test(parent);
+  const full = labelOk && parentOk ? `${label}.${parent}` : null;
+
+  useOutcome(
+    state,
+    "name",
+    {
+      title: "Agent named",
+      body: "The name is bound to this mandate, so it answers with the bound the contract enforces rather than a copy of it.",
+    },
+    "Not named",
+    () => {
+      onClose();
+      reloadSoon();
+    },
+  );
+
+  return (
+    <Modal
+      open={open}
+      onClose={working ? () => undefined : onClose}
+      title={`Name ${shortId(node.node)}`}
+      description="An ENSv2 subname bound to this mandate. A seller that resolves it reads what the contract allows right now, never a figure copied into a record."
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={working}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            loading={working}
+            disabled={working || !full}
+            onClick={() =>
+              void name(node.node, parent, label, { endpoint: endpoint.trim() || undefined })
+            }
+          >
+            {state.status === "working" ? state.step : "Issue and bind"}
+          </Button>
+        </>
+      }
+    >
+      <div className="form-stack">
+        <Field
+          label="Label"
+          info="The one part being added. Lower case, digits and hyphens."
+          hint={full ? `This agent will answer to ${full}.` : undefined}
+          error={label !== "" && !labelOk ? "Lower case letters, digits and hyphens." : undefined}
+        >
+          <TextField value={label} placeholder="worker2" autoFocus onChange={(event) => setLabel(event.target.value.trim().toLowerCase())} />
+        </Field>
+        <Field
+          label="Under which name"
+          info="The parent's ENS name. Offered from the chain where the parent already has one; a registry is hung under it first if it has none."
+          error={parent !== "" && !parentOk ? "A .eth name." : undefined}
+        >
+          <TextField value={parent} placeholder="probe.mira.eth" onChange={(event) => setParent(event.target.value.trim().toLowerCase())} />
+        </Field>
+        <Field
+          label="MCP endpoint"
+          info="Optional, and the owner's own words — nothing checks it. The bound is read from the contract either way."
+        >
+          <TextField value={endpoint} placeholder="https://…" onChange={(event) => setEndpoint(event.target.value)} />
+        </Field>
+      </div>
     </Modal>
   );
 }
