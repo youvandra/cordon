@@ -17,6 +17,7 @@ import {
   createWalletClient,
   custom,
   encodeAbiParameters,
+  formatEther,
   http,
   keccak256,
   type Hex,
@@ -622,6 +623,58 @@ export function useRevoke(expected: string | null) {
   );
 
   return { state, revoke };
+}
+
+/**
+ * Gas for an operator key, from the owner's own wallet.
+ *
+ * Deliberately not from the vault. The vault holds what the mandate bounds and
+ * releases it one purchase at a time; gas is the chain's own token, it sits
+ * outside every bound, and a vault that could pay it would be a treasury that
+ * spends without a draw. This is the owner topping up a key, which is the
+ * transaction `FuelOperators` sends from a script — the same one, offered where
+ * the agent is.
+ *
+ * An operator with no gas cannot send the draw that earns its tranche, and from
+ * outside that looks exactly like a refusal and is not one.
+ */
+export function useFuelOperator(expected: string | null) {
+  const { wallets } = useWallets();
+  const [state, setState] = useState<ActionState>({ status: "idle" });
+
+  const fuel = useCallback(
+    async (operator: `0x${string}`, amountWei: bigint) => {
+      if (!expected) {
+        setState({ status: "failed", why: "no wallet" });
+        return;
+      }
+      try {
+        const { account, wallet, reader } = await signerFor(wallets, expected);
+        /* Read first, so a wallet short of the native token is told here rather
+           than by the node rejecting the send after the signature. */
+        const held = (await reader.getBalance({ address: account })) as bigint;
+        if (held < amountWei) {
+          setState({
+            status: "failed",
+            why: `this wallet holds ${formatEther(held)} ${CHAIN.nativeSymbol} and the send is ${formatEther(amountWei)}`,
+          });
+          return;
+        }
+        setState({
+          status: "working",
+          step: `sending ${formatEther(amountWei)} ${CHAIN.nativeSymbol}`,
+        });
+        const hash = await wallet.sendTransaction({ to: operator, value: amountWei });
+        await reader.waitForTransactionReceipt({ hash });
+        setState({ status: "done", hash });
+      } catch (error) {
+        setState({ status: "failed", why: why(error) });
+      }
+    },
+    [wallets, expected],
+  );
+
+  return { state, fuel };
 }
 
 export function useSpawnChild(expected: string | null) {

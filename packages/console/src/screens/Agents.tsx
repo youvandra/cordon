@@ -5,7 +5,7 @@ import { formatUsdc } from "@cordon/fixtures";
 import { useTitle } from "../parts/Shell";
 import { Meter, PageHeader, PageSkeleton, Panel, ReadFailed } from "../parts/Page";
 import { NodeDetail } from "../parts/NodeDetail";
-import { NameDialog, RevokeDialog, SpawnDialog, WithdrawDialog } from "../parts/OwnerDialogs";
+import { FuelDialog, NameDialog, RevokeDialog, SpawnDialog, WithdrawDialog } from "../parts/OwnerDialogs";
 import { TreeGraph, type GraphNode } from "../parts/TreeGraph";
 import { useConsoleTree } from "../lib/useConsoleTree";
 import { usePurposes } from "../lib/purpose";
@@ -26,6 +26,7 @@ export default function Agents() {
   const [revoking, setRevoking] = useState<ChainNode | null>(null);
   const [withdrawing, setWithdrawing] = useState<ChainNode | null>(null);
   const [naming, setNaming] = useState<ChainNode | null>(null);
+  const [fueling, setFueling] = useState<ChainNode | null>(null);
   /* Read for every row at once, before the early returns below can skip it:
      a hook may not be called conditionally. */
   const purposes = usePurposes(nodes.map((node) => node.node));
@@ -260,14 +261,21 @@ export default function Agents() {
               {isCut(selected.node) ? (
                 <span />
               ) : (
-                <Button
-                  variant="secondary"
-                  iconStart="plus"
-                  disabled={selected.depth + 1 > selected.maxDepth}
-                  onClick={() => setSpawnParent(selected)}
-                >
-                  {selected.depth + 1 > selected.maxDepth ? "At max depth" : "Spawn under this agent"}
-                </Button>
+                <>
+                  <Button
+                    variant="secondary"
+                    iconStart="plus"
+                    disabled={selected.depth + 1 > selected.maxDepth}
+                    onClick={() => setSpawnParent(selected)}
+                  >
+                    {selected.depth + 1 > selected.maxDepth ? "At max depth" : "Spawn under this agent"}
+                  </Button>
+                  {/* Gas for the key that signs, not money for the tree. A cut
+                      node draws nothing, so there is nothing to fuel it for. */}
+                  <Button variant="secondary" onClick={() => setFueling(selected)}>
+                    Send gas
+                  </Button>
+                </>
               )}
               <span className="sheet-actions__end">
                 {/* Only where the agent has no name. A named agent is named;
@@ -305,6 +313,9 @@ export default function Agents() {
           {/* The parent's name comes from the same reverse resolution the table
               already uses, so the dialog opens with it filled in rather than
               asking an owner to retype a name the chain knows. */}
+          {fueling ? (
+            <FuelDialog open onClose={() => setFueling(null)} node={fueling} owner={owner} />
+          ) : null}
           {naming ? (
             <NameDialog
               open

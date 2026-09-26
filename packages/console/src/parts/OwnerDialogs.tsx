@@ -1,10 +1,31 @@
 import { useEffect, useRef, useState } from "react";
+import { parseEther } from "viem";
 import { Button, Field, Modal, TextField, useNotify } from "cordon-ui";
 import { formatUsdc, isAddress } from "@cordon/fixtures";
-import { useFundVault, useRevoke, useSpawnChild, useTreasury, useWithdraw, type ActionState } from "../lib/mandate";
+import {
+  useFuelOperator,
+  useFundVault,
+  useRevoke,
+  useSpawnChild,
+  useTreasury,
+  useWithdraw,
+  type ActionState,
+} from "../lib/mandate";
 import { useNameAgent, useParentCheck } from "../lib/naming";
+import { CHAIN } from "../lib/chain";
 import type { ChainNode } from "../lib/tree";
 import { shortId, usdc6 } from "../lib/format";
+
+/** Native token as wei, without a float in between. Zero on anything that is
+ *  not a plain decimal, so the send button stays disabled rather than sending
+ *  a guessed amount. */
+function nativeWei(text: string): bigint {
+  try {
+    return parseEther(text as `${number}`);
+  } catch {
+    return 0n;
+  }
+}
 
 /**
  * A reload a moment later, so the toast that said what happened is read first.
@@ -446,6 +467,92 @@ export function NameDialog({
           info="Optional, and the owner's own words — nothing checks it. The bound is read from the contract either way."
         >
           <TextField value={endpoint} placeholder="https://…" onChange={(event) => setEndpoint(event.target.value)} />
+        </Field>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * Gas for an operator, from the owner's own wallet.
+ *
+ * A spawn does not carry gas, and an operator with none cannot send the draw
+ * that earns its tranche — a state that looks from outside exactly like a
+ * refusal and is not one. This is the fix, offered where the agent is, and it
+ * is deliberately from the owner's wallet rather than the vault: gas is the
+ * chain's own token, outside every bound, and the vault releases only a
+ * purchase at a time.
+ */
+export function FuelDialog({
+  open,
+  onClose,
+  node,
+  owner,
+}: {
+  open: boolean;
+  onClose: () => void;
+  node: ChainNode;
+  owner: string;
+}) {
+  const { state, fuel } = useFuelOperator(owner);
+  const [amount, setAmount] = useState("0.02");
+  const working = state.status === "working";
+  const value = nativeWei(amount);
+
+  useOutcome(
+    state,
+    "fuel",
+    {
+      title: "Gas sent",
+      body: "That operator can send its draw now. The money it spends still comes from the vault, one purchase at a time.",
+    },
+    "Not sent",
+    () => {
+      onClose();
+      reloadSoon();
+    },
+  );
+
+  return (
+    <Modal
+      open={open}
+      onClose={working ? () => undefined : onClose}
+      title="Send gas to this operator"
+      description={`${CHAIN.nativeSymbol} from your own wallet, to the key that signs for this agent. It pays for the transaction that draws a tranche — never for a purchase, and the vault cannot send it.`}
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={working}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            loading={working}
+            disabled={working || value <= 0n}
+            onClick={() => void fuel(node.operator, value)}
+          >
+            {state.status === "working" ? state.step : `Send ${amount || "0"} ${CHAIN.nativeSymbol}`}
+          </Button>
+        </>
+      }
+    >
+      <div className="form-stack">
+        <p className="small muted">
+          Operator for this agent: <span className="mono">{shortId(node.operator)}</span>
+        </p>
+        <Field
+          label="Amount"
+          info="A little goes a long way. Gas buys blocks for the draw; the purchase itself is still paid out of the vault, inside every bound."
+        >
+          <TextField
+            type="number"
+            min="0"
+            step="0.001"
+            value={amount}
+            suffix={CHAIN.nativeSymbol}
+            autoFocus
+            onChange={(event) => setAmount(event.target.value)}
+          />
         </Field>
       </div>
     </Modal>
