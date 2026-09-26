@@ -25,8 +25,13 @@ export function Hero() {
       <div className="hero__bg" />
       <div className="wrap hero__grid">
         <div>
+          {/* The first line a reader gets, so it names what this entry is
+              about. It said "Arc · Circle" through the ETHOnline build and
+              stayed there after the work moved to names on Ethereum, which
+              left the hero naming one pair of sponsors and the strip below it
+              another. */}
           <Appear as="p" className="eyebrow" from={{ opacity: 0, y: 6 }} delay={0.05}>
-            Arc · Circle
+            ENS · ETHGlobal Tokyo
           </Appear>
 
           <h1 className="display">
