@@ -172,6 +172,36 @@ test("the same authorisation cannot be settled twice, whatever this process forg
   await assert.rejects(() => collector.collect(payment), /authorization is used/);
 });
 
+test("a settlement that lands but cannot be read back is reported as settled", async () => {
+  /* The first receipt read fails the way an RPC timeout does, while the
+     transaction is on chain regardless. The collector used to retry the other
+     signature shape, get `authorization is used`, and report a settled
+     purchase as `settlement failed` — a payer told their payment did not work
+     after their money moved. */
+  let reads = 0;
+  const collector = new Eip3009Collector({
+    rpcUrl: RPC,
+    chain,
+    token,
+    privateKey: SUBMITTER_KEY,
+    receipt: async () => {
+      reads += 1;
+      if (reads === 1) throw new Error("rpc timeout");
+      return { status: "success" };
+    },
+  });
+  const payment = await sign();
+
+  const before6 = await client.readContract({ address: token, abi: ERC20, functionName: "balanceOf", args: [PAYTO] });
+  const collected = await collector.collect(payment);
+  const after6 = await client.readContract({ address: token, abi: ERC20, functionName: "balanceOf", args: [PAYTO] });
+
+  assert.equal(after6 - before6, ATTEST.price6, "the money moved once");
+  assert.equal(collected.payer, payer.address);
+  assert.match(collected.txHash, /^0x[0-9a-f]{64}$/);
+  assert.equal(reads, 1, "the second signature shape was never tried");
+});
+
 test("an authorisation the payer cannot cover is refused before a transaction is sent", async () => {
   const collector = new Eip3009Collector({ rpcUrl: RPC, chain, token, privateKey: SUBMITTER_KEY });
   const payment = await sign({ value: 10_000_000n });

@@ -139,12 +139,21 @@ export interface Eip3009Options {
   token: Address;
   /** The submitter. It pays gas and holds nothing else. */
   privateKey: Hex;
+  /**
+   * How a submitted transaction is read back.
+   *
+   * Overridable so a test can make the read fail while the transaction lands,
+   * which is the failure this collector has to survive: an RPC that times out
+   * on the receipt is not an RPC that refused the payment.
+   */
+  receipt?: (hash: Hex) => Promise<{ status: string }>;
 }
 
 export class Eip3009Collector implements Collector {
   private readonly publicClient: PublicClient;
   private readonly wallet: ReturnType<typeof createWalletClient>;
   private readonly token: Address;
+  private readonly receipts: (hash: Hex) => Promise<{ status: string }>;
   /**
    * One settlement at a time.
    *
@@ -173,6 +182,8 @@ export class Eip3009Collector implements Collector {
       transport: http(options.rpcUrl),
       pollingInterval: 250,
     });
+    this.receipts =
+      options.receipt ?? ((hash) => this.publicClient.waitForTransactionReceipt({ hash }));
   }
 
   get submitter(): Address {
@@ -201,6 +212,11 @@ export class Eip3009Collector implements Collector {
     ];
 
     const failures: string[] = [];
+    /* The hash of the transaction this process last submitted. A settlement
+       that landed but whose receipt could not be read back is still a
+       settlement, and holding the hash is what lets it be reported as one. */
+    let submitted: Hex | null = null;
+
     for (const attempt of attempts) {
       try {
         const { request } = await this.publicClient.simulateContract({
@@ -211,20 +227,73 @@ export class Eip3009Collector implements Collector {
           account: this.wallet.account,
         });
         const txHash = await this.wallet.writeContract(request as never);
-        const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash });
+        submitted = txHash;
+        const receipt = await this.receipts(txHash);
         if (receipt.status !== "success") {
           throw new CollectError(`settlement reverted in ${txHash}`);
         }
         return { txHash, payer: a.from, amount6: a.value };
       } catch (error) {
         if (error instanceof CollectError) throw error;
+        /* A transaction that was submitted has moved the money even when the
+           read that follows does not come back: an RPC timeout is a failure to
+           read, not a failure to settle. The token, not this process, decides
+           whether the authorisation was spent — so ask it before trying the
+           other shape, or a landed settlement is retried into `authorization
+           is used or canceled` and reported to the payer as a failure. */
+        if (submitted && (await this.consumed(payment))) {
+          return { txHash: submitted, payer: a.from, amount6: a.value };
+        }
         failures.push(`${attempt.shape}: ${short(error)}`);
       }
     }
 
+    /* Every shape failed to report success. One last read: a submission whose
+       receipt never arrived may still have landed, and the token is the
+       authority on that. */
+    if (submitted && (await this.consumed(payment))) {
+      return { txHash: submitted, payer: a.from, amount6: a.value };
+    }
+
     throw new CollectError(`the token refused this authorisation. ${failures.join("; ")}`);
   }
+
+  /**
+   * Whether the token has spent this authorisation.
+   *
+   * `authorizationState` is the token's own record, and a `true` means a
+   * `transferWithAuthorization` landed — or the payer cancelled it, which only
+   * the payer can do and which is not a state this endpoint can serve from
+   * either way.
+   *
+   * Retried a few times, because the read that follows a dropped receipt can
+   * land before the block the submission is in: the same RPC that did not
+   * return the receipt will happily answer a state read from just before it.
+   * The waits are longer than this client's read cache, so each attempt is a
+   * fresh answer rather than the previous one. A read that still fails answers
+   * false rather than throwing: the caller is already handling a failure, and
+   * an unreachable node is not evidence that nothing settled.
+   */
+  private async consumed(payment: Payment): Promise<boolean> {
+    for (let attempt = 0; attempt < 6; attempt++) {
+      try {
+        const done = (await this.publicClient.readContract({
+          address: this.token,
+          abi: EIP3009_ABI,
+          functionName: "authorizationState",
+          args: [payment.authorization.from, payment.authorization.nonce],
+        })) as boolean;
+        if (done) return true;
+      } catch {
+        /* Keep trying; an unreachable node is not evidence of anything. */
+      }
+      await wait(300);
+    }
+    return false;
+  }
 }
+
+const wait = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms));
 
 function splitSignature(signature: Hex): [number, Hex, Hex] {
   const { v, r, s, yParity } = parseSignature(signature);
