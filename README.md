@@ -993,7 +993,7 @@ runs that produced them, never by hand.
 ## Testing
 
 ```bash
-cd packages/contracts && forge test          # G1, G4, G5, G6
+cd packages/contracts && forge test          # G1, G4, G5, G6, G8, G9
 npm test --prefix packages/daemon            # the gate, the settler, the fetch path
 npm test --prefix packages/meter             # the ledger, and that it rebuilds
 npm test --prefix packages/attest            # x402: replay, expiry, version
@@ -1002,15 +1002,16 @@ npm test --prefix packages/mcp               # the tools, and the absent ones
 npm test --prefix packages/eval              # G7
 npm test --prefix packages/fixtures          # the figures themselves
 npm test --prefix packages/console           # what the screens are told to draw
+npm test --prefix packages/verify            # what a seller can check alone
 ```
 
-Measured on 13 September 2026: **96** contract tests, **46** daemon, **39**
-meter, **34** attest, **18** proxy, **14** mcp, **10** eval, **3** fixtures.
+Measured on 26 September 2026, every suite on one run: **120** contract tests,
+**111** daemon, **40** attest, **39** meter, **22** console, **18** proxy,
+**15** mcp, **10** eval, **10** fixtures, **7** verify.
 
-Measured on 26 September 2026, for the suites that have changed since: **10**
-fixtures and **22** console, the latter new. The daemon figure above predates
-`test/namespace.test.ts`, which adds **7** and is the part of that suite
-needing no chain to run.
+The daemon's split matters to anyone without Foundry: `npm run test:unit` is
+the **98** that need no chain, and `npm run test:chain` is the **13** that
+start anvil.
 
 `CORDON_G4_VARIANTS=3` runs the adversarial search coarse while iterating; the
 full sweep is most of the contract suite's runtime.
