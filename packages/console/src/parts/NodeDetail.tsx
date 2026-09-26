@@ -27,7 +27,19 @@ function Row({ label, value, fn }: { label: string; value: ReactNode; fn?: strin
  * window, its lifetime cap, or the treasury — so only a panel holding every
  * field can say which.
  */
-export function NodeDetail({ node, all, cut }: { node: ChainNode; all: ChainNode[]; cut: boolean }) {
+export function NodeDetail({
+  node,
+  all,
+  cut,
+  names,
+}: {
+  node: ChainNode;
+  all: ChainNode[];
+  cut: boolean;
+  /** The names the Agents screen already resolved, so every id on this panel
+   *  reads as the name someone gave it where there is one. */
+  names?: { ofNode: (node: string) => string | undefined; of: (operator: string) => string | undefined };
+}) {
   const parent = all.find((candidate) => candidate.node === node.parent);
   const children = all.filter((candidate) => candidate.parent === node.node);
   const heldElsewhere = node.boundBy.toLowerCase() !== node.node.toLowerCase();
@@ -67,6 +79,16 @@ export function NodeDetail({ node, all, cut }: { node: ChainNode; all: ChainNode
 
       <dl className="detail__list">
         <Row
+          label="Name"
+          value={
+            names?.ofNode(node.node) ? (
+              <span className="mono">{names.ofNode(node.node)}</span>
+            ) : (
+              <span className="muted">Unnamed — a name is bound from the console, not by the contract</span>
+            )
+          }
+        />
+        <Row
           label="Purpose"
           value={
             purpose.state === "read" ? (
@@ -104,16 +126,34 @@ export function NodeDetail({ node, all, cut }: { node: ChainNode; all: ChainNode
         <Row
           label="Operator"
           value={
-            <a className="mono breakable" href={explorerFor.address(node.operator)} target="_blank" rel="noreferrer">
-              {node.operator}
-            </a>
+            <span className="cell-stack">
+              {names?.of(node.operator) ? <span className="mono">{names.of(node.operator)}</span> : null}
+              <a className="mono breakable" href={explorerFor.address(node.operator)} target="_blank" rel="noreferrer">
+                {node.operator}
+              </a>
+            </span>
           }
         />
-        <Row label="Parent" value={parent ? <span className="mono">{shortId(parent.node)}</span> : "None — root"} />
+        <Row
+          label="Parent"
+          value={
+            parent ? (
+              <span className="mono">{names?.ofNode(parent.node) ?? shortId(parent.node)}</span>
+            ) : (
+              "None — root"
+            )
+          }
+        />
         <Row
           label="Children"
           value={
-            children.length === 0 ? "None" : <span className="mono">{children.map((child) => shortId(child.node)).join(", ")}</span>
+            children.length === 0 ? (
+              "None"
+            ) : (
+              <span className="mono">
+                {children.map((child) => names?.ofNode(child.node) ?? shortId(child.node)).join(", ")}
+              </span>
+            )
           }
         />
         <Row label="Node id" value={<span className="mono breakable">{node.node}</span>} />

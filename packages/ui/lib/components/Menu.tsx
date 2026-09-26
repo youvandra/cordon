@@ -151,15 +151,22 @@ export function Menu({ items, trigger, align = "start", side = "bottom", width, 
 export interface DropdownButtonProps extends Omit<ButtonProps, "iconEnd" | "onSelect"> {
   items: (MenuItem | "separator")[];
   align?: MenuProps["align"];
+  /**
+   * Which way the panel opens. `top` is the one a trigger near the bottom of a
+   * sheet needs: the panel would otherwise open past the sheet's edge, off the
+   * screen, and read as a button that does nothing.
+   */
+  side?: MenuProps["side"];
   menuWidth?: number;
 }
 
 /** Glossary: "Dropdown buttons". A button whose job is to reveal a list. */
-export function DropdownButton({ items, align, menuWidth, children, ...rest }: DropdownButtonProps) {
+export function DropdownButton({ items, align, side, menuWidth, children, ...rest }: DropdownButtonProps) {
   return (
     <Menu
       items={items}
       align={align}
+      side={side}
       width={menuWidth}
       trigger={
         <Button iconEnd="chevron-down" {...rest}>
