@@ -172,7 +172,25 @@ type LookupCallback = (
 ) => void;
 
 export function pinnedLookup(allow: AddressCheck = publicAddressesOnly) {
-  return (hostname: string, _options: unknown, callback: LookupCallback): void => {
+  /**
+   * `all` decides the shape of the answer, and ignoring it broke every purchase
+   * on Node 26.
+   *
+   * `dns.lookup` has two callback contracts. Without `all` it answers with an
+   * address and a family; with `all` it answers with an array of them, and the
+   * caller reads `address` off each element. Node's HTTP agent began passing
+   * `{ all: true }`, so a string arrived where an array was expected, the
+   * agent read `.address` off it, and every outbound request failed with
+   * `Invalid IP address: undefined` — from inside Node, naming nothing that
+   * would lead a reader here. On Node 24 the same code is fine, which is the
+   * worst version of this bug: it depends on the machine the demo runs on.
+   *
+   * One element, never the whole answer, so the pin below is unchanged: the
+   * socket still gets exactly the address that was checked.
+   */
+  return (hostname: string, options: unknown, callback: LookupCallback): void => {
+    const all =
+      typeof options === "object" && options !== null && (options as { all?: unknown }).all === true;
     /* An address literal needs no resolution, and asking DNS about one invents a
        lookup that could fail or, worse, answer. */
     const literal = isIP(hostname);
@@ -184,7 +202,9 @@ export function pinnedLookup(allow: AddressCheck = publicAddressesOnly) {
           }),
         );
       }
-      return callback(null, hostname, literal);
+      return all
+        ? callback(null, [{ address: hostname, family: literal }])
+        : callback(null, hostname, literal);
     }
 
     lookup(hostname, { all: true, verbatim: true }).then(
@@ -215,7 +235,9 @@ export function pinnedLookup(allow: AddressCheck = publicAddressesOnly) {
           );
         }
         /* This exact address is what the socket connects to. */
-        return callback(null, chosen.address, chosen.family);
+        return all
+          ? callback(null, [{ address: chosen.address, family: chosen.family }])
+          : callback(null, chosen.address, chosen.family);
       },
       (error) => callback(Object.assign(error as NodeJS.ErrnoException, { code: "ENOTFOUND" })),
     );
