@@ -1599,6 +1599,27 @@ main { flex: 1 1 auto; }
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Resolve — the one page a stranger reads                             */
+/* ------------------------------------------------------------------ */
+
+.resolve__form {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.resolve__form .cordon-textfield {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .resolve__form {
+    flex-direction: column;
+  }
+}
+
 /* The daemon's answer, as the presenter will read it off their own screen.
    `.code` sets the well; this only stops a one-line JSON body inheriting the
    row's prose measure and keeps it inside a phone. */

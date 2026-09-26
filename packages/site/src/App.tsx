@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { CordonProvider } from "cordon-ui";
 import { Shell } from "./parts/Shell";
@@ -12,6 +12,16 @@ import AgentRecord from "./pages/AgentRecord";
 import Attest from "./pages/Attest";
 import Refusal from "./pages/Refusal";
 import NotFound from "./pages/NotFound";
+
+/**
+ * The seller's lookup, on demand.
+ *
+ * It is the only public page that reads the chain in the browser, so `viem`
+ * comes with it. Loaded eagerly it would sit in the landing's bundle for every
+ * reader who never asks; the chunk is fetched the first time somebody opens
+ * `/resolve`.
+ */
+const Resolve = lazy(() => import("./pages/Resolve"));
 
 /**
  * Put the new position at the top before it is painted.
@@ -107,6 +117,18 @@ export function App() {
         <Route path="/demo" element={<Demo />} />
         <Route path="/agent/:id" element={<AgentRecord />} />
         <Route path="/attest/:id" element={<Attest />} />
+
+        {/* The stranger's surface, at the front door. A seller holds a name or
+            an address and nothing else, and should not have to find a room
+            called "Console" to ask whether the agent in front of it may pay. */}
+        <Route
+          path="/resolve"
+          element={
+            <Suspense fallback={null}>
+              <Resolve />
+            </Suspense>
+          }
+        />
 
         {/* Not a page anybody navigates to. `ConductRecord.RECORD_BASE` is a
             Solidity constant, so every record in the reputation registry

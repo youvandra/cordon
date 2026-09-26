@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Button } from "cordon-ui";
 import { Allowances } from "../parts/Allowances";
 import { Appear } from "../parts/motion";
@@ -84,11 +85,15 @@ export function Hero() {
                 See it run
               </Button>
             </a>
-            <a href="#start">
+            {/* The stranger's question, not the developer's. "Run it yourself"
+                sent a reader to a setup section; the second thing anyone asks
+                about an agent is what it is allowed to spend, and that is
+                answered by a lookup rather than an install. */}
+            <Link to="/resolve">
               <Button variant="ghost" size="lg">
-                Run it yourself
+                Resolve an agent
               </Button>
-            </a>
+            </Link>
           </Appear>
         </div>
 

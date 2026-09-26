@@ -42,6 +42,10 @@ export default defineConfig({
       { find: /^cordon-ui$/, replacement: local("../ui/index.ts") },
       { find: /^@cordon\/fixtures$/, replacement: local("../fixtures/src/index.ts") },
       { find: /^@cordon\/fixtures\/preview$/, replacement: local("../fixtures/src/preview.ts") },
+      /* The seller's own check, reused rather than reimplemented: a page that
+         resolved a name its own way is a second copy that can disagree with
+         the package a seller integrates. */
+      { find: /^@cordon\/verify$/, replacement: local("../verify/src/index.ts") },
       { find: /^react$/, replacement: pkg("react") },
       { find: /^react-dom$/, replacement: pkg("react-dom") },
       { find: /^framer-motion$/, replacement: pkg("framer-motion") },

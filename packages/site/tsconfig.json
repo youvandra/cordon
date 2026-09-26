@@ -32,6 +32,9 @@
       "@cordon/fixtures/preview": [
         "../fixtures/src/preview.ts"
       ],
+      "@cordon/verify": [
+        "../verify/src/index.ts"
+      ],
       "react": [
         "./node_modules/@types/react"
       ],
