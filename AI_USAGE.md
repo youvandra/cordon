@@ -2,7 +2,7 @@
 
 Written for the ETHOnline 2026 submission requirement that a project state
 where and how AI tools were used, and kept current for ETHGlobal Tokyo 2026.
-Last revised 25 September 2026.
+Last revised 26 September 2026.
 
 ## The short version
 
