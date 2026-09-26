@@ -18,8 +18,47 @@ const out = resolve(here, "../src/abi.gen.ts");
 const WANTED = ["TreeVault", "MandateRegistry", "ConductRecord", "IERC20", "IGatewayWallet"];
 
 const artifact = (name) => resolve(contracts, `out/${name}.sol/${name}.json`);
-if (!WANTED.every((n) => existsSync(artifact(n)))) {
-  execFileSync("forge", ["build"], { cwd: contracts, stdio: "inherit" });
+const built = WANTED.every((n) => existsSync(artifact(n)));
+
+/**
+ * Build the artifacts, unless there is nothing to build them with.
+ *
+ * `abi.gen.ts` is committed so that every suite and typecheck that needs no
+ * chain also needs no Foundry — that is the split the `units` job exists to
+ * keep honest. This script sat inside `npm run build`, so a typecheck on a
+ * clean checkout found no `out/` (it is gitignored), shelled out to `forge`,
+ * and died with ENOENT on a runner that had deliberately not installed it.
+ *
+ * So a missing toolchain is only fatal when there is also nothing committed
+ * to fall back to. When both are missing the error says which is which,
+ * rather than printing a spawn failure about a binary the reader may not know
+ * this script wanted. Whether the committed copy is still correct is not this
+ * script's question: the job with a compiler regenerates it and fails on a
+ * diff.
+ */
+if (!built) {
+  const forge = (() => {
+    try {
+      execFileSync("forge", ["build"], { cwd: contracts, stdio: "inherit" });
+      return true;
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+      return false;
+    }
+  })();
+
+  if (!forge) {
+    if (existsSync(out)) {
+      console.log(`abi -> kept ${out} (no forge, no artifacts)`);
+      process.exit(0);
+    }
+    console.error(
+      "no forge on PATH and no artifacts in packages/contracts/out, and " +
+        "src/abi.gen.ts has not been committed either — install Foundry or " +
+        "run this where the contracts have been built.",
+    );
+    process.exit(1);
+  }
 }
 
 let body = "";
