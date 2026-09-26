@@ -62,12 +62,10 @@ export function Seller() {
           >
             <div className="seller__server">
               <span className="panel__label">A paid API</span>
-              <span className="seller__price mono">serving costs real money</span>
             </div>
 
             <div className="seller__split">
               <div className="seller__side">
-                <p className="seller__side-label">One buyer</p>
                 <div className="seller__chips">
                   <span className="seller__chip seller__chip--named mono">trade.olivia.eth</span>
                 </div>
@@ -77,11 +75,10 @@ export function Seller() {
               </div>
 
               <div className="seller__vs" aria-hidden="true">
-                402
+                =
               </div>
 
               <div className="seller__side">
-                <p className="seller__side-label">A script</p>
                 <div className="seller__chips">
                   {SWARM.map((address) => (
                     <span key={address} className="seller__chip seller__chip--anon mono">

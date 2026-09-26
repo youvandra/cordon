@@ -1652,11 +1652,6 @@ main { flex: 1 1 auto; }
   border-bottom: 1px solid var(--cordon-hairline-soft);
 }
 
-.seller__price {
-  color: var(--cordon-copy-dim);
-  font-size: var(--cordon-size-caption);
-}
-
 .seller__split {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -1670,13 +1665,6 @@ main { flex: 1 1 auto; }
   flex-direction: column;
   gap: var(--cordon-space-2);
   min-width: 0;
-}
-
-.seller__side-label {
-  margin: 0;
-  color: var(--cordon-copy-dim);
-  font-size: var(--cordon-size-micro);
-  letter-spacing: 0.02em;
 }
 
 .seller__side-note {
