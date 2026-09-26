@@ -22,7 +22,7 @@
  */
 import { useEffect, useState } from "react";
 import { createPublicClient, http, namehash, parseAbi, parseAbiItem, type Address, type Hex } from "viem";
-import { DEPLOYMENTS, ENSV2, SEPOLIA } from "@cordon/fixtures";
+import { DEMOS, DEPLOYMENTS, ENSV2, SEPOLIA } from "@cordon/fixtures";
 import { CHAIN, chain } from "./chain";
 import { placeOf } from "./ens-plan";
 
@@ -106,6 +106,18 @@ export function useAgentNames(agents: Agent[]): AgentNames {
          carries the string. A tree's binds all land on the nearest ancestor's
          resolver, so one resolver usually covers the whole tree. */
       const resolvers = new Set<Address>();
+      /* The demo tree's own name first, when it has one. Its operators carry no
+         reverse record, so without this seed a tree named the moment it was
+         built would read as a column of hexadecimal. */
+      const seeded = DEMOS[SEPOLIA.chainId]?.name;
+      if (seeded) {
+        try {
+          const place = await placeOf(client, seeded);
+          if (place.resolver) resolvers.add(place.resolver);
+        } catch {
+          /* A demo name that will not walk leaves the rest readable. */
+        }
+      }
       for (const name of new Set(operators.values())) {
         try {
           const place = await placeOf(client, name);

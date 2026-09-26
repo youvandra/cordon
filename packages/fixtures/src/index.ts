@@ -732,7 +732,14 @@ export const ENDPOINTS = [
 export interface DemoTree {
   owner: string;
   root: string;
-  /** An ERC-8004 identity in the tree, which is what the record pages address. */
+  /**
+   * The root name, when the tree has one. The console reads a node's name from
+   * the resolver this name resolves through, so a demo tree whose operators
+   * carry no reverse record is still readable by name.
+   */
+  name?: string;
+  /** An ERC-8004 identity in the tree, which is what the record pages address.
+   *  `pending` until a daemon running against these contracts enrols one. */
   agentId: string;
 }
 
@@ -757,8 +764,11 @@ export const DEMOS: Record<number, DemoTree> = {
      their preview rows, which is the failure this fixture exists to prevent. */
   11155111: {
     owner: "0x9F846D2054689a439DA8D0619f37F6c70Db03597",
-    root: "0x6052919a0adffdfcbde3b6cbdba1f3ab5db068e5dbeb730d46a4eca05d34663b",
-    agentId: "10529",
+    root: "0x1f51de5d45c1aba5976f6035902372e91b0db463ceb6c320710fff7ac1e2981e",
+    name: "olivia.eth",
+    /* The daemon enrols each node into ERC-8004 on start; until one runs against
+       these contracts there is no identity for a record page to address. */
+    agentId: "pending",
   },
 };
 

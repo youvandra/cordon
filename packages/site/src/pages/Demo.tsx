@@ -29,6 +29,16 @@ import { useLiveTree, type LiveNode, type LiveTree } from "../parts/meter";
 const DEMO = DEMOS[DEFAULT_CHAIN.chainId]!;
 
 /**
+ * The identity the record pages address, when there is one.
+ *
+ * A tree has none until a daemon running against its contracts enrols one, and
+ * the runbook is written before that first run. A link built from `pending`
+ * resolves to a page about no agent; a beat simply has no record to open until
+ * there is one.
+ */
+const AGENT_ID = /^\d+$/.test(DEMO.agentId) ? DEMO.agentId : null;
+
+/**
  * The one file every command needs, and the reason it is spelled out.
  *
  * `packages/daemon/.env.live` is Arc's — chain 5042002, Arc's registry, Arc's
@@ -214,7 +224,9 @@ const BEATS: Beat[] = [
        down here is an id from the tree that existed when it was written, and
        these trees get respawned — the record page lists whatever refusals the
        node actually has, including the one just made. */
-    open: { label: "The agent's record", to: `/agent/${DEMO.agentId}` },
+    ...(AGENT_ID
+      ? { open: { label: "The agent's record", to: `/agent/${AGENT_ID}` } }
+      : {}),
     ifItFails:
       "Beacon has to be serving for this beat, and it is the only beat that needs any seller. If it is not, open an existing refusal and say it was made earlier — the claim is that refusals carry their transaction, and 98.7 to 100% of the registry's feedback carries none, so a refusal from this morning proves it as well as one from this minute.",
     sellerFree: false,
@@ -343,7 +355,11 @@ export default function Demo() {
           <Text variant="micro" tone="dim" as="p">
             {DEFAULT_CHAIN.name} {DEFAULT_CHAIN.chainId} · root{" "}
             <span className="mono">{shortId(DEMO.root)}</span> · agent{" "}
-            <Link to={`/agent/${DEMO.agentId}`}>{DEMO.agentId}</Link>
+            {AGENT_ID ? (
+              <Link to={`/agent/${AGENT_ID}`}>{AGENT_ID}</Link>
+            ) : (
+              <span>pending — no daemon has enrolled one yet</span>
+            )}
           </Text>
         </header>
 
