@@ -10,8 +10,25 @@ bounds it. Run in this order; each one prints what the next one needs.
 | `AttachSubregistry.s.sol` | deploy the name's own registry and point the name at it |
 | `IssueSubname.s.sol` | issue an agent's name inside it |
 | `StandUpDemo.s.sol` | the mandate tree, a resolver, and the records, in one broadcast |
+| `DeployResolver.s.sol` | `CordonResolver` on the tree's root name, computing its records |
+| `BindSubname.s.sol` | bring each agent name under it, bound to its own mandate |
 | `FundVault.s.sol` | put the root's budget behind the tree |
 | `FuelOperators.s.sol` | gas for the daemon keys |
+
+## Trap 0 — a redeploy invalidates every node id
+
+A node id is `keccak256(chainid, registry, owner, nonce)`, so new contracts
+mean new nodes even for the same tree. After a `Deploy`, rewrite
+`CORDON_REGISTRY`, `CORDON_VAULT` and `CORDON_RECORD` in `.env.ens` before
+anything here runs, then rewrite the node ids from what `StandUpDemo` prints.
+`DeployResolver` checks `m.exists` and stops on a stale one; `FundVault` does
+not, and would fund a node nobody holds.
+
+Two more that bite in the same pass: `ENS_RESOLVER_SALT` must be bumped,
+because the resolver is deployed CREATE2 and the old salt collides; and a
+subname's expiry is its own, so check it has not lapsed —
+`getExpiry(tokenId)` on the subregistry — before blaming the redeploy for a
+`LabelExpired`.
 
 `.env.ens` holds the addresses and the commitment secret. It is gitignored, and
 the commit and the reveal must read the identical values — a secret typed twice
