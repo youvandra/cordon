@@ -74,6 +74,16 @@ interface IVerifiableFactory {
         returns (address proxy);
 }
 
+/**
+ * Thrown by a UserRegistry when the label is taken.
+ *
+ * Declared here so a script can recognise it by name rather than comparing
+ * four bytes nobody reading the code could identify. `AgentSpawns` needs the
+ * difference between "this name already exists" and every other failure,
+ * because the first is a state it can continue from and the rest are not.
+ */
+error LabelAlreadyRegistered(string label);
+
 interface IUserRegistry {
     function initialize(address rootAccount, uint256 roleBitmap) external;
 
