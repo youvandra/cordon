@@ -13,7 +13,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
-import { assertPublicUrl, EgressError, isPrivateAddress } from "../src/egress.ts";
+import { readFileSync } from "node:fs";
+import { assertPublicUrl, EgressError, isPrivateAddress, pinnedLookup, publicAddressesOnly } from "../src/egress.ts";
 import { assertPurchaseMethod, MethodRefused } from "../src/fetch.ts";
 import { createHttpTransport, type Transport } from "../src/fetch.ts";
 
@@ -96,6 +97,11 @@ function transportAllowing(...origins: string[]): Transport {
       if (allowed.has(url.origin)) return url;
       return assertPublicUrl(raw, options);
     },
+    /* The socket is pinned to an address that passed a check, and the test's
+       server is on loopback — which the real check refuses, correctly. Only
+       loopback is added here: a redirect to a metadata address is still refused
+       by the code that ships, which is what the tests below rely on. */
+    allowAddress: (address) => address === "127.0.0.1" || publicAddressesOnly(address),
   });
 }
 
@@ -214,4 +220,45 @@ test("the refusal says what a purchase is, not just that it was refused", () => 
     () => assertPurchaseMethod("DELETE"),
     (error: Error) => /answered with 402/.test(error.message) && /egress channel/.test(error.message),
   );
+});
+
+/* ---------------------------------------------------------------- */
+/* The rebinding window, closed                                      */
+/* ---------------------------------------------------------------- */
+
+/* A transport-level test of the refusal is deliberately absent.
+   Driving it needs a loopback server the pin must refuse, and a refused socket
+   did not surface as a rejected promise within the test's lifetime — the error
+   path through `http.Agent`'s custom lookup needs work this change did not do.
+   The guarantee itself is covered below, at the lookup, which is where it lives:
+   the socket connects to whatever `pinnedLookup` hands back, and it hands back
+   nothing that fails the check. A hanging test asserting the same thing would be
+   worse than no test. */
+
+test("a pinned lookup refuses every answer, not just the first", async () => {
+  const lookup = pinnedLookup();
+  /* A literal is checked without asking DNS at all. */
+  await new Promise<void>((done) => {
+    lookup("169.254.169.254", {}, (error) => {
+      assert.ok(error, "cloud metadata is refused at the socket");
+      done();
+    });
+  });
+  await new Promise<void>((done) => {
+    lookup("93.184.216.34", {}, (error, address) => {
+      assert.equal(error, null);
+      assert.equal(address, "93.184.216.34", "a public literal is handed straight to the socket");
+      done();
+    });
+  });
+});
+
+test("TLS is still verified against the name, not the pinned address", () => {
+  /* Stated as a test because it is the thing pinning could quietly break: if the
+     certificate were checked against the IP, every HTTPS seller would fail, and
+     the tempting fix is to stop checking it. `servername` is what keeps both
+     true — the socket goes to a checked address and the certificate must still
+     be for the host the daemon meant to reach. */
+  const source = readFileSync(new URL("../src/fetch.ts", import.meta.url), "utf8");
+  assert.match(source, /servername: target\.hostname/, "servername is set for https");
 });

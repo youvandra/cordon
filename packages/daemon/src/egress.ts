@@ -135,3 +135,89 @@ export async function assertPublicUrl(raw: string, options: EgressOptions = {}):
 
   return url;
 }
+
+/* ------------------------------------------------------------------ */
+/* Pinning the connection to the address that was checked              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The hole `assertPublicUrl` cannot close on its own.
+ *
+ * That function resolves a name and refuses it if any answer is private. Then
+ * the HTTP client connects — and resolves the name *again*. A name that answers
+ * with a public address the first time and a loopback address the second is not
+ * caught by any amount of checking beforehand, because the check and the connect
+ * look up different things. This is the DNS-rebinding window, and the header of
+ * this file has always said it was open.
+ *
+ * It closes by doing the two together. `pinnedLookup` is handed to a Node HTTP
+ * agent, so it IS the resolution the socket uses: it resolves once, refuses the
+ * whole name if any answer is private, and returns a single verified address for
+ * the connection. There is no second lookup to disagree with the first, because
+ * there is only one.
+ *
+ * `allow` is injected so a test can reach its own loopback server. The default
+ * is the real rule, and `assertPublicUrl` still runs first — it produces the
+ * readable refusal, and this produces the guarantee.
+ */
+export type AddressCheck = (address: string) => boolean;
+
+export const publicAddressesOnly: AddressCheck = (address) => !isPrivateAddress(address);
+
+/** Node's `lookup` contract, narrowed to what an HTTP agent calls. */
+type LookupCallback = (
+  err: NodeJS.ErrnoException | null,
+  address?: string | { address: string; family: number }[],
+  family?: number,
+) => void;
+
+export function pinnedLookup(allow: AddressCheck = publicAddressesOnly) {
+  return (hostname: string, _options: unknown, callback: LookupCallback): void => {
+    /* An address literal needs no resolution, and asking DNS about one invents a
+       lookup that could fail or, worse, answer. */
+    const literal = isIP(hostname);
+    if (literal) {
+      if (!allow(hostname)) {
+        return callback(
+          Object.assign(new EgressError(`${hostname} is not an address this daemon connects to`), {
+            code: "ECONNREFUSED",
+          }),
+        );
+      }
+      return callback(null, hostname, literal);
+    }
+
+    lookup(hostname, { all: true, verbatim: true }).then(
+      (answers) => {
+        /* Every answer, not the first. A name that returns one public address
+           and one loopback address is the ordinary way past a check that stops
+           as soon as it finds something acceptable. */
+        for (const answer of answers) {
+          if (!allow(answer.address)) {
+            return callback(
+              Object.assign(
+                new EgressError(
+                  `${hostname} resolves to ${answer.address}, which is on this machine or its ` +
+                    `private network. The connection was refused at the socket, so no request ` +
+                    `was sent to it.`,
+                ),
+                { code: "ECONNREFUSED" },
+              ),
+            );
+          }
+        }
+        const chosen = answers[0];
+        if (!chosen) {
+          return callback(
+            Object.assign(new EgressError(`${hostname} does not resolve, so there is nothing to ask`), {
+              code: "ENOTFOUND",
+            }),
+          );
+        }
+        /* This exact address is what the socket connects to. */
+        return callback(null, chosen.address, chosen.family);
+      },
+      (error) => callback(Object.assign(error as NodeJS.ErrnoException, { code: "ENOTFOUND" })),
+    );
+  };
+}

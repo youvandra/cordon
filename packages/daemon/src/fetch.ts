@@ -12,7 +12,15 @@ import type { Address, Hex } from "viem";
 import { parseChallenge, selectOffer, type Acceptable, type Offer } from "./challenge.ts";
 import type { Gate, DrawOutcome } from "./gate.ts";
 import type { Settler } from "./settle.ts";
-import { assertPublicUrl, EgressError } from "./egress.ts";
+import http from "node:http";
+import https from "node:https";
+import {
+  assertPublicUrl,
+  EgressError,
+  pinnedLookup,
+  publicAddressesOnly,
+  type AddressCheck,
+} from "./egress.ts";
 import type { ReleasedPurchases } from "./released.ts";
 
 export interface FetchRequest {
@@ -197,15 +205,91 @@ const MAX_REDIRECTS = 3;
  * still cannot go anywhere else; what a third party gets is the chance to
  * submit it first, which is not a thing to hand out by accident.
  */
-export function createHttpTransport(options: { assert?: typeof assertPublicUrl } = {}): Transport {
+export function createHttpTransport(
+  options: {
+    assert?: typeof assertPublicUrl;
+    /**
+     * Which addresses the socket may connect to. Defaults to the real rule.
+     * A test injects one that also allows its own loopback server; nothing in
+     * the shipped path does.
+     */
+    allowAddress?: AddressCheck;
+  } = {},
+): Transport {
   const guard = options.assert ?? assertPublicUrl;
-  return httpTransportWith(guard);
+  return httpTransportWith(guard, options.allowAddress ?? publicAddressesOnly);
 }
 
 /** The one the daemon and the MCP server use. */
-export const httpTransport: Transport = (url, init) => httpTransportWith(assertPublicUrl)(url, init);
+export const httpTransport: Transport = (url, init) =>
+  httpTransportWith(assertPublicUrl, publicAddressesOnly)(url, init);
 
-const httpTransportWith = (assert: typeof assertPublicUrl): Transport => async (url, init) => {
+/**
+ * One request, over a socket pinned to an address that was checked.
+ *
+ * `fetch` cannot be given an agent, so this is `node:http` instead. That is the
+ * whole reason for the change: an agent carries the `lookup` that makes the
+ * check and the connection the same act, and without it the daemon resolved a
+ * name to decide whether to trust it and then let the client resolve it again to
+ * decide where to go.
+ */
+function requestOnce(
+  target: URL,
+  init: { method: string; headers: Record<string, string>; body?: string },
+  allow: AddressCheck,
+): Promise<{ status: number; headers: Record<string, string>; body: string }> {
+  const secure = target.protocol === "https:";
+  const driver = secure ? https : http;
+  const agent = new driver.Agent({ lookup: pinnedLookup(allow) } as never);
+
+  return new Promise((resolve, reject) => {
+    const req = driver.request(
+      {
+        protocol: target.protocol,
+        hostname: target.hostname,
+        port: target.port || (secure ? 443 : 80),
+        path: `${target.pathname}${target.search}`,
+        method: init.method,
+        headers: init.headers,
+        agent,
+        /* TLS is still verified against the NAME, not the pinned address: the
+           certificate has to be for the host the daemon meant to reach. */
+        ...(secure ? { servername: target.hostname } : {}),
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => {
+          chunks.push(chunk);
+          /* A seller that answers forever is a seller that hangs the daemon. */
+          if (chunks.reduce((n, c) => n + c.length, 0) > MAX_BODY_BYTES) {
+            req.destroy(new EgressError(`${target.origin} sent more than ${MAX_BODY_BYTES} bytes`));
+          }
+        });
+        res.on("end", () => {
+          const headers: Record<string, string> = {};
+          for (const [name, value] of Object.entries(res.headers)) {
+            if (value === undefined) continue;
+            headers[name] = Array.isArray(value) ? value.join(", ") : value;
+          }
+          resolve({ status: res.statusCode ?? 0, headers, body: Buffer.concat(chunks).toString("utf8") });
+        });
+        res.on("error", reject);
+      },
+    );
+
+    req.setTimeout(30_000, () => req.destroy(new EgressError(`${target.origin} did not answer in 30s`)));
+    req.on("error", reject);
+    if (init.body !== undefined) req.write(init.body);
+    req.end();
+  });
+}
+
+/** A seller's answer is a 402 challenge or a resource, not a stream. */
+const MAX_BODY_BYTES = 8 * 1024 * 1024;
+
+const httpTransportWith =
+  (assert: typeof assertPublicUrl, allow: AddressCheck): Transport =>
+  async (url, init) => {
   let target = await assert(url);
   const origin = target.origin;
   const carriesPayment = Object.keys(init.headers).some(
@@ -213,29 +297,19 @@ const httpTransportWith = (assert: typeof assertPublicUrl): Transport => async (
   );
 
   for (let hop = 0; ; hop++) {
-    const response = await fetch(target, {
-      method: init.method,
-      headers: init.headers,
-      body: init.body,
-      /* Followed below instead, so each hop is checked. */
-      redirect: "manual",
-      signal: AbortSignal.timeout(30_000),
-    });
+    /* Redirects are followed below rather than by the client, so every hop is
+       checked and every hop is pinned. */
+    const response = await requestOnce(target, init, allow);
 
-    const location = response.headers.get("location");
+    const location = response.headers["location"];
     if (response.status < 300 || response.status >= 400 || !location) {
-      const text = await response.text();
-      let body: unknown = text;
+      let body: unknown = response.body;
       try {
-        body = JSON.parse(text);
+        body = JSON.parse(response.body);
       } catch {
         /* not JSON, and that is fine — only a 402 challenge has to be */
       }
-      return {
-        status: response.status,
-        headers: Object.fromEntries(response.headers.entries()),
-        body,
-      };
+      return { status: response.status, headers: response.headers, body };
     }
 
     if (hop >= MAX_REDIRECTS) {
