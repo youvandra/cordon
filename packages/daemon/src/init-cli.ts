@@ -6,7 +6,7 @@
  */
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { DEFAULT_CHAIN, ARC, DEPLOYMENT } from "../../fixtures/src/index.ts";
+import { DEFAULT_CHAIN, DEPLOYMENT } from "../../fixtures/src/index.ts";
 
 /** Where the owner surface lives. Overridable for a console served elsewhere. */
 const CONSOLE_URL = process.env.CORDON_CONSOLE_URL ?? "https://getcordon.xyz/console";
