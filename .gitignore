@@ -20,6 +20,12 @@ packages/contracts/gates-run.json
 # A local anvil deployment is a throwaway; deployments/ is for chains a reader
 # can go and look at.
 packages/contracts/deployments/31337.json
+# The root lockfile. Each workspace commits its own — those nine are tracked —
+# and the root one is whatever `npm install --include-workspace-root` last
+# resolved across all of them. It has never been committed, CI regenerates it
+# on every run, and an 800-package file nobody reviews is one that only ever
+# shows up as noise in a diff. The leading slash keeps the per-package ones.
+/package-lock.json
 *.log
 # The meter's snapshot. A cache by definition: delete it and the meter rebuilds
 # it from chain, which is the property its tests assert.
