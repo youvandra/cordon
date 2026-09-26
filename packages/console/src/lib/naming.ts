@@ -32,11 +32,17 @@
  * else, and a parent registry is created with the roles its own name already
  * carries.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useWallets } from "@privy-io/react-auth";
 import { encodeFunctionData, keccak256, namehash, parseAbi, stringToBytes, type Address, type Hex } from "viem";
+import { createPublicClient, http } from "viem";
 import { ENSV2 } from "@cordon/fixtures";
+import { CHAIN, chain } from "./chain";
 import { signerFor, why, type ActionState } from "./mandate";
+
+/* A reader that needs no wallet, so the dialog can check a name before anyone
+   is asked to sign. */
+const reading = CHAIN.chainId === ENSV2.chainId ? createPublicClient({ chain, transport: http(CHAIN.rpc) }) : null;
 
 /* Only the calls this file makes. The full interfaces live in
    `script/ens/IEns.sol`; copying all of them here would be a second place for
@@ -411,4 +417,73 @@ export function useNameAgent(expected: string | null) {
   );
 
   return { state, name };
+}
+
+/**
+ * Check a parent name against the mandate it is supposed to be.
+ *
+ * The dialog used to take the parent's name from reverse resolution and, when
+ * there was none, leave the field empty and the button dead — which is what
+ * happened the first time anyone tried it: `worker1.probe.mira.eth` has no
+ * reverse record, so naming a child of worker1 offered an empty required field
+ * and no explanation.
+ *
+ * Typing it is fine. Typing it unchecked is not: a name that belongs to a
+ * different mandate would hang the child in the wrong place in the namespace
+ * while its mandate sat somewhere else, and both would look right on their own.
+ * So the typed name is resolved to a node through the same resolver a seller
+ * would use, and compared with the mandate the sheet is showing.
+ */
+export type ParentCheck =
+  | { state: "idle" }
+  | { state: "checking" }
+  | { state: "ok"; place: NamePlace; needsSubregistry: boolean }
+  | { state: "mismatch"; boundTo: Hex }
+  | { state: "unbound" }
+  | { state: "error"; why: string };
+
+export function useParentCheck(parentName: string, expectedNode: Hex | null): ParentCheck {
+  const [result, setResult] = useState<ParentCheck>({ state: "idle" });
+
+  useEffect(() => {
+    const ok = /^([a-z0-9-]+\.)+eth$/.test(parentName);
+    if (!reading || !ok || !expectedNode) {
+      setResult({ state: "idle" });
+      return;
+    }
+    let live = true;
+    setResult({ state: "checking" });
+
+    (async () => {
+      try {
+        const place = await placeOf(reading as never, parentName);
+        if (!place.resolver) {
+          if (live) setResult({ state: "unbound" });
+          return;
+        }
+        const bound = (await reading.readContract({
+          address: place.resolver,
+          abi: ResolverAbi,
+          functionName: "nodeOf",
+          args: [namehash(parentName)],
+        })) as Hex;
+        if (!live) return;
+        if (bound === "0x0000000000000000000000000000000000000000000000000000000000000000") {
+          setResult({ state: "unbound" });
+        } else if (bound.toLowerCase() !== expectedNode.toLowerCase()) {
+          setResult({ state: "mismatch", boundTo: bound });
+        } else {
+          setResult({ state: "ok", place, needsSubregistry: place.subregistry === null });
+        }
+      } catch (error) {
+        if (live) setResult({ state: "error", why: why(error) });
+      }
+    })();
+
+    return () => {
+      live = false;
+    };
+  }, [parentName, expectedNode]);
+
+  return result;
 }

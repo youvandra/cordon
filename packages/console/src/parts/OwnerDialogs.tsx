@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Field, Modal, TextField, useNotify } from "cordon-ui";
 import { formatUsdc, isAddress } from "@cordon/fixtures";
 import { useFundVault, useRevoke, useSpawnChild, useTreasury, useWithdraw, type ActionState } from "../lib/mandate";
-import { useNameAgent } from "../lib/naming";
+import { useNameAgent, useParentCheck } from "../lib/naming";
 import type { ChainNode } from "../lib/tree";
 import { shortId, usdc6 } from "../lib/format";
 
@@ -340,6 +340,9 @@ export function NameDialog({
   const [parent, setParent] = useState(parentName ?? "");
   const [endpoint, setEndpoint] = useState("");
   const working = state.status === "working";
+  /* Checked against the chain, because the name is typed whenever the parent
+     has no reverse record — which is the ordinary case, not the exception. */
+  const check = useParentCheck(parent, node.parent);
 
   /* The default follows the parent the sheet is showing, and only until the
      owner types over it. */
@@ -350,6 +353,30 @@ export function NameDialog({
   const labelOk = /^[a-z0-9][a-z0-9-]{0,62}$/.test(label);
   const parentOk = /^([a-z0-9-]+\.)+eth$/.test(parent);
   const full = labelOk && parentOk ? `${label}.${parent}` : null;
+  /* Only a name that resolves to this agent's own parent may be built on. */
+  const ready = Boolean(full) && check.state === "ok";
+
+  const parentError =
+    parent === "" || parentOk === false
+      ? parent !== "" && !parentOk
+        ? "A .eth name."
+        : undefined
+      : check.state === "mismatch"
+        ? `That name is bound to ${shortId(check.boundTo)}, which is a different mandate.`
+        : check.state === "unbound"
+          ? "No mandate is bound to that name, so a child under it would resolve to nothing."
+          : check.state === "error"
+            ? check.why
+            : undefined;
+
+  const parentHint =
+    check.state === "checking"
+      ? "Checking that name against this agent's parent…"
+      : check.state === "ok"
+        ? check.needsSubregistry
+          ? "Matches this agent's parent. It has no registry beneath it yet, so this takes three signatures: one to create it, one to point the parent at it, one to register the name."
+          : "Matches this agent's parent."
+        : undefined;
 
   useOutcome(
     state,
@@ -380,7 +407,7 @@ export function NameDialog({
           <Button
             variant="primary"
             loading={working}
-            disabled={working || !full}
+            disabled={working || !ready}
             onClick={() =>
               void name(node.node, parent, label, { endpoint: endpoint.trim() || undefined })
             }
@@ -401,8 +428,9 @@ export function NameDialog({
         </Field>
         <Field
           label="Under which name"
-          info="The parent's ENS name. Offered from the chain where the parent already has one; a registry is hung under it first if it has none."
-          error={parent !== "" && !parentOk ? "A .eth name." : undefined}
+          info="The parent's ENS name, checked against the parent's mandate before anything is signed. Offered from the chain when the parent has a reverse record; most do not, so it is usually typed."
+          hint={parentHint}
+          error={parentError}
         >
           <TextField value={parent} placeholder="probe.mira.eth" onChange={(event) => setParent(event.target.value.trim().toLowerCase())} />
         </Field>
