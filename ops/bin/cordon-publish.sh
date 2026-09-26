@@ -15,6 +15,10 @@
 #   - a console bundle built without base /console/, which loads nothing
 #   - a site bundle whose index.html is missing
 #
+# It installs the workspace's dependencies before it builds, so a new
+# inter-package import cannot fail a publish for want of an install. Set
+# CORDON_SKIP_INSTALL=1 to skip that when the tree is already installed.
+#
 # It copies and never deletes at the root. /var/www/cordon also holds
 # console/ and .well-known/; an `rsync --delete` there removes the console the
 # judges are pointed at and breaks the certificate renewal in the same pass.
@@ -41,6 +45,22 @@ refuse() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) refusing: $*" >&2; exit 1; }
 [ -d "$WWW" ] || refuse "$WWW does not exist; create it and point nginx at it first"
 
 cd "$REPO"
+
+# Dependencies first.
+#
+# This script used to build with whatever was already in `node_modules`, which
+# is fine until a new inter-package import arrives — site → @cordon/verify, for
+# one — and the build then fails with a module-not-found that reads like a code
+# error while the fix is an install. `npm ci` is lock-exact and never rewrites
+# the lockfile, so a `package.json` committed without its lock fails loudly here
+# rather than publishing a bundle built from dependencies nobody recorded.
+#
+# Skipped on a dry run, which must touch nothing, and skippable on a box that
+# has just installed.
+if [ "$DRY" = no ] && [ "${CORDON_SKIP_INSTALL:-}" != "1" ]; then
+  log "installing workspace dependencies"
+  npm ci --no-audit --no-fund
+fi
 
 # The record pages resolve the ids the chain writes off the meter, and the
 # meter is served from this same origin at /api. Unset, the site falls back to
