@@ -138,14 +138,30 @@ export interface VerifyOptions {
  * name at somebody else's address and borrow their bound.
  */
 export async function verify(subject: string, options: VerifyOptions): Promise<Result> {
+  /*
+   * The universal resolver goes onto the chain, because that is the only place
+   * `getEnsAddress` reads it from.
+   *
+   * It was passed as a client option, which viem ignores: `createPublicClient`
+   * has no top-level `contracts`, so every caller that needed the ENSv2
+   * preview's resolver — the whole reason the option exists — got "this chain
+   * does not support contract ensUniversalResolver" instead. A build that
+   * ships the override should place it where the library looks.
+   */
+  const chain = options.universalResolver
+    ? {
+        ...options.chain,
+        contracts: {
+          ...(options.chain.contracts ?? {}),
+          ensUniversalResolver: { address: options.universalResolver },
+        },
+      }
+    : options.chain;
   const client =
     options.client ??
     (createPublicClient({
-      chain: options.chain,
+      chain,
       transport: http(options.rpcUrl),
-      ...(options.universalResolver
-        ? { contracts: { ensUniversalResolver: { address: options.universalResolver } } }
-        : {}),
     }) as PublicClient);
 
   const asked = subject.trim();
