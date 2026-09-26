@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Button, DataTable, SearchField, Segmented, Sheet, Tag } from "cordon-ui";
+import { Button, DataTable, DropdownButton, SearchField, Segmented, Sheet, Tag, type DropdownButtonProps } from "cordon-ui";
 import { formatUsdc } from "@cordon/fixtures";
 import { useTitle } from "../parts/Shell";
 import { Meter, PageHeader, PageSkeleton, Panel, ReadFailed } from "../parts/Page";
@@ -257,48 +257,75 @@ export default function Agents() {
           /* A revoked root keeps its footer: its vault can still be emptied,
              and that is the one thing left to do with it. */
           mine && selected && (!isCut(selected.node) || selected.parent === null) ? (
-            <div className="sheet-actions">
-              {isCut(selected.node) ? (
-                <span />
-              ) : (
-                <>
-                  <Button
-                    variant="secondary"
-                    iconStart="plus"
-                    disabled={selected.depth + 1 > selected.maxDepth}
-                    onClick={() => setSpawnParent(selected)}
-                  >
-                    {selected.depth + 1 > selected.maxDepth ? "At max depth" : "Spawn under this agent"}
-                  </Button>
-                  {/* Gas for the key that signs, not money for the tree. A cut
-                      node draws nothing, so there is nothing to fuel it for. */}
-                  <Button variant="secondary" onClick={() => setFueling(selected)}>
-                    Send gas
-                  </Button>
-                </>
-              )}
-              <span className="sheet-actions__end">
-                {/* Only where the agent has no name. A named agent is named;
-                    reissuing is not an owner action this screen invites, and a
-                    second name bound to one mandate is two answers to the same
-                    question. */}
-                {names.ofNode(selected.node) ?? names.of(selected.operator) ? null : (
-                  <Button variant="secondary" onClick={() => setNaming(selected)}>
-                    Name this agent
-                  </Button>
-                )}
-                {selected.parent === null ? (
-                  <Button variant="secondary" onClick={() => setWithdrawing(selected)}>
-                    Withdraw
-                  </Button>
-                ) : null}
-                {isCut(selected.node) ? null : (
-                  <Button variant="danger" onClick={() => setRevoking(selected)}>
-                    Revoke
-                  </Button>
-                )}
-              </span>
-            </div>
+            (() => {
+              const cut = isCut(selected.node);
+              const named = names.ofNode(selected.node) ?? names.of(selected.operator);
+              /* One obvious action and a menu. Five buttons in a row made the
+                 panel read as a toolbar: the thing an owner does nine times out
+                 of ten — spawn beneath this agent — sat beside four others of
+                 equal weight, and revoke, which is irreversible, sat beside
+                 them too. */
+              const more: DropdownButtonProps["items"] = [
+                ...(cut
+                  ? []
+                  : [
+                      {
+                        id: "fuel",
+                        label: "Send gas to the operator",
+                        onSelect: () => setFueling(selected),
+                      },
+                    ]),
+                /* Only where the agent has no name. A named agent is named;
+                   reissuing is not an owner action this screen invites, and a
+                   second name bound to one mandate is two answers to the same
+                   question. */
+                ...(cut || named
+                  ? []
+                  : [{ id: "name", label: "Name this agent", onSelect: () => setNaming(selected) }]),
+                ...(selected.parent === null
+                  ? [
+                      {
+                        id: "withdraw",
+                        label: "Withdraw from the vault",
+                        onSelect: () => setWithdrawing(selected),
+                      },
+                    ]
+                  : []),
+                ...(cut
+                  ? []
+                  : [
+                      "separator" as const,
+                      {
+                        id: "revoke",
+                        label: "Revoke this branch",
+                        destructive: true,
+                        onSelect: () => setRevoking(selected),
+                      },
+                    ]),
+              ];
+
+              return (
+                <div className="sheet-actions">
+                  {cut ? (
+                    <span />
+                  ) : (
+                    <Button
+                      variant="primary"
+                      iconStart="plus"
+                      disabled={selected.depth + 1 > selected.maxDepth}
+                      onClick={() => setSpawnParent(selected)}
+                    >
+                      {selected.depth + 1 > selected.maxDepth ? "At max depth" : "Spawn under this agent"}
+                    </Button>
+                  )}
+                  <span className="sheet-actions__end">
+                    <DropdownButton variant="secondary" align="end" items={more}>
+                      More
+                    </DropdownButton>
+                  </span>
+                </div>
+              );
+            })()
           ) : undefined
         }
       >
