@@ -1,8 +1,26 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import { dirname } from "node:path";
 
 const local = (path: string) => fileURLToPath(new URL(path, import.meta.url));
+
+/**
+ * Where a runtime dependency actually is, asked rather than assumed.
+ *
+ * These were written as `./node_modules/react`, which is true when every
+ * package installs its own and false the moment npm workspaces hoist them to
+ * the root — the layout CI installs. The build then failed on a path that had
+ * never existed there, while the same command passed on a developer's machine
+ * with the older per-package layout.
+ *
+ * Node's own resolution answers for both. It still yields the package
+ * DIRECTORY, so Vite reads each package's `exports` map; aliasing a deep file
+ * bypasses that map and yields a build whose animations never start.
+ */
+const req = createRequire(import.meta.url);
+const pkg = (name: string) => dirname(req.resolve(`${name}/package.json`));
 
 /**
  * The design system and the fixtures are consumed as source from sibling
@@ -24,9 +42,9 @@ export default defineConfig({
       { find: /^cordon-ui$/, replacement: local("../ui/index.ts") },
       { find: /^@cordon\/fixtures$/, replacement: local("../fixtures/src/index.ts") },
       { find: /^@cordon\/fixtures\/preview$/, replacement: local("../fixtures/src/preview.ts") },
-      { find: /^react$/, replacement: local("./node_modules/react") },
-      { find: /^react-dom$/, replacement: local("./node_modules/react-dom") },
-      { find: /^framer-motion$/, replacement: local("./node_modules/framer-motion") },
+      { find: /^react$/, replacement: pkg("react") },
+      { find: /^react-dom$/, replacement: pkg("react-dom") },
+      { find: /^framer-motion$/, replacement: pkg("framer-motion") },
     ],
     dedupe: ["react", "react-dom", "framer-motion"],
   },
