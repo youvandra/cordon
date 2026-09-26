@@ -241,7 +241,7 @@ function LiveRefusalPage({ data }: { data: LiveRefusal }) {
                 the path scored the request, and no model was asked.
               </Text>
               <span className="mono">{data.reason}</span>
-              <a href={txUrl(data.site.transactionHash)} target="_blank" rel="noreferrer" className="mono">
+              <a href={txUrl(data.site.transactionHash, data.chainId)} target="_blank" rel="noreferrer" className="mono">
                 {shortTx(data.site.transactionHash)}
               </a>
               <Stack direction="row" gap="md" wrap>
@@ -284,7 +284,7 @@ function LiveRefusalPage({ data }: { data: LiveRefusal }) {
                 </Text>
                 <Stack direction="row" gap="md" wrap>
                   <a
-                    href={txUrl(data.attested.site.transactionHash)}
+                    href={txUrl(data.attested.site.transactionHash, data.chainId)}
                     target="_blank"
                     rel="noreferrer"
                     className="mono"

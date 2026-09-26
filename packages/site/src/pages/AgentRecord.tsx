@@ -272,7 +272,7 @@ function LiveAgentRecord({ data }: { data: LiveConduct }) {
                   id: "tx",
                   header: "Transaction",
                   cell: (row) => (
-                    <a href={txUrl(row.site.transactionHash)} target="_blank" rel="noreferrer" className="mono">
+                    <a href={txUrl(row.site.transactionHash, row.chainId)} target="_blank" rel="noreferrer" className="mono">
                       {shortTx(row.site.transactionHash)}
                     </a>
                   ),
