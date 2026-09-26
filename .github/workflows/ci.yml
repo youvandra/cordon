@@ -72,19 +72,24 @@ jobs:
       - name: forge test
         run: forge test --root packages/contracts -vv
 
-      # Re-record every contract gate from this run and fail if the committed
-      # numbers disagree. This is the check that was missing: gates.gen.ts is
-      # what the site prints as each gate's size, it was recorded by hand, and
-      # it had drifted to 66 G1 tests against a suite of 70.
+      # Re-record every contract gate and fail if the committed numbers
+      # disagree. This is the check that was missing: gates.gen.ts is what the
+      # site prints as each gate's size, it was recorded by hand, and it had
+      # drifted to 66 G1 tests against a suite of 70.
+      #
+      # One run, read six times. Each recorder used to start its own, so G4's
+      # adversarial search ran again for the sake of counting it. The
+      # completeness guard is unchanged and still the point: a gate that
+      # cannot account for every one of its own files is red, whether the run
+      # was its own or shared.
       - name: Gate counts are what the run produced
         working-directory: packages/contracts
         run: |
-          node scripts/record-gate.mjs G1 'test/G1_*'
-          node scripts/record-gate.mjs G4 'test/G4_*'
-          node scripts/record-gate.mjs G5 'test/G5_*'
-          node scripts/record-gate.mjs G6 'test/G6_*'
-          node scripts/record-gate.mjs G8 'test/G8_*'
-          node scripts/record-gate.mjs G9 'test/G9_*'
+          forge test --json --offline > gates-run.json
+          for gate in G1 G4 G5 G6 G8 G9; do
+            CORDON_GATE_REPORT=gates-run.json node scripts/record-gate.mjs "$gate" "test/${gate}_*"
+          done
+          rm -f gates-run.json
       - name: No gate drift
         run: |
           git diff --exit-code -- packages/fixtures/src/gates.gen.ts \

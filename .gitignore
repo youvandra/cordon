@@ -14,6 +14,9 @@ dist/
 packages/contracts/out/
 packages/contracts/cache/
 packages/contracts/broadcast/
+# One forge run, written down so every gate can read it instead of starting
+# its own. Temporary by definition: the recorders consume it and delete it.
+packages/contracts/gates-run.json
 # A local anvil deployment is a throwaway; deployments/ is for chains a reader
 # can go and look at.
 packages/contracts/deployments/31337.json
