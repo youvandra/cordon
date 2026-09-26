@@ -540,6 +540,13 @@ operator key holds the child's identity. `POST /spawn` with `purpose`, or
 needed for a child spawned that way. Send the new operator gas and restart the
 daemon, or the child gets no identity and its refusals are never published.
 
+An operator needs gas to send the draw that earns its tranche, and the console
+has one action for it: on an agent's panel, **More → Send gas** sends the
+chain's own token from **your own wallet** to that operator. It is deliberately
+not from the vault — gas sits outside every bound, and the vault releases only a
+purchase at a time — which is the same transaction `script/ens/FuelOperators`
+sends from a script.
+
 > **Check:** `GET https://getcordon.xyz/api/tree/<root>` shows one more node,
 > and its bounds are inside its parent's.
 
@@ -878,6 +885,16 @@ a namespace rather than a configuration file.
 
 Addresses are in `packages/fixtures/src/index.ts` under `ENSV2`, checked against
 the chain, and nowhere else.
+
+**The implementation pair is deliberate, and the wrong one fails in
+`deployProxy`.** Sepolia carries two complete ENSv2 deployments. A name's
+registry is a `UserRegistry` proxy made by the resolving set's
+`VerifiableFactory`, but it runs the **other** set's `UserRegistry` and
+`PermissionedResolver` implementations, because the resolving set's own predate
+the `initialize(address,uint256)` the factory calls on every proxy it makes.
+Pointed at the wrong one, `deployProxy` reverts and no subname can be created at
+all. `ENSV2` in fixtures is the pair that works; `script/ens/README.md` says the
+same in prose.
 
 ### Why a namespace and not a config file
 
