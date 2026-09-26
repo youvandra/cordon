@@ -1429,6 +1429,21 @@ main { flex: 1 1 auto; }
   white-space: nowrap;
 }
 
+/* A little more room after a mark than between two words. */
+.stack__mark + .stack__name {
+  margin-left: 2px;
+}
+
+/* The mark sits on the name's optical line rather than its baseline: a
+   glyph and a logo do not share one, and aligning to the baseline hangs the
+   logo low enough to read as a mistake. */
+.stack__mark {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  flex: none;
+}
+
 .stack__name {
   color: var(--cordon-ink-strong);
   font-size: clamp(17px, 2.1vw, 23px);

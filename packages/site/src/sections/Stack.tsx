@@ -1,15 +1,16 @@
 import { SEPOLIA, ARC } from "@cordon/fixtures";
+import { EnsMark, EthereumMark } from "../parts/marks";
 
 /**
  * Who this is built on, moving past.
  *
- * Names rather than logos, and that is a licensing fact before it is a taste
- * one. ENS asks for a trademark licence in advance and says plainly not to
- * imply a partnership that does not exist; an unlicensed symbol in a strip
- * headed "built on" is exactly that implication, on a site ENS is judging.
- * Using the word to say which namespace an agent resolves in is ordinary
- * description and needs nobody's permission. When a licence exists the symbol
- * drops in beside the word without any of this moving.
+ * A mark where one could be sourced from that project's own brand page, and
+ * the name alone where it could not. A redrawn logo is a wrong logo, and a
+ * strip headed "built on" is the worst place to put one — so nothing here is
+ * traced, guessed or pulled off a search result.
+ *
+ * ENS requires a trademark licence before its brand is used and asks that no
+ * partnership be implied. The owner has confirmed this use is supported.
  *
  * Each one still carries what it does here. That is the part a reader wants
  * after the hero, and it is what keeps the strip from reading as a wall of
@@ -19,18 +20,25 @@ import { SEPOLIA, ARC } from "@cordon/fixtures";
  * this project implements rather than parties it stands on, and mixing the two
  * kinds made the strip answer two questions at once.
  *
- * ETHGlobal Tokyo is the eyebrow and not an item, for the same reason: the
- * event is where this was built, which is a different sentence from what it
- * is built on. It read as a stutter when both said it.
+ * The eyebrow is "Built on" and names no event. Where this was built belongs
+ * in the prose that can give it a sentence, not in the label over a list of
+ * what it stands on.
  *
  * The words are in the DOM whether or not the animation runs. `CLAUDE.md`:
  * animation may not gate visibility — a marquee whose content depends on a
  * frame loop is blank in a background tab, and this one is a list that happens
  * to move.
  */
-const STACK = [
-  { name: "ENS", role: "names and permissions" },
-  { name: SEPOLIA.name, role: "where the names live" },
+interface Item {
+  name: string;
+  role: string;
+  /** The official mark, where this project could source one. */
+  Mark?: (props: { size?: number }) => React.ReactElement;
+}
+
+const STACK: Item[] = [
+  { name: "ENS", role: "names and permissions", Mark: EnsMark },
+  { name: SEPOLIA.name, role: "where the names live", Mark: EthereumMark },
   { name: "Circle", role: "Gateway, and USDC" },
   { name: ARC.name, role: "where it began" },
   { name: "x402", role: "the payment" },
@@ -40,10 +48,17 @@ const STACK = [
 function Track({ hidden = false }: { hidden?: boolean }) {
   return (
     <ul className="stack__track" aria-hidden={hidden || undefined}>
-      {STACK.map((item) => (
-        <li className="stack__item" key={item.name}>
-          <span className="stack__name">{item.name}</span>
-          <span className="stack__role">{item.role}</span>
+      {STACK.map(({ name, role, Mark }) => (
+        <li className="stack__item" key={name}>
+          {/* The mark is decoration beside a name that is already there, so it
+              is hidden from assistive technology rather than read twice. */}
+          {Mark ? (
+            <span className="stack__mark" aria-hidden="true">
+              <Mark />
+            </span>
+          ) : null}
+          <span className="stack__name">{name}</span>
+          <span className="stack__role">{role}</span>
         </li>
       ))}
     </ul>
@@ -54,9 +69,7 @@ export function Stack() {
   return (
     <section className="stack" aria-label="What Cordon is built on">
       <div className="wrap">
-        <p className="stack__eyebrow">
-          Built at <b>ETHGlobal Tokyo 2026</b> on
-        </p>
+        <p className="stack__eyebrow">Built on</p>
       </div>
       {/* Two identical tracks, so the loop has no seam. The second is hidden
           from assistive technology: it is the same list twice, and a reader
