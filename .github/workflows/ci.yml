@@ -35,6 +35,21 @@ jobs:
         with:
           version: stable
 
+      # solc is downloaded once per runner otherwise, and every contract is
+      # recompiled from cold on every push. The key carries the sources, so a
+      # contract change invalidates it and forge recompiles what moved; the
+      # restore-key keeps the compiler itself across all of them.
+      - name: Cache solc and the build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.svm
+            packages/contracts/cache
+            packages/contracts/out
+          key: forge-${{ runner.os }}-${{ hashFiles('packages/contracts/src/**/*.sol', 'packages/contracts/test/**/*.sol', 'packages/contracts/foundry.toml') }}
+          restore-keys: |
+            forge-${{ runner.os }}-
+
       # The Solidity view of packages/fixtures. Generated, never written twice.
       - name: Emit fixtures
         run: node packages/fixtures/scripts/emit-solidity.ts
@@ -48,6 +63,12 @@ jobs:
       - name: forge build
         run: forge build --root packages/contracts
 
+      # No `--gas-report`. It used to run as a second pass over the whole
+      # suite so a reader could notice a gas regression in the log, and
+      # measured here the instrumentation alone takes the suite from ~118s to
+      # ~292s. G9 asserts the ceilings now and fails on a regression, which is
+      # the same guard by machine rather than by eye — `forge test
+      # --gas-report` locally when the table is what you want.
       - name: forge test
         run: forge test --root packages/contracts -vv
 
@@ -68,11 +89,6 @@ jobs:
         run: |
           git diff --exit-code -- packages/fixtures/src/gates.gen.ts \
             || { echo "::error::gates.gen.ts is stale — commit the re-recorded counts"; exit 1; }
-
-      # Refusals are returns, not reverts, and every bound is priced on the hot
-      # path. A gas report in the log is how a regression in either gets noticed.
-      - name: Gas report
-        run: forge test --root packages/contracts --gas-report
 
   # What a contributor without Foundry installed can run. Keeping this job
   # honest is the point of it: if it ever needs a chain, the split has rotted
