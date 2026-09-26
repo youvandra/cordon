@@ -285,7 +285,7 @@ export default function Resolve() {
               <TextField
                 value={typed}
                 onChange={(event) => setTyped(event.target.value)}
-                placeholder="worker1.probe.mira.eth, or 0x…"
+                placeholder="trade.olivia.eth, or 0x…"
                 iconStart="search"
                 aria-label="An agent's ENS name or address"
                 size="lg"

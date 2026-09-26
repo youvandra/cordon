@@ -38,7 +38,10 @@ export function Names() {
             style={{ marginTop: "var(--cordon-space-8)" }}
           >
             <p className="panel__label">Resolve one name</p>
-            <pre className="panel__code">{`worker1.probe.mira.eth
+            <pre className="panel__code">{`olivia.eth
+  trade.olivia.eth
+  research.olivia.eth
+  data.olivia.eth
 
   where to call it         an ordinary https endpoint
   what it may spend        read from the contract, not the record
@@ -54,7 +57,7 @@ export function Names() {
 
         <Reveal delay={0.05}>
           <p className="lede" style={{ marginTop: "var(--cordon-space-8)" }}>
-            <Link to="/resolve?q=worker1.probe.mira.eth">Resolve an agent</Link> — no
+            <Link to="/resolve?q=trade.olivia.eth">Resolve an agent</Link> — no
             wallet, no permission — or read{" "}
             <Link to="/docs/names">names and authority</Link>.
           </p>
